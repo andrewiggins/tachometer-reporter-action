@@ -53,7 +53,7 @@ const actionLogger = {
 	const inputs = { path };
 
 	let finish = (checkResult) => console.log("Check Result:", checkResult);
-	if (useCheck) {
+	if (useCheck == "true") {
 		finish = await createCheck(octokit, github.context);
 	}
 

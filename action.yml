@@ -15,7 +15,7 @@ inputs:
   use-check:
     description: "Report status as a CI Check instead of using a comment [experimental]"
     required: false
-    default: false
+    default: "false"
 runs:
   using: "node12"
   main: "dist/action.js"
