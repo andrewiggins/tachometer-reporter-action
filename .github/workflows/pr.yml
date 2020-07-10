@@ -1,15 +1,12 @@
-name: Main
+name: Pull Request Test
 
 on:
   pull_request:
     branches:
       - "**"
-  push:
-    branches:
-      - master
 
 jobs:
-  test:
+  pr_test:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
@@ -21,4 +18,4 @@ jobs:
       - name: Report Tachometer Result
         uses: ./
         with:
-          path: results.json
+          path: tests/test-results.json

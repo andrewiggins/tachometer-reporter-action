@@ -43,6 +43,7 @@
     "prettier": "^2.0.5",
     "rollup": "^2.21.0",
     "rollup-plugin-node-externals": "^2.2.0",
+    "tachometer": "^0.4.20",
     "uvu": "^0.1.0"
   }
 }

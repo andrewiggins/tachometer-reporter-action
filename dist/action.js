@@ -5486,6 +5486,79 @@ exports.getOctokit = getOctokit;
 
 });
 
+const { readFile } = fs.promises;
+
+/**
+ * Create a PR comment, or update one if it already exists
+ * @param {GitHubActionClient} github,
+ * @param {GitHubActionContext} context
+ * @param {string} commentMarkdown
+ * @param {Logger} logger
+ */
+async function postOrUpdateComment(github, context, commentMarkdown, logger) {
+	const commentInfo = {
+		...context.repo,
+		issue_number: context.issue.number,
+	};
+
+	const comment = {
+		...commentInfo,
+		body: commentMarkdown + "\n\n<sub>tachometer-reporter-action</sub>", // used to update this comment later
+	};
+
+	logger.startGroup(`Updating PR comment`);
+	let commentId;
+	try {
+		const comments = (await github.issues.listComments(commentInfo)).data;
+		for (let i = comments.length; i--; ) {
+			const c = comments[i];
+			if (
+				c.user.type === "Bot" &&
+				/<sub>[\s\n]*tachometer-reporter-action/.test(c.body)
+			) {
+				commentId = c.id;
+				break;
+			}
+		}
+	} catch (e) {
+		console.log("Error checking for previous comments: " + e.message);
+	}
+
+	if (commentId) {
+		try {
+			await github.issues.updateComment({
+				...context.repo,
+				comment_id: commentId,
+				body: comment.body,
+			});
+		} catch (e) {
+			commentId = null;
+		}
+	}
+
+	if (!commentId) {
+		try {
+			await github.issues.createComment(comment);
+		} catch (e) {
+			console.log(`Error creating comment: ${e.message}`);
+		}
+	}
+	logger.endGroup();
+}
+
+/**
+ * @typedef {{ summary: string; markdown: string; }} Report
+ * @param {import('tachometer/lib/json-output').JsonOutputFile} tachResults
+ * @returns {Report}
+ */
+function buildReport(tachResults) {
+	return {
+		summary: "One line summary of results",
+		markdown: "## Benchmark Results Markdown",
+	};
+}
+
+/** @type {Logger} */
 const defaultLogger = {
 	warn(getMsg) {
 		console.warn(getMsg);
@@ -5494,54 +5567,124 @@ const defaultLogger = {
 		console.log(getMsg);
 	},
 	debug() {},
+	startGroup(name) {
+		console.group(name);
+	},
+	endGroup() {
+		console.groupEnd();
+	},
 };
 
 /**
  * @typedef {ReturnType<typeof import('@actions/github').getOctokit>} GitHubActionClient
  * @typedef {typeof import('@actions/github').context} GitHubActionContext
  * @typedef {{ path: string; }} Inputs
- * @typedef {{ warn(msg: string): void; info(msg: string): void; debug(getMsg: () => string): void; }} Logger
+ * @typedef {{ warn(msg: string): void; info(msg: string): void; debug(getMsg: () => string): void; startGroup(name: string): void; endGroup(): void; }} Logger
  *
- * @param {GitHubActionClient} client
+ * @param {GitHubActionClient} github
  * @param {GitHubActionContext} context
  * @param {Inputs} inputs
- * @param {Logger} [log]
+ * @param {Logger} [logger]
+ *
+ * @returns {Promise<Report>}
  */
-function reportTachResults(client, context, inputs, log = defaultLogger) {
-	log.info("[reportTachResults] Testing... 1.. 2.. Is this thing on?");
+async function reportTachResults(
+	github,
+	context,
+	inputs,
+	logger = defaultLogger
+) {
+	const tachResults = JSON.parse(await readFile(inputs.path, "utf8"));
+	const report = buildReport();
+
+	await postOrUpdateComment(github, context, report.markdown, logger);
+	return report;
 }
 
 var tachometerReporterAction = {
+	buildReport,
 	reportTachResults,
 };
 
 const { reportTachResults: reportTachResults$1 } = tachometerReporterAction;
 
+/**
+ * Create a status check, and return a function that updates (completes) it.
+ * @param {import('./index').GitHubActionClient} github
+ * @param {import('./index').GitHubActionContext} context
+ */
+async function createCheck(github, context) {
+	const check = await github.checks.create({
+		...context.repo,
+		name: "Tachometer Benchmarks",
+		head_sha: context.payload.pull_request.head.sha,
+		status: "in_progress",
+	});
+
+	return async (details) => {
+		await github.checks.update({
+			...context.repo,
+			check_run_id: check.data.id,
+			completed_at: new Date().toISOString(),
+			status: "completed",
+			...details,
+		});
+	};
+}
+
+const actionLogger = {
+	warn(msg) {
+		core.warning(msg);
+	},
+	info(msg) {
+		core.info(msg);
+	},
+	debug(getMsg) {
+		core.debug(getMsg());
+	},
+	startGroup(name) {
+		core.startGroup(name);
+	},
+	endGroup() {
+		core.endGroup();
+	},
+};
+
 (async () => {
+	const token = core.getInput("github_token", { required: true });
+	const path = core.getInput("path", { required: true });
+
+	const octokit = github.getOctokit(token);
+	const finish = await createCheck(octokit, github.context);
+	const inputs = { path };
+
 	try {
-		const token = core.getInput("github_token", { required: true });
-		const path = core.getInput("path", { required: true });
-
-		const octokit = github.getOctokit(token);
-		const inputs = { path };
-
 		core.debug("Inputs: " + JSON.stringify(inputs, null, 2));
 		core.debug("Context: " + JSON.stringify(github.context, undefined, 2));
 
-		const actionLogger = {
-			warn(msg) {
-				core.warning(msg);
-			},
-			info(msg) {
-				core.info(msg);
-			},
-			debug(getMsg) {
-				core.debug(getMsg());
-			},
-		};
+		let results = await reportTachResults$1(
+			octokit,
+			github.context,
+			inputs,
+			actionLogger
+		);
 
-		await reportTachResults$1(octokit, github.context, inputs, actionLogger);
+		await finish({
+			conclusion: "success",
+			output: {
+				title: `Tachometer Benchmark Results`,
+				summary: results.summary,
+			},
+		});
 	} catch (e) {
 		core.setFailed(e.message);
+
+		await finish({
+			conclusion: "failure",
+			output: {
+				title: "Tachometer Benchmarks failed",
+				summary: `Error: ${e.message}`,
+			},
+		});
 	}
 })();
