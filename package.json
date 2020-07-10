@@ -1,0 +1,48 @@
+{
+  "name": "tach-reporter-action",
+  "version": "1.0.0",
+  "description": "Report the results of Polymer/tachometer in a comment for PRs",
+  "main": "index.js",
+  "scripts": {
+    "build": "rollup -c ./rollup.config.js",
+    "test": "node tests/index.test.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/andrewiggins/tach-reporter-action.git"
+  },
+  "keywords": [
+    "tachometer",
+    "benchmarks",
+    "action",
+    "github"
+  ],
+  "author": "Andre Wiggins",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/andrewiggins/tach-reporter-action/issues"
+  },
+  "homepage": "https://github.com/andrewiggins/tach-reporter-action#readme",
+  "lint-staged": {
+    "**/*.{js,jsx,ts,tsx,yml,json}": [
+      "prettier --write"
+    ]
+  },
+  "husky": {
+    "hooks": {
+      "pre-commit": "npm run build && git add dist && lint-staged"
+    }
+  },
+  "devDependencies": {
+    "@actions/core": "^1.2.4",
+    "@actions/github": "^4.0.0",
+    "@rollup/plugin-commonjs": "^13.0.0",
+    "@rollup/plugin-node-resolve": "^8.1.0",
+    "husky": "^4.2.5",
+    "lint-staged": "^10.2.11",
+    "prettier": "^2.0.5",
+    "rollup": "^2.21.0",
+    "rollup-plugin-node-externals": "^2.2.0",
+    "uvu": "^0.1.0"
+  }
+}
