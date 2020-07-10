@@ -47,10 +47,15 @@ const actionLogger = {
 (async () => {
 	const token = core.getInput("github_token", { required: true });
 	const path = core.getInput("path", { required: true });
+	const useCheck = core.getInput("use-check", { required: true });
 
 	const octokit = github.getOctokit(token);
-	const finish = await createCheck(octokit, github.context);
 	const inputs = { path };
+
+	let finish = (checkResult) => console.log("Check Result:", checkResult);
+	if (useCheck) {
+		finish = await createCheck(octokit, github.context);
+	}
 
 	try {
 		core.debug("Inputs: " + JSON.stringify(inputs, null, 2));
