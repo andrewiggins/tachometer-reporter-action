@@ -5511,11 +5511,11 @@ function reportTachResults(client, context, inputs, log = defaultLogger) {
 	log.info("[reportTachResults] Testing... 1.. 2.. Is this thing on?");
 }
 
-var tachReporterAction = {
-	reportTachResults
+var tachometerReporterAction = {
+	reportTachResults,
 };
 
-const { reportTachResults: reportTachResults$1 } = tachReporterAction;
+const { reportTachResults: reportTachResults$1 } = tachometerReporterAction;
 
 (async () => {
 	try {

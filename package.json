@@ -1,5 +1,5 @@
 {
-  "name": "tach-reporter-action",
+  "name": "tachometer-reporter-action",
   "version": "1.0.0",
   "description": "Report the results of Polymer/tachometer in a comment for PRs",
   "main": "index.js",
@@ -9,7 +9,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/andrewiggins/tach-reporter-action.git"
+    "url": "git+https://github.com/andrewiggins/tachometer-reporter-action.git"
   },
   "keywords": [
     "tachometer",
@@ -20,9 +20,9 @@
   "author": "Andre Wiggins",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/andrewiggins/tach-reporter-action/issues"
+    "url": "https://github.com/andrewiggins/tachometer-reporter-action/issues"
   },
-  "homepage": "https://github.com/andrewiggins/tach-reporter-action#readme",
+  "homepage": "https://github.com/andrewiggins/tachometer-reporter-action#readme",
   "lint-staged": {
     "**/*.{js,jsx,ts,tsx,yml,json}": [
       "prettier --write"
