@@ -6606,12 +6606,12 @@ async function reportTachResults(
 	return report;
 }
 
-var tachometerReporterAction = {
+var src = {
 	buildReport,
 	reportTachResults,
 };
 
-const { reportTachResults: reportTachResults$1 } = tachometerReporterAction;
+const { reportTachResults: reportTachResults$1 } = src;
 
 /**
  * Create a status check, and return a function that updates (completes) it.
