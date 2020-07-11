@@ -12,8 +12,7 @@ const baseVersion = "base-version";
 
 test("Initial test", () => {
 	const report = buildReport(testResults, localVersion, baseVersion);
-	assert.type(report.summary, "string", "Returns string summary");
-	assert.type(report.markdown, "string", "Returns string markdown");
+	assert.ok(report, "Returns a report");
 });
 
 test.run();

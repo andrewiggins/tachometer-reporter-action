@@ -1,5 +1,6 @@
 const { readFile } = require("fs").promises;
 const { UAParser } = require("ua-parser-js");
+const prettyBytes = require("pretty-bytes");
 
 /** @jsx h */
 
@@ -9,9 +10,10 @@ function h(tag, attrs, ...children) {
 		attrStr += ` ${key}="${attrs[key]}"`;
 	}
 
+	// @ts-ignore
 	const childrenStr = children.flat(Infinity).join("");
 
-	return `<${tag} ${attrStr}>${childrenStr}</${tag}>`;
+	return `<${tag}${attrStr}>${childrenStr}</${tag}>`;
 }
 
 /**
@@ -51,7 +53,7 @@ function renderTable(benchmarks) {
 					return (
 						<tr>
 							<td>{b.version}</td>
-							<td>{b.bytesSent}</td>
+							<td>{prettyBytes(b.bytesSent)}</td>
 						</tr>
 					);
 				})}
@@ -61,9 +63,11 @@ function renderTable(benchmarks) {
 }
 
 /**
- * @typedef {{ summary: string; markdown: string; }} Report
- * @typedef {JsonOutputFile} TachResults
+ * @typedef {import('./global').JsonOutputFile} TachResults
  * @typedef {TachResults["benchmarks"][0]} BenchmarkResult
+ * @typedef {{ results: TachResults["benchmarks"]; summary: string; tableHtml: string; }} BenchmarkReport
+ * @typedef {Map<string, Map<string, BenchmarkReport>>} Report Results of
+ * Tachometer grouped by benchmark name, then browser
  *
  * @param {TachResults} tachResults
  * @param {string | null} localVersion
@@ -81,57 +85,72 @@ function buildReport(tachResults, localVersion, baseVersion) {
 	}
 
 	// Group by benchmark name then browser
-	/** @type {Map<string, Map<string, TachResults["benchmarks"]>>} */
-	const benchmarks = new Map();
+	/**
+	 * @type {Report}
+	 */
+	const report = new Map();
 	for (let bench of tachResults.benchmarks) {
-		if (!benchmarks.has(bench.name)) {
-			benchmarks.set(bench.name, new Map());
+		if (!report.has(bench.name)) {
+			report.set(bench.name, new Map());
 		}
 
 		const browserName = getBrowserConfigName(bench.browser);
-		const benchBrowsers = benchmarks.get(bench.name);
+		const benchBrowsers = report.get(bench.name);
 		if (!benchBrowsers.has(browserName)) {
-			benchBrowsers.set(browserName, []);
+			benchBrowsers.set(browserName, {
+				results: [],
+				summary: null,
+				tableHtml: null,
+			});
 		}
 
-		benchBrowsers.get(browserName).push(bench);
+		benchBrowsers.get(browserName).results.push(bench);
 	}
 
 	// Generate tables for each benchmark/browser combination
 	/** @type {string[]} */
-	const tables = [];
 	for (let benchName of benchmarkNames) {
 		for (let browserName of browserNames) {
-			tables.push(renderTable(benchmarks.get(benchName).get(browserName)));
+			const benchReport = report.get(benchName).get(browserName);
+			benchReport.summary = "One line summary of results";
+			benchReport.tableHtml = renderTable(benchReport.results);
 		}
 	}
 
-	return {
-		summary: "One line summary of results",
-		markdown: `## Benchmark Results Markdown \n<div id="test-1">${tables[0]}</div>`,
-	};
+	return report;
+}
+
+/**
+ * @param {GitHubActionContext} context
+ * @param {Report} report
+ * @param {CommentData} [comment]
+ */
+function getCommentBody(context, report, comment) {
+	const benchReport = Array.from(Array.from(report.values())[0].values())[0];
+	return `## Benchmark Results Markdown \n<div id="test-1">${benchReport.tableHtml}</div>`;
 }
 
 /**
  * Create a PR comment, or update one if it already exists
+ *
+ * @typedef {import('@octokit/types').IssuesGetCommentResponseData} CommentData
+ *
  * @param {GitHubActionClient} github,
  * @param {GitHubActionContext} context
- * @param {string} commentMarkdown
+ * @param {(comment: CommentData | null) => string} getCommentBody
  * @param {Logger} logger
  */
-async function postOrUpdateComment(github, context, commentMarkdown, logger) {
+async function postOrUpdateComment(github, context, getCommentBody, logger) {
+	const footer = "\n\n<sub>tachometer-reporter-action</sub>"; // used to update this comment later
 	const commentInfo = {
 		...context.repo,
 		issue_number: context.issue.number,
 	};
 
-	const comment = {
-		...commentInfo,
-		body: commentMarkdown + "\n\n<sub>tachometer-reporter-action</sub>", // used to update this comment later
-	};
-
 	logger.startGroup(`Updating PR comment`);
-	let commentId;
+
+	/** @type {CommentData} */
+	let comment;
 	try {
 		logger.info(`Looking for existing comment...`);
 		const comments = (await github.issues.listComments(commentInfo)).data;
@@ -141,7 +160,7 @@ async function postOrUpdateComment(github, context, commentMarkdown, logger) {
 				c.user.type === "Bot" &&
 				/<sub>[\s\n]*tachometer-reporter-action/.test(c.body)
 			) {
-				commentId = c.id;
+				comment = c;
 				logger.info(`Found comment! (id: ${c.id})`);
 				logger.debug(() => `Found comment: ${JSON.stringify(c, null, 2)}`);
 				break;
@@ -151,28 +170,32 @@ async function postOrUpdateComment(github, context, commentMarkdown, logger) {
 		logger.info("Error checking for previous comments: " + e.message);
 	}
 
-	if (commentId) {
+	if (comment) {
 		try {
-			logger.info(`Updating comment (id: ${commentId})...`);
+			logger.info(`Updating comment (id: ${comment.id})...`);
 			await github.issues.updateComment({
 				...context.repo,
-				comment_id: commentId,
-				body: comment.body,
+				comment_id: comment.id,
+				body: getCommentBody(comment) + footer,
 			});
 		} catch (e) {
 			logger.info(`Error updating comment: ${e.message}`);
-			commentId = null;
+			comment = null;
 		}
 	}
 
-	if (!commentId) {
+	if (!comment) {
 		try {
 			logger.info(`Creating new comment...`);
-			await github.issues.createComment(comment);
+			await github.issues.createComment({
+				...commentInfo,
+				body: getCommentBody(null) + footer,
+			});
 		} catch (e) {
 			logger.info(`Error creating comment: ${e.message}`);
 		}
 	}
+
 	logger.endGroup();
 }
 
@@ -219,7 +242,12 @@ async function reportTachResults(
 		inputs.baseVersion
 	);
 
-	await postOrUpdateComment(github, context, report.markdown, logger);
+	await postOrUpdateComment(
+		github,
+		context,
+		(comment) => getCommentBody(context, report, comment),
+		logger
+	);
 	return report;
 }
 

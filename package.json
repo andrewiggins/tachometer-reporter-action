@@ -54,6 +54,7 @@
     "watch": "^1.0.2"
   },
   "dependencies": {
+    "pretty-bytes": "^5.3.0",
     "ua-parser-js": "^0.7.21"
   }
 }

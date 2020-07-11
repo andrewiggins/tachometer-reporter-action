@@ -1,5 +1,5 @@
 // Temporary until next version of Tachometer is released
-interface BrowserConfig {
+export interface BrowserConfig {
 	/** Name of the browser. */
 	name: BrowserName;
 	/** Whether to run in headless mode. */

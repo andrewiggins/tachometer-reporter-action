@@ -6384,8 +6384,84 @@ var uaParser = createCommonjsModule(function (module, exports) {
 })(typeof window === 'object' ? window : commonjsGlobal);
 });
 
+const BYTE_UNITS = [
+	'B',
+	'kB',
+	'MB',
+	'GB',
+	'TB',
+	'PB',
+	'EB',
+	'ZB',
+	'YB'
+];
+
+const BIT_UNITS = [
+	'b',
+	'kbit',
+	'Mbit',
+	'Gbit',
+	'Tbit',
+	'Pbit',
+	'Ebit',
+	'Zbit',
+	'Ybit'
+];
+
+/*
+Formats the given number using `Number#toLocaleString`.
+- If locale is a string, the value is expected to be a locale-key (for example: `de`).
+- If locale is true, the system default locale is used for translation.
+- If no value for locale is specified, the number is returned unmodified.
+*/
+const toLocaleString = (number, locale) => {
+	let result = number;
+	if (typeof locale === 'string') {
+		result = number.toLocaleString(locale);
+	} else if (locale === true) {
+		result = number.toLocaleString();
+	}
+
+	return result;
+};
+
+var prettyBytes = (number, options) => {
+	if (!Number.isFinite(number)) {
+		throw new TypeError(`Expected a finite number, got ${typeof number}: ${number}`);
+	}
+
+	options = Object.assign({bits: false}, options);
+	const UNITS = options.bits ? BIT_UNITS : BYTE_UNITS;
+
+	if (options.signed && number === 0) {
+		return ' 0 ' + UNITS[0];
+	}
+
+	const isNegative = number < 0;
+	const prefix = isNegative ? '-' : (options.signed ? '+' : '');
+
+	if (isNegative) {
+		number = -number;
+	}
+
+	if (number < 1) {
+		const numberString = toLocaleString(number, options.locale);
+		return prefix + numberString + ' ' + UNITS[0];
+	}
+
+	const exponent = Math.min(Math.floor(Math.log10(number) / 3), UNITS.length - 1);
+	// eslint-disable-next-line unicorn/prefer-exponentiation-operator
+	number = Number((number / Math.pow(1000, exponent)).toPrecision(3));
+	const numberString = toLocaleString(number, options.locale);
+
+	const unit = UNITS[exponent];
+
+	return prefix + numberString + ' ' + unit;
+};
+
 const { readFile } = fs.promises;
 const { UAParser } = uaParser;
+
 
 /** @jsx h */
 
@@ -6395,9 +6471,10 @@ function h(tag, attrs, ...children) {
 		attrStr += ` ${key}="${attrs[key]}"`;
 	}
 
+	// @ts-ignore
 	const childrenStr = children.flat(Infinity).join("");
 
-	return `<${tag} ${attrStr}>${childrenStr}</${tag}>`;
+	return `<${tag}${attrStr}>${childrenStr}</${tag}>`;
 }
 
 /**
@@ -6421,11 +6498,15 @@ function getBrowserConfigName(browser) {
 }
 
 /**
+ * @param {string} benchName
+ * @param {string} browserName
+ * @param {string} summary
  * @param {BenchmarkResult[]} benchmarks
  */
-function renderTable(benchmarks) {
+function renderTable(benchName, browserName, summary, benchmarks) {
 	return (
-		h('table', null
+		h('div', { id: "test-1",}
+, h('table', null
 , h('thead', null
 , h('tr', null
 , h('th', null, "Version")
@@ -6434,22 +6515,25 @@ function renderTable(benchmarks) {
 )
 , h('tbody', null
 , benchmarks.map((b) => {
-					return (
-						h('tr', null
+						return (
+							h('tr', null
 , h('td', null, b.version)
-, h('td', null, b.bytesSent)
+, h('td', null, prettyBytes(b.bytesSent))
 )
-					);
-				})
+						);
+					})
+)
 )
 )
 	);
 }
 
 /**
- * @typedef {{ summary: string; markdown: string; }} Report
- * @typedef {JsonOutputFile} TachResults
+ * @typedef {import('./global').JsonOutputFile} TachResults
  * @typedef {TachResults["benchmarks"][0]} BenchmarkResult
+ * @typedef {{ results: TachResults["benchmarks"]; summary: string; body: string; }} BenchmarkReport
+ * @typedef {Map<string, Map<string, BenchmarkReport>>} Report Results of
+ * Tachometer grouped by benchmark name, then browser
  *
  * @param {TachResults} tachResults
  * @param {string | null} localVersion
@@ -6467,57 +6551,85 @@ function buildReport(tachResults, localVersion, baseVersion) {
 	}
 
 	// Group by benchmark name then browser
-	/** @type {Map<string, Map<string, TachResults["benchmarks"]>>} */
-	const benchmarks = new Map();
+	/**
+	 * @type {Report}
+	 */
+	const report = new Map();
 	for (let bench of tachResults.benchmarks) {
-		if (!benchmarks.has(bench.name)) {
-			benchmarks.set(bench.name, new Map());
+		if (!report.has(bench.name)) {
+			report.set(bench.name, new Map());
 		}
 
 		const browserName = getBrowserConfigName(bench.browser);
-		const benchBrowsers = benchmarks.get(bench.name);
+		const benchBrowsers = report.get(bench.name);
 		if (!benchBrowsers.has(browserName)) {
-			benchBrowsers.set(browserName, []);
+			benchBrowsers.set(browserName, {
+				results: [],
+				summary: null,
+				body: null,
+			});
 		}
 
-		benchBrowsers.get(browserName).push(bench);
+		benchBrowsers.get(browserName).results.push(bench);
 	}
 
 	// Generate tables for each benchmark/browser combination
 	/** @type {string[]} */
-	const tables = [];
 	for (let benchName of benchmarkNames) {
 		for (let browserName of browserNames) {
-			tables.push(renderTable(benchmarks.get(benchName).get(browserName)));
+			const benchReport = report.get(benchName).get(browserName);
+			benchReport.summary = "One line summary of results";
+			benchReport.body = renderTable(
+				benchName,
+				browserName,
+				benchReport.summary,
+				benchReport.results
+			);
 		}
 	}
 
-	return {
-		summary: "One line summary of results",
-		markdown: `## Benchmark Results Markdown \n<div id="test-1">${tables[0]}</div>`,
-	};
+	return report;
+}
+
+/**
+ * @param {GitHubActionContext} context
+ * @param {Report} report
+ * @param {CommentData} [comment]
+ */
+function getCommentBody(context, report, comment) {
+	// TODO: Update comment body
+
+	let body = "## Benchmark Results Markdown\n";
+	for (let [benchName, browsers] of report) {
+		for (let [browserName, benchReport] of browsers) {
+			body += benchReport.body;
+		}
+	}
+
+	return body;
 }
 
 /**
  * Create a PR comment, or update one if it already exists
+ *
+ * @typedef {import('@octokit/types').IssuesGetCommentResponseData} CommentData
+ *
  * @param {GitHubActionClient} github,
  * @param {GitHubActionContext} context
- * @param {string} commentMarkdown
+ * @param {(comment: CommentData | null) => string} getCommentBody
  * @param {Logger} logger
  */
-async function postOrUpdateComment(github, context, commentMarkdown, logger) {
+async function postOrUpdateComment(github, context, getCommentBody, logger) {
+	const footer = "\n\n<sub>tachometer-reporter-action</sub>"; // used to update this comment later
 	const commentInfo = {
 		...context.repo,
 		issue_number: context.issue.number,
 	};
 
-	const comment = {
-		...commentInfo,
-		body: commentMarkdown + "\n\n<sub>tachometer-reporter-action</sub>", // used to update this comment later
-	};
-
 	logger.startGroup(`Updating PR comment`);
-	let commentId;
+
+	/** @type {CommentData} */
+	let comment;
 	try {
 		logger.info(`Looking for existing comment...`);
 		const comments = (await github.issues.listComments(commentInfo)).data;
@@ -6527,7 +6639,7 @@ async function postOrUpdateComment(github, context, commentMarkdown, logger) {
 				c.user.type === "Bot" &&
 				/<sub>[\s\n]*tachometer-reporter-action/.test(c.body)
 			) {
-				commentId = c.id;
+				comment = c;
 				logger.info(`Found comment! (id: ${c.id})`);
 				logger.debug(() => `Found comment: ${JSON.stringify(c, null, 2)}`);
 				break;
@@ -6537,28 +6649,32 @@ async function postOrUpdateComment(github, context, commentMarkdown, logger) {
 		logger.info("Error checking for previous comments: " + e.message);
 	}
 
-	if (commentId) {
+	if (comment) {
 		try {
-			logger.info(`Updating comment (id: ${commentId})...`);
+			logger.info(`Updating comment (id: ${comment.id})...`);
 			await github.issues.updateComment({
 				...context.repo,
-				comment_id: commentId,
-				body: comment.body,
+				comment_id: comment.id,
+				body: getCommentBody(comment) + footer,
 			});
 		} catch (e) {
 			logger.info(`Error updating comment: ${e.message}`);
-			commentId = null;
+			comment = null;
 		}
 	}
 
-	if (!commentId) {
+	if (!comment) {
 		try {
 			logger.info(`Creating new comment...`);
-			await github.issues.createComment(comment);
+			await github.issues.createComment({
+				...commentInfo,
+				body: getCommentBody(null) + footer,
+			});
 		} catch (e) {
 			logger.info(`Error creating comment: ${e.message}`);
 		}
 	}
+
 	logger.endGroup();
 }
 
@@ -6605,7 +6721,12 @@ async function reportTachResults(
 		inputs.baseVersion
 	);
 
-	await postOrUpdateComment(github, context, report.markdown, logger);
+	await postOrUpdateComment(
+		github,
+		context,
+		(comment) => getCommentBody(context, report, comment),
+		logger
+	);
 	return report;
 }
 
