@@ -6495,6 +6495,8 @@ const { h: h$1 } = html;
 
 // Utilities from Tachometer, adapted from: https://github.com/Polymer/tachometer/blob/ac0bc64e4521fb0ba9c78ceea0d382e55724be75/src/format.ts
 
+const lineBreak = h$1('br', null );
+
 /**
  * @typedef {ReturnType<typeof buildTableData>} TableData
  * @param {import('./index').TachResults["benchmarks"]} results
@@ -6660,15 +6662,15 @@ const colorizeSign = (n, format) => {
 function formatDifference({ absolute, percentChange }) {
 	let word, rel, abs;
 	if (absolute.low > 0 && percentChange.low > 0) {
-		word = `**slower** 🏗`; // bold red
+		word = h$1('strong', null, "slower 🏗" ); // bold red
 		rel = `${percent(percentChange.low)}% - ${percent(percentChange.high)}%`;
 		abs = `${absolute.low.toFixed(2)}ms - ${absolute.high.toFixed(2)}ms`;
 	} else if (absolute.high < 0 && percentChange.high < 0) {
-		word = `**faster** 🔥`; // bold green
+		word = h$1('strong', null, "faster 🔥" ); // bold green
 		rel = `${percent(-percentChange.high)}% - ${percent(-percentChange.low)}%`;
 		abs = `${-absolute.high.toFixed(2)}ms - ${-absolute.low.toFixed(2)}ms`;
 	} else {
-		word = `**unsure** 🔍`; // bold blue
+		word = h$1('strong', null, "unsure 🔍" ); // bold blue
 		rel = `${colorizeSign(percentChange.low, percent)}% - ${colorizeSign(
 			percentChange.high,
 			percent
@@ -6677,7 +6679,7 @@ function formatDifference({ absolute, percentChange }) {
 			n.toFixed(2)
 		)}ms - ${colorizeSign(absolute.high, (n) => n.toFixed(2))}ms`;
 	}
-	return `${word}\n${rel}\n${abs}`;
+	return [word, rel, abs].join(lineBreak);
 }
 
 /**
@@ -6721,7 +6723,7 @@ function makeUniqueLabelFn(results) {
 			fields.push(result.browser.name);
 		}
 
-		return fields.join("\n");
+		return fields.join(lineBreak);
 	};
 }
 
@@ -6742,11 +6744,7 @@ function renderTable3({ benchmarks }) {
 	const tableDimensions = [
 		{
 			label: "Version",
-			format(r) {
-				return labelFn(r)
-					.split("\n")
-					.join(h$1('br', null ));
-			},
+			format: labelFn,
 		},
 		runtimeConfidenceIntervalDimension,
 		...benchmarks.map((b, i) => {
@@ -6764,9 +6762,7 @@ function renderTable3({ benchmarks }) {
 						return "-";
 					}
 
-					return formatDifference(diff)
-						.split("\n")
-						.join(h$1('br', null ));
+					return formatDifference(diff);
 				},
 				// tableConfig: {
 				// 	alignment: "right",
@@ -6823,7 +6819,7 @@ function renderTable3({ benchmarks }) {
 									// const style = alignment ? `text-align: ${alignment}` : null;
 									// return <td style={style}>{d.format(b)}</td>;
 
-									return h$1('td', { align: "center",}, "\n\n" + d.format(b) + "\n\n");
+									return h$1('td', { align: "center",}, d.format(b));
 								})
 )
 						);

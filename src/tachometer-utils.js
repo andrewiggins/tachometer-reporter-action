@@ -6,6 +6,8 @@ const { h } = require("./html");
 
 // Utilities from Tachometer, adapted from: https://github.com/Polymer/tachometer/blob/ac0bc64e4521fb0ba9c78ceea0d382e55724be75/src/format.ts
 
+const lineBreak = <br />;
+
 /**
  * @typedef {ReturnType<typeof buildTableData>} TableData
  * @param {import('./index').TachResults["benchmarks"]} results
@@ -171,15 +173,15 @@ const colorizeSign = (n, format) => {
 function formatDifference({ absolute, percentChange }) {
 	let word, rel, abs;
 	if (absolute.low > 0 && percentChange.low > 0) {
-		word = `**slower** 🏗`; // bold red
+		word = <strong>slower 🏗</strong>; // bold red
 		rel = `${percent(percentChange.low)}% - ${percent(percentChange.high)}%`;
 		abs = `${absolute.low.toFixed(2)}ms - ${absolute.high.toFixed(2)}ms`;
 	} else if (absolute.high < 0 && percentChange.high < 0) {
-		word = `**faster** 🔥`; // bold green
+		word = <strong>faster 🔥</strong>; // bold green
 		rel = `${percent(-percentChange.high)}% - ${percent(-percentChange.low)}%`;
 		abs = `${-absolute.high.toFixed(2)}ms - ${-absolute.low.toFixed(2)}ms`;
 	} else {
-		word = `**unsure** 🔍`; // bold blue
+		word = <strong>unsure 🔍</strong>; // bold blue
 		rel = `${colorizeSign(percentChange.low, percent)}% - ${colorizeSign(
 			percentChange.high,
 			percent
@@ -188,7 +190,7 @@ function formatDifference({ absolute, percentChange }) {
 			n.toFixed(2)
 		)}ms - ${colorizeSign(absolute.high, (n) => n.toFixed(2))}ms`;
 	}
-	return `${word}\n${rel}\n${abs}`;
+	return [word, rel, abs].join(lineBreak);
 }
 
 /**
@@ -232,7 +234,7 @@ function makeUniqueLabelFn(results) {
 			fields.push(result.browser.name);
 		}
 
-		return fields.join("\n");
+		return fields.join(lineBreak);
 	};
 }
 
@@ -253,11 +255,7 @@ function renderTable3({ benchmarks }) {
 	const tableDimensions = [
 		{
 			label: "Version",
-			format(r) {
-				return labelFn(r)
-					.split("\n")
-					.join(<br />);
-			},
+			format: labelFn,
 		},
 		runtimeConfidenceIntervalDimension,
 		...benchmarks.map((b, i) => {
@@ -275,9 +273,7 @@ function renderTable3({ benchmarks }) {
 						return "-";
 					}
 
-					return formatDifference(diff)
-						.split("\n")
-						.join(<br />);
+					return formatDifference(diff);
 				},
 				// tableConfig: {
 				// 	alignment: "right",
@@ -334,9 +330,7 @@ function renderTable3({ benchmarks }) {
 									// const style = alignment ? `text-align: ${alignment}` : null;
 									// return <td style={style}>{d.format(b)}</td>;
 
-									return (
-										<td align="center">{"\n\n" + d.format(b) + "\n\n"}</td>
-									);
+									return <td align="center">{d.format(b)}</td>;
 								})}
 							</tr>
 						);
