@@ -5,13 +5,19 @@ branding:
   icon: bar-chart-2 # clipboard, file-text, flag, trending-up, upload
   color: purple
 inputs:
-  github_token:
+  github-token:
     description: "The GITHUB_TOKEN for the current workflow run"
     required: false
     default: ${{github.token}}
   path:
     description: "The path to the results JSON file of running tachometer"
     required: true
+  local-version:
+    description: "The name of the version/app in tachometer results that is under test or being built by this action"
+    required: false
+  base-version:
+    description: "The name of the version/app in tachometer results that maps the version that the local version is being compared to"
+    required: false
   use-check:
     description: "Report status as a CI Check instead of using a comment [experimental]"
     required: false

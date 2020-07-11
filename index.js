@@ -67,11 +67,11 @@ async function postOrUpdateComment(github, context, commentMarkdown, logger) {
 /**
  * @typedef {{ summary: string; markdown: string; }} Report
  * @param {import('tachometer/lib/json-output').JsonOutputFile} tachResults
- * @param {string | null} baseVersion
  * @param {string | null} localVersion
+ * @param {string | null} baseVersion
  * @returns {Report}
  */
-function buildReport(tachResults, baseVersion, localVersion) {
+function buildReport(tachResults, localVersion, baseVersion) {
 	return {
 		summary: "One line summary of results",
 		markdown: `## Benchmark Results Markdown \n<div id="test-1" style="color: red"><table><tbody><tr><td>Cell 1</td><td>Cell 2</td></tr></tbody></table></div>\n<p id="test-2">A paragraph</p>\n`,
@@ -98,7 +98,7 @@ const defaultLogger = {
 /**
  * @typedef {ReturnType<typeof import('@actions/github').getOctokit>} GitHubActionClient
  * @typedef {typeof import('@actions/github').context} GitHubActionContext
- * @typedef {{ path: string; }} Inputs
+ * @typedef {{ path: string; localVersion: string; baseVersion: string; }} Inputs
  * @typedef {{ warn(msg: string): void; info(msg: string): void; debug(getMsg: () => string): void; startGroup(name: string): void; endGroup(): void; }} Logger
  *
  * @param {GitHubActionClient} github
@@ -115,7 +115,11 @@ async function reportTachResults(
 	logger = defaultLogger
 ) {
 	const tachResults = JSON.parse(await readFile(inputs.path, "utf8"));
-	const report = buildReport(tachResults);
+	const report = buildReport(
+		tachResults,
+		inputs.localVersion,
+		inputs.baseVersion
+	);
 
 	await postOrUpdateComment(github, context, report.markdown, logger);
 	return report;

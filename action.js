@@ -45,12 +45,14 @@ const actionLogger = {
 };
 
 (async () => {
-	const token = core.getInput("github_token", { required: true });
+	const token = core.getInput("github-token", { required: true });
 	const path = core.getInput("path", { required: true });
+	const localVersion = core.getInput("local-version", { required: false });
+	const baseVersion = core.getInput("base-version", { required: false });
 	const useCheck = core.getInput("use-check", { required: true });
 
 	const octokit = github.getOctokit(token);
-	const inputs = { path };
+	const inputs = { path, localVersion, baseVersion };
 
 	let finish = (checkResult) =>
 		core.debug("Check Result: " + JSON.stringify(checkResult));
