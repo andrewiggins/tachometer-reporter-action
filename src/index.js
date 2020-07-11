@@ -55,7 +55,7 @@ function getCommentBody(context, report, comment) {
 		"<sub>local_version vs base_version</sub>",
 		"",
 		// TODO: Consider if numbers should inline or below result
-		"- test_bench: unsure 🔍 -39.84ms - 46.76ms (-10% - +12%)",
+		"- test_bench: unsure 🔍   *-4.10ms - +5.24ms (-10% - +12%)*",
 		"",
 		"### Results",
 		"",

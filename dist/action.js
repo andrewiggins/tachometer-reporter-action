@@ -1308,7 +1308,7 @@ function renderTable3({ benchmarks }) {
 		h$1('div', { id: "test-1",}
 , h$1('details', { open: true,}
 , h$1('summary', null
-, h$1('strong', { style: "font-size: 1.25em" ,}, benchNames.join(", "))
+, h$1('strong', null, benchNames.join(", "))
 )
 , h$1('ul', null
 , listDimensions.map((dim) => {
@@ -1418,7 +1418,7 @@ function getCommentBody(context, report, comment) {
 		"<sub>local_version vs base_version</sub>",
 		"",
 		// TODO: Consider if numbers should inline or below result
-		"- test_bench: unsure 🔍 -39.84ms - 46.76ms (-10% - +12%)",
+		"- test_bench: unsure 🔍   *-4.10ms - +5.24ms (-10% - +12%)*",
 		"",
 		"### Results",
 		"",

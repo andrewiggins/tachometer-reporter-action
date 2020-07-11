@@ -288,7 +288,7 @@ function renderTable3({ benchmarks }) {
 		<div id="test-1">
 			<details open>
 				<summary>
-					<strong style="font-size: 1.25em">{benchNames.join(", ")}</strong>
+					<strong>{benchNames.join(", ")}</strong>
 				</summary>
 				<ul>
 					{listDimensions.map((dim) => {
