@@ -171,15 +171,15 @@ const colorizeSign = (n, format) => {
 function formatDifference({ absolute, percentChange }) {
 	let word, rel, abs;
 	if (absolute.low > 0 && percentChange.low > 0) {
-		word = `slower`; // bold red
+		word = `slower 🏗`; // bold red
 		rel = `${percent(percentChange.low)}% - ${percent(percentChange.high)}%`;
 		abs = `${absolute.low.toFixed(2)}ms - ${absolute.high.toFixed(2)}ms`;
 	} else if (absolute.high < 0 && percentChange.high < 0) {
-		word = `faster`; // bold green
+		word = `faster 🔥`; // bold green
 		rel = `${percent(-percentChange.high)}% - ${percent(-percentChange.low)}%`;
 		abs = `${-absolute.high.toFixed(2)}ms - ${-absolute.low.toFixed(2)}ms`;
 	} else {
-		word = `unsure`; // bold blue
+		word = `unsure 🔍`; // bold blue
 		rel = `${colorizeSign(percentChange.low, percent)}% - ${colorizeSign(
 			percentChange.high,
 			percent
@@ -290,6 +290,7 @@ function renderTable3({ benchmarks }) {
 
 	return (
 		<div id="test-1">
+			<h3>{benchNames.join(", ")}</h3>
 			{"\n\n"}
 			:red_circle: :orange_circle: :yellow_circle: :green_circle:
 			:large_blue_circle: :red_square: :orange_square: :yellow_square:
@@ -302,7 +303,6 @@ function renderTable3({ benchmarks }) {
 			:rocket: :racing_car: :stop_sign: :construction: :building_construction:
 			:thinking:
 			{"\n\n"}
-			<h3>{benchNames.join(", ")}</h3>
 			<ul>
 				{listDimensions.map((dim) => {
 					const uniqueValues = new Set(benchmarks.map((b) => dim.format(b)));
