@@ -52,7 +52,8 @@ const actionLogger = {
 	const octokit = github.getOctokit(token);
 	const inputs = { path };
 
-	let finish = (checkResult) => console.log("Check Result:", checkResult);
+	let finish = (checkResult) =>
+		core.debug("Check Result: " + JSON.stringify(checkResult));
 	if (useCheck == "true") {
 		finish = await createCheck(octokit, github.context);
 	}

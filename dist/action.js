@@ -5556,7 +5556,7 @@ async function postOrUpdateComment(github, context, commentMarkdown, logger) {
 function buildReport(tachResults, baseVersion, localVersion) {
 	return {
 		summary: "One line summary of results",
-		markdown: `## Benchmark Results Markdown <div id="test-1" style="color: red"><table><tbody><tr><td>Cell 1</td><td>Cell 2</td></tr></tbody></table></div><p id="test-2">A paragraph</p>`,
+		markdown: `## Benchmark Results Markdown \n<div id="test-1" style="color: red"><table><tbody><tr><td>Cell 1</td><td>Cell 2</td></tr></tbody></table></div>\n<p id="test-2">A paragraph</p>\n`,
 	};
 }
 
