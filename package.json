@@ -38,6 +38,7 @@
     "@actions/github": "^4.0.0",
     "@rollup/plugin-commonjs": "^13.0.0",
     "@rollup/plugin-node-resolve": "^8.1.0",
+    "@rollup/plugin-sucrase": "^3.1.0",
     "husky": "^4.2.5",
     "lint-staged": "^10.2.11",
     "prettier": "^2.0.5",
@@ -45,5 +46,8 @@
     "rollup-plugin-node-externals": "^2.2.0",
     "tachometer": "^0.4.20",
     "uvu": "^0.1.0"
+  },
+  "dependencies": {
+    "ua-parser-js": "^0.7.21"
   }
 }
