@@ -12,11 +12,15 @@ inputs:
   path:
     description: "The path to the results JSON file of running tachometer"
     required: true
+  keep-old-results:
+    description: Whether to keep old results in the comment on re-runs
+    required: false
+    default: "false"
   local-version:
-    description: "The name of the version/app in tachometer results that is under test or being built by this action"
+    description: "The name of the version in tachometer results (i.e. packageVersions.label config) that is under test or being built by this action"
     required: false
   base-version:
-    description: "The name of the version/app in tachometer results that maps the version that the local version is being compared to"
+    description: "The name of the version in tachometer results (i.e. packageVersions.label config) that the local version should be compared to"
     required: false
   use-check:
     description: "Report status as a CI Check instead of using a comment [experimental]"

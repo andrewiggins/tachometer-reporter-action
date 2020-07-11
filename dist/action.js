@@ -7060,6 +7060,7 @@ const actionLogger = {
 (async () => {
 	const token = core.getInput("github-token", { required: true });
 	const path = core.getInput("path", { required: true });
+	const keepOldResults = core.getInput("keep-old-results", { required: false });
 	const localVersion = core.getInput("local-version", { required: false });
 	const baseVersion = core.getInput("base-version", { required: false });
 	const useCheck = core.getInput("use-check", { required: true });
