@@ -1,3 +1,13 @@
+import { BenchmarkResult } from "./index";
+
+/**
+ * An abstraction for the various dimensions of data we display.
+ */
+interface Dimension {
+	label: string;
+	format: (r: BenchmarkResult) => string;
+}
+
 // Temporary until next version of Tachometer is released
 export interface BrowserConfig {
 	/** Name of the browser. */

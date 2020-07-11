@@ -1,42 +1,10 @@
 const { readFile } = require("fs").promises;
 const { UAParser } = require("ua-parser-js");
 const prettyBytes = require("pretty-bytes");
+const { h } = require("./html");
+const { buildTableData, renderTable3 } = require("./tachometer-utils");
 
 /** @jsx h */
-
-function h(tag, attrs, ...children) {
-	let attrStr = "";
-	for (let key in attrs) {
-		attrStr += ` ${key}="${attrs[key]}"`;
-	}
-
-	// @ts-ignore
-	const childrenStr = children.flat(Infinity).join("");
-
-	return `<${tag}${attrStr}>${childrenStr}</${tag}>`;
-}
-
-/**
- * @param {BenchmarkResult["browser"]} browser
- */
-function getBrowserConfigName(browser) {
-	// From Tachometer: https://git.io/JJY8U
-	let s = browser.name;
-	if (browser.headless) {
-		s += "-headless";
-	}
-
-	if (browser.remoteUrl) {
-		s += `\n@${browser.remoteUrl}`;
-	}
-
-	if (browser.userAgent !== "") {
-		const ua = new UAParser(browser.userAgent).getBrowser();
-		s += `\n${ua.version}`;
-	}
-
-	return s;
-}
 
 /**
  * @param {string} benchName
@@ -70,10 +38,41 @@ function renderTable(benchName, browserName, summary, benchmarks) {
 }
 
 /**
+ * @param {import('./tachometer-utils').TableData} props
+ */
+function renderTable2({ fixed, unfixed }) {
+	const { dimensions, results } = unfixed;
+	return (
+		<div id="test-1">
+			<table>
+				<thead>
+					<tr>
+						{dimensions.map((d) => (
+							<th>{d.label}</th>
+						))}
+					</tr>
+				</thead>
+				<tbody>
+					{results.map((b) => {
+						return (
+							<tr>
+								{dimensions.map((d) => (
+									<td>{d.format(b)}</td>
+								))}
+							</tr>
+						);
+					})}
+				</tbody>
+			</table>
+		</div>
+	);
+}
+
+/**
  * @typedef {import('./global').JsonOutputFile} TachResults
  * @typedef {TachResults["benchmarks"][0]} BenchmarkResult
  * @typedef {{ summary: string; body: string; results: TachResults["benchmarks"]; }} BenchmarkReport
- * @typedef {Map<string, Map<string, BenchmarkReport>>} Report Results of
+ * @typedef {string} Report Results of
  * Tachometer grouped by benchmark name, then browser
  *
  * @param {TachResults} tachResults
@@ -83,53 +82,8 @@ function renderTable(benchName, browserName, summary, benchmarks) {
  * @returns {Report}
  */
 function buildReport(tachResults, localVersion, baseVersion) {
-	const benchmarkNames = new Set();
-	const browserNames = new Set();
-
-	for (let benchmark of tachResults.benchmarks) {
-		benchmarkNames.add(benchmark.name);
-		browserNames.add(getBrowserConfigName(benchmark.browser));
-	}
-
-	// Group by benchmark name then browser
-	/**
-	 * @type {Report}
-	 */
-	const report = new Map();
-	for (let bench of tachResults.benchmarks) {
-		if (!report.has(bench.name)) {
-			report.set(bench.name, new Map());
-		}
-
-		const browserName = getBrowserConfigName(bench.browser);
-		const benchBrowsers = report.get(bench.name);
-		if (!benchBrowsers.has(browserName)) {
-			benchBrowsers.set(browserName, {
-				results: [],
-				summary: null,
-				body: null,
-			});
-		}
-
-		benchBrowsers.get(browserName).results.push(bench);
-	}
-
-	// Generate tables for each benchmark/browser combination
-	/** @type {string[]} */
-	for (let benchName of benchmarkNames) {
-		for (let browserName of browserNames) {
-			const benchReport = report.get(benchName).get(browserName);
-			benchReport.summary = "One line summary of results";
-			benchReport.body = renderTable(
-				benchName,
-				browserName,
-				benchReport.summary,
-				benchReport.results
-			);
-		}
-	}
-
-	return report;
+	// return renderTable2(buildTableData(tachResults.benchmarks));
+	return renderTable3({ benchmarks: tachResults.benchmarks });
 }
 
 /**
@@ -141,13 +95,13 @@ function getCommentBody(context, report, comment) {
 	// TODO: Update comment body
 
 	let body = "## Benchmark Results Markdown\n";
-	for (let [benchName, browsers] of report) {
-		for (let [browserName, benchReport] of browsers) {
-			body += benchReport.body;
-		}
-	}
+	// for (let [benchName, browsers] of report) {
+	// 	for (let [browserName, benchReport] of browsers) {
+	// 		body += benchReport.body;
+	// 	}
+	// }
 
-	return body;
+	return body + report;
 }
 
 /**

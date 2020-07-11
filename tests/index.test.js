@@ -13,6 +13,7 @@ const baseVersion = "base-version";
 test("Initial test", () => {
 	const report = buildReport(testResults, localVersion, baseVersion);
 	assert.ok(report, "Returns a report");
+	console.log(report);
 });
 
 test.run();
