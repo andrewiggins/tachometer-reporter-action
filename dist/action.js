@@ -6482,6 +6482,7 @@ function buildReport(tachResults, localVersion, baseVersion) {
 	}
 
 	// Generate tables for each benchmark/browser combination
+	/** @type {string[]} */
 	const tables = [];
 	for (let benchName of benchmarkNames) {
 		for (let browserName of browserNames) {
