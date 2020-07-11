@@ -6769,7 +6769,7 @@ function renderTable3({ benchmarks }) {
 
 	return (
 		h$1('div', { id: "test-1",}
-, h$1('table', { style: "text-align: center" ,}
+, h$1('table', null
 , h$1('thead', null
 , h$1('tr', null
 , dimensions.map((d) => (
@@ -6790,7 +6790,7 @@ function renderTable3({ benchmarks }) {
 									// const style = alignment ? `text-align: ${alignment}` : null;
 									// return <td style={style}>{d.format(b)}</td>;
 
-									return h$1('td', null, d.format(b));
+									return h$1('td', { align: "center",}, d.format(b));
 								})
 )
 						);

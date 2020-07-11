@@ -280,7 +280,7 @@ function renderTable3({ benchmarks }) {
 
 	return (
 		<div id="test-1">
-			<table style="text-align: center">
+			<table>
 				<thead>
 					<tr>
 						{dimensions.map((d) => (
@@ -301,7 +301,7 @@ function renderTable3({ benchmarks }) {
 									// const style = alignment ? `text-align: ${alignment}` : null;
 									// return <td style={style}>{d.format(b)}</td>;
 
-									return <td>{d.format(b)}</td>;
+									return <td align="center">{d.format(b)}</td>;
 								})}
 							</tr>
 						);
