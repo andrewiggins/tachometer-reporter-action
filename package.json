@@ -4,6 +4,7 @@
   "description": "Report the results of Polymer/tachometer in a comment for PRs",
   "main": "lib/index.js",
   "scripts": {
+    "prepare": "npm run build",
     "dev": "watch \"sucrase --production -t jsx --jsx-pragma h -d lib ./src\" src",
     "build": "npm run build:index && npm run build:action ",
     "build:index": "sucrase --production -t jsx --jsx-pragma h -d lib ./src",
