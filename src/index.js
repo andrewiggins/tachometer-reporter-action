@@ -7,68 +7,6 @@ const { buildTableData, renderTable3 } = require("./tachometer-utils");
 /** @jsx h */
 
 /**
- * @param {string} benchName
- * @param {string} browserName
- * @param {string} summary
- * @param {BenchmarkResult[]} benchmarks
- */
-function renderTable(benchName, browserName, summary, benchmarks) {
-	return (
-		<div id="test-1">
-			<table>
-				<thead>
-					<tr>
-						<th>Version</th>
-						<th>Bytes Sent</th>
-					</tr>
-				</thead>
-				<tbody>
-					{benchmarks.map((b) => {
-						return (
-							<tr>
-								<td>{b.version}</td>
-								<td>{prettyBytes(b.bytesSent)}</td>
-							</tr>
-						);
-					})}
-				</tbody>
-			</table>
-		</div>
-	);
-}
-
-/**
- * @param {import('./tachometer-utils').TableData} props
- */
-function renderTable2({ fixed, unfixed }) {
-	const { dimensions, results } = unfixed;
-	return (
-		<div id="test-1">
-			<table>
-				<thead>
-					<tr>
-						{dimensions.map((d) => (
-							<th>{d.label}</th>
-						))}
-					</tr>
-				</thead>
-				<tbody>
-					{results.map((b) => {
-						return (
-							<tr>
-								{dimensions.map((d) => (
-									<td>{d.format(b)}</td>
-								))}
-							</tr>
-						);
-					})}
-				</tbody>
-			</table>
-		</div>
-	);
-}
-
-/**
  * @typedef {import('./global').JsonOutputFile} TachResults
  * @typedef {TachResults["benchmarks"][0]} BenchmarkResult
  * @typedef {{ summary: string; body: string; results: TachResults["benchmarks"]; }} BenchmarkReport
@@ -86,19 +24,29 @@ function buildReport(tachResults, localVersion, baseVersion) {
 	// TODO: Write comment update code
 	// TODO: Determine if we can render `Running...` status at start of job
 	//		- might need to add a label/id input values so we can update comments
-	//			event before we have results
+	// 			before we have results
+	// TODO: Consider improving names (likely needs to happen in runner repo)
+	//		- "before" and "this PR"
+	//		- Allow different names for local runs and CI runs
+	// 		- Allowing aliases
+	// 		- replace `base-version` with `branch@SHA`
 
-	// return renderTable2(buildTableData(tachResults.benchmarks));
 	return renderTable3({ benchmarks: tachResults.benchmarks });
 }
 
 /**
  * @param {GitHubActionContext} context
  * @param {Report} report
- * @param {CommentData} [comment]
+ * @param {CommentData | null} comment
  */
 function getCommentBody(context, report, comment) {
 	// TODO: Update comment body
+	// TODO: Include which action generated the results (e.g. Main#13)
+	// TODO: Add tests for getCommentBody
+	//		- new comment (null comment arg)
+	//		- existing comment with no existing id
+	//		- existing comment with existing id & replace
+	//		- existing comment with existing id & no replace
 
 	let body = [
 		"## Tachometer Benchmark Results",
@@ -106,18 +54,13 @@ function getCommentBody(context, report, comment) {
 		"### Summary",
 		"<sub>local_version vs base_version</sub>",
 		"",
-		"- test_bench: unsure 🔍",
+		// TODO: Consider if numbers should inline or below result
+		"- test_bench: unsure 🔍 -39.84ms - 46.76ms (-10% - +12%)",
 		"",
 		"### Results",
 		"",
 		report,
 	].join("\n");
-
-	// for (let [benchName, browsers] of report) {
-	// 	for (let [browserName, benchReport] of browsers) {
-	// 		body += benchReport.body;
-	// 	}
-	// }
 
 	return body;
 }
@@ -249,5 +192,6 @@ async function reportTachResults(
 
 module.exports = {
 	buildReport,
+	getCommentBody,
 	reportTachResults,
 };
