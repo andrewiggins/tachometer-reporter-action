@@ -171,15 +171,15 @@ const colorizeSign = (n, format) => {
 function formatDifference({ absolute, percentChange }) {
 	let word, rel, abs;
 	if (absolute.low > 0 && percentChange.low > 0) {
-		word = `slower 🏗`; // bold red
+		word = `**slower** 🏗`; // bold red
 		rel = `${percent(percentChange.low)}% - ${percent(percentChange.high)}%`;
 		abs = `${absolute.low.toFixed(2)}ms - ${absolute.high.toFixed(2)}ms`;
 	} else if (absolute.high < 0 && percentChange.high < 0) {
-		word = `faster 🔥`; // bold green
+		word = `**faster** 🔥`; // bold green
 		rel = `${percent(-percentChange.high)}% - ${percent(-percentChange.low)}%`;
 		abs = `${-absolute.high.toFixed(2)}ms - ${-absolute.low.toFixed(2)}ms`;
 	} else {
-		word = `unsure 🔍`; // bold blue
+		word = `**unsure** 🔍`; // bold blue
 		rel = `${colorizeSign(percentChange.low, percent)}% - ${colorizeSign(
 			percentChange.high,
 			percent
@@ -334,7 +334,9 @@ function renderTable3({ benchmarks }) {
 									// const style = alignment ? `text-align: ${alignment}` : null;
 									// return <td style={style}>{d.format(b)}</td>;
 
-									return <td align="center">{d.format(b)}</td>;
+									return (
+										<td align="center">{"\n\n" + d.format(b) + "\n\n"}</td>
+									);
 								})}
 							</tr>
 						);
