@@ -5509,6 +5509,7 @@ async function postOrUpdateComment(github, context, commentMarkdown, logger) {
 	logger.startGroup(`Updating PR comment`);
 	let commentId;
 	try {
+		logger.info(`Looking for existing comment...`);
 		const comments = (await github.issues.listComments(commentInfo)).data;
 		for (let i = comments.length; i--; ) {
 			const c = comments[i];
@@ -5517,6 +5518,8 @@ async function postOrUpdateComment(github, context, commentMarkdown, logger) {
 				/<sub>[\s\n]*tachometer-reporter-action/.test(c.body)
 			) {
 				commentId = c.id;
+				logger.info(`Found comment! (id: ${c.id})`);
+				logger.debug(() => `Found comment: ${JSON.stringify(c, null, 2)}`);
 				break;
 			}
 		}
@@ -5526,18 +5529,21 @@ async function postOrUpdateComment(github, context, commentMarkdown, logger) {
 
 	if (commentId) {
 		try {
+			logger.info(`Updating comment (id: ${commentId})...`);
 			await github.issues.updateComment({
 				...context.repo,
 				comment_id: commentId,
 				body: comment.body,
 			});
 		} catch (e) {
+			logger.info(`Error updating comment: ${e.message}`);
 			commentId = null;
 		}
 	}
 
 	if (!commentId) {
 		try {
+			logger.info(`Creating new comment...`);
 			await github.issues.createComment(comment);
 		} catch (e) {
 			logger.info(`Error creating comment: ${e.message}`);
