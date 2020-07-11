@@ -288,17 +288,8 @@ function renderTable3({ benchmarks }) {
 		<div id="test-1">
 			<details open>
 				<summary>
-					<h3>{benchNames.join(", ")}</h3>
+					<strong style="font-size: 1.25em">{benchNames.join(", ")}</strong>
 				</summary>
-				{"\n\n"}
-				:heavy_check_mark: :x: :part_alternation_mark: :question: :exclamation:
-				:left_right_arrow: :arrow_upper_right: :arrow_lower_right:
-				:arrow_lower_left: :arrow_upper_left: :arrow_heading_up:
-				:arrow_heading_down: :warning: :no_entry: :no_entry_sign:
-				:hammer_and_wrench: :fire: :mag: :fireworks: :sparkles: :tada: :star2:
-				:rocket: :racing_car: :stop_sign: :construction: :building_construction:
-				:thinking:
-				{"\n\n"}
 				<ul>
 					{listDimensions.map((dim) => {
 						const uniqueValues = new Set(benchmarks.map((b) => dim.format(b)));

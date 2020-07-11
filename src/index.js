@@ -100,7 +100,7 @@ function buildReport(tachResults, localVersion, baseVersion) {
 function getCommentBody(context, report, comment) {
 	// TODO: Update comment body
 
-	let body = "## Benchmark Results Markdown\n";
+	let body = "## Tachometer Benchmark Results\n";
 	// for (let [benchName, browsers] of report) {
 	// 	for (let [browserName, benchReport] of browsers) {
 	// 		body += benchReport.body;

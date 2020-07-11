@@ -6777,17 +6777,8 @@ function renderTable3({ benchmarks }) {
 		h$1('div', { id: "test-1",}
 , h$1('details', { open: true,}
 , h$1('summary', null
-, h$1('h3', null, benchNames.join(", "))
+, h$1('strong', { style: "font-size: 1.25em" ,}, benchNames.join(", "))
 )
-, "\n\n", ":heavy_check_mark: :x: :part_alternation_mark: :question: :exclamation: :left_right_arrow: :arrow_upper_right: :arrow_lower_right: :arrow_lower_left: :arrow_upper_left: :arrow_heading_up: :arrow_heading_down: :warning: :no_entry: :no_entry_sign: :hammer_and_wrench: :fire: :mag: :fireworks: :sparkles: :tada: :star2: :rocket: :racing_car: :stop_sign: :construction: :building_construction: :thinking:"
-
-
-
-
-
-
-
-, "\n\n"
 , h$1('ul', null
 , listDimensions.map((dim) => {
 						const uniqueValues = new Set(benchmarks.map((b) => dim.format(b)));
@@ -6877,7 +6868,7 @@ function buildReport(tachResults, localVersion, baseVersion) {
 function getCommentBody(context, report, comment) {
 	// TODO: Update comment body
 
-	let body = "## Benchmark Results Markdown\n";
+	let body = "## Tachometer Benchmark Results\n";
 	// for (let [benchName, browsers] of report) {
 	// 	for (let [browserName, benchReport] of browsers) {
 	// 		body += benchReport.body;
