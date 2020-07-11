@@ -6586,15 +6586,18 @@ const browserDimension = {
 			s += "-headless";
 		}
 
-		if (browser.remoteUrl) {
-			s += `\n@${browser.remoteUrl}`;
-		}
+		// if (browser.remoteUrl) {
+		// 	s += `\n@${browser.remoteUrl}`;
+		// }
 
-		if (browser.userAgent !== "") {
-			// We'll only have a user agent when using the built-in static server.
-			// TODO Get UA from window.navigator.userAgent so we always have it.
+		// if (browser.userAgent !== "") {
+		// 	const ua = new UAParser(browser.userAgent).getBrowser();
+		// 	s += `\n${ua.version}`;
+		// }
+
+		if (browser.userAgent) {
 			const ua = new UAParser(browser.userAgent).getBrowser();
-			s += `\n${ua.version}`;
+			s += ` ${ua.version}`;
 		}
 
 		return s;
@@ -6726,10 +6729,17 @@ function makeUniqueLabelFn(results) {
  * @param {{ benchmarks: import('./index').TachResults["benchmarks"] }} props
  */
 function renderTable3({ benchmarks }) {
+	// Hard code what dimensions are rendered in the main table since GitHub comments
+	// have limited horizontal space
+
+	const benchNames = Array.from(new Set(benchmarks.map((b) => b.name)));
+
+	const listDimensions = [browserDimension, sampleSizeDimension];
+
 	const labelFn = makeUniqueLabelFn(benchmarks);
 
 	/** @type {import("./global").Dimension[]} */
-	const dimensions = [
+	const tableDimensions = [
 		{
 			label: "Version",
 			format(r) {
@@ -6769,10 +6779,21 @@ function renderTable3({ benchmarks }) {
 
 	return (
 		h$1('div', { id: "test-1",}
+, h$1('h3', null, benchNames.join(", "))
+, h$1('ul', null
+, listDimensions.map((dim) => {
+					const uniqueValues = new Set(benchmarks.map((b) => dim.format(b)));
+					return (
+						h$1('li', null
+, dim.label, ": " , Array.from(uniqueValues).join(", ")
+)
+					);
+				})
+)
 , h$1('table', null
 , h$1('thead', null
 , h$1('tr', null
-, dimensions.map((d) => (
+, tableDimensions.map((d) => (
 							h$1('th', null, d.label)
 						))
 )
@@ -6781,7 +6802,7 @@ function renderTable3({ benchmarks }) {
 , benchmarks.map((b) => {
 						return (
 							h$1('tr', null
-, dimensions.map((d, i) => {
+, tableDimensions.map((d, i) => {
 									// const alignment =
 									// 	b.differences[i] == null
 									// 		? "center"
@@ -6829,6 +6850,13 @@ const { buildTableData: buildTableData$1, renderTable3: renderTable3$1 } = tacho
  * @returns {Report}
  */
 function buildReport(tachResults, localVersion, baseVersion) {
+
+	// TODO: Generate summaries
+	// TODO: Write comment update code
+	// TODO: Determine if we can render `Running...` status at start of job
+	//		- might need to add a label/id input values so we can update comments
+	//			event before we have results
+
 	// return renderTable2(buildTableData(tachResults.benchmarks));
 	return renderTable3$1({ benchmarks: tachResults.benchmarks });
 }

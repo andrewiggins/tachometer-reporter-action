@@ -82,6 +82,12 @@ function renderTable2({ fixed, unfixed }) {
  * @returns {Report}
  */
 function buildReport(tachResults, localVersion, baseVersion) {
+	// TODO: Generate summaries
+	// TODO: Write comment update code
+	// TODO: Determine if we can render `Running...` status at start of job
+	//		- might need to add a label/id input values so we can update comments
+	//			event before we have results
+
 	// return renderTable2(buildTableData(tachResults.benchmarks));
 	return renderTable3({ benchmarks: tachResults.benchmarks });
 }

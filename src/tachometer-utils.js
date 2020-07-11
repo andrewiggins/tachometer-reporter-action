@@ -97,15 +97,18 @@ const browserDimension = {
 			s += "-headless";
 		}
 
-		if (browser.remoteUrl) {
-			s += `\n@${browser.remoteUrl}`;
-		}
+		// if (browser.remoteUrl) {
+		// 	s += `\n@${browser.remoteUrl}`;
+		// }
 
-		if (browser.userAgent !== "") {
-			// We'll only have a user agent when using the built-in static server.
-			// TODO Get UA from window.navigator.userAgent so we always have it.
+		// if (browser.userAgent !== "") {
+		// 	const ua = new UAParser(browser.userAgent).getBrowser();
+		// 	s += `\n${ua.version}`;
+		// }
+
+		if (browser.userAgent) {
 			const ua = new UAParser(browser.userAgent).getBrowser();
-			s += `\n${ua.version}`;
+			s += ` ${ua.version}`;
 		}
 
 		return s;
@@ -237,10 +240,17 @@ function makeUniqueLabelFn(results) {
  * @param {{ benchmarks: import('./index').TachResults["benchmarks"] }} props
  */
 function renderTable3({ benchmarks }) {
+	// Hard code what dimensions are rendered in the main table since GitHub comments
+	// have limited horizontal space
+
+	const benchNames = Array.from(new Set(benchmarks.map((b) => b.name)));
+
+	const listDimensions = [browserDimension, sampleSizeDimension];
+
 	const labelFn = makeUniqueLabelFn(benchmarks);
 
 	/** @type {import("./global").Dimension[]} */
-	const dimensions = [
+	const tableDimensions = [
 		{
 			label: "Version",
 			format(r) {
@@ -280,10 +290,21 @@ function renderTable3({ benchmarks }) {
 
 	return (
 		<div id="test-1">
+			<h3>{benchNames.join(", ")}</h3>
+			<ul>
+				{listDimensions.map((dim) => {
+					const uniqueValues = new Set(benchmarks.map((b) => dim.format(b)));
+					return (
+						<li>
+							{dim.label}: {Array.from(uniqueValues).join(", ")}
+						</li>
+					);
+				})}
+			</ul>
 			<table>
 				<thead>
 					<tr>
-						{dimensions.map((d) => (
+						{tableDimensions.map((d) => (
 							<th>{d.label}</th>
 						))}
 					</tr>
@@ -292,7 +313,7 @@ function renderTable3({ benchmarks }) {
 					{benchmarks.map((b) => {
 						return (
 							<tr>
-								{dimensions.map((d, i) => {
+								{tableDimensions.map((d, i) => {
 									// const alignment =
 									// 	b.differences[i] == null
 									// 		? "center"
