@@ -173,11 +173,11 @@ const colorizeSign = (n, format) => {
 function formatDifference({ absolute, percentChange }) {
 	let word, rel, abs;
 	if (absolute.low > 0 && percentChange.low > 0) {
-		word = <strong>slower 🏗</strong>; // bold red
+		word = <strong>slower ❌</strong>; // bold red
 		rel = `${percent(percentChange.low)}% - ${percent(percentChange.high)}%`;
 		abs = `${absolute.low.toFixed(2)}ms - ${absolute.high.toFixed(2)}ms`;
 	} else if (absolute.high < 0 && percentChange.high < 0) {
-		word = <strong>faster 🔥</strong>; // bold green
+		word = <strong>faster ✔</strong>; // bold green
 		rel = `${percent(-percentChange.high)}% - ${percent(-percentChange.low)}%`;
 		abs = `${-absolute.high.toFixed(2)}ms - ${-absolute.low.toFixed(2)}ms`;
 	} else {
@@ -288,9 +288,6 @@ function renderTable3({ benchmarks }) {
 		<div id="test-1">
 			<h3>{benchNames.join(", ")}</h3>
 			{"\n\n"}
-			:red_circle: :orange_circle: :yellow_circle: :green_circle:
-			:large_blue_circle: :red_square: :orange_square: :yellow_square:
-			:green_square: :blue_square: :large_orange_diamond: :large_blue_diamond:
 			:heavy_check_mark: :x: :part_alternation_mark: :question: :exclamation:
 			:left_right_arrow: :arrow_upper_right: :arrow_lower_right:
 			:arrow_lower_left: :arrow_upper_left: :arrow_heading_up:

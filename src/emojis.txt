@@ -1,15 +1,7 @@
-🔴 :red_circle:
-🟠 :orange_circle:
-🟡 :yellow_circle:
-🟢 :green_circle:
-🔵 :large_blue_circle:
-🟥 :red_square:
-🟧 :orange_square:
-🟨 :yellow_square:
-🟩 :green_square:
-🟦 :blue_square:
-🔶 :large_orange_diamond:
-🔷 :large_blue_diamond:
+Don't use just shapes since they rely on just color to communicate info which
+excludes color-blind people
+
+
 ✔ :heavy_check_mark:
 ❌ :x:
 〽 :part_alternation_mark:
