@@ -5521,7 +5521,7 @@ async function postOrUpdateComment(github, context, commentMarkdown, logger) {
 			}
 		}
 	} catch (e) {
-		console.log("Error checking for previous comments: " + e.message);
+		logger.info("Error checking for previous comments: " + e.message);
 	}
 
 	if (commentId) {
@@ -5540,7 +5540,7 @@ async function postOrUpdateComment(github, context, commentMarkdown, logger) {
 		try {
 			await github.issues.createComment(comment);
 		} catch (e) {
-			console.log(`Error creating comment: ${e.message}`);
+			logger.info(`Error creating comment: ${e.message}`);
 		}
 	}
 	logger.endGroup();
@@ -5549,12 +5549,14 @@ async function postOrUpdateComment(github, context, commentMarkdown, logger) {
 /**
  * @typedef {{ summary: string; markdown: string; }} Report
  * @param {import('tachometer/lib/json-output').JsonOutputFile} tachResults
+ * @param {string | null} baseVersion
+ * @param {string | null} localVersion
  * @returns {Report}
  */
-function buildReport(tachResults) {
+function buildReport(tachResults, baseVersion, localVersion) {
 	return {
 		summary: "One line summary of results",
-		markdown: "## Benchmark Results Markdown",
+		markdown: `## Benchmark Results Markdown <div id="test-1" style="color: red"><table><tbody><tr><td>Cell 1</td><td>Cell 2</td></tr></tbody></table></div><p id="test-2">A paragraph</p>`,
 	};
 }
 
@@ -5658,7 +5660,8 @@ const actionLogger = {
 	const octokit = github.getOctokit(token);
 	const inputs = { path };
 
-	let finish = (checkResult) => console.log("Check Result:", checkResult);
+	let finish = (checkResult) =>
+		core.debug("Check Result: " + JSON.stringify(checkResult));
 	if (useCheck == "true") {
 		finish = await createCheck(octokit, github.context);
 	}
