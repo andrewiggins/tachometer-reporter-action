@@ -290,7 +290,8 @@ function renderTable3({ benchmarks }) {
 
 	return (
 		<div id="test-1">
-			<h3>{benchNames.join(", ")}</h3>
+			<style>{".bench-title { color: blue }"}</style>
+			<h3 class="bench-title">{benchNames.join(", ")}</h3>
 			<ul>
 				{listDimensions.map((dim) => {
 					const uniqueValues = new Set(benchmarks.map((b) => dim.format(b)));
