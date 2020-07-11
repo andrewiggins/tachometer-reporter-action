@@ -20,52 +20,59 @@ function h(tag, attrs, ...children) {
  * @param {BenchmarkResult["browser"]} browser
  */
 function getBrowserConfigName(browser) {
+	// From Tachometer: https://git.io/JJY8U
 	let s = browser.name;
 	if (browser.headless) {
 		s += "-headless";
 	}
+
 	if (browser.remoteUrl) {
 		s += `\n@${browser.remoteUrl}`;
 	}
+
 	if (browser.userAgent !== "") {
-		// We'll only have a user agent when using the built-in static server.
-		// TODO Get UA from window.navigator.userAgent so we always have it.
 		const ua = new UAParser(browser.userAgent).getBrowser();
 		s += `\n${ua.version}`;
 	}
+
 	return s;
 }
 
 /**
+ * @param {string} benchName
+ * @param {string} browserName
+ * @param {string} summary
  * @param {BenchmarkResult[]} benchmarks
  */
-function renderTable(benchmarks) {
+function renderTable(benchName, browserName, summary, benchmarks) {
 	return (
-		<table>
-			<thead>
-				<tr>
-					<th>Version</th>
-					<th>Bytes Sent</th>
-				</tr>
-			</thead>
-			<tbody>
-				{benchmarks.map((b) => {
-					return (
-						<tr>
-							<td>{b.version}</td>
-							<td>{prettyBytes(b.bytesSent)}</td>
-						</tr>
-					);
-				})}
-			</tbody>
-		</table>
+		<div id="test-1">
+			<table>
+				<thead>
+					<tr>
+						<th>Version</th>
+						<th>Bytes Sent</th>
+					</tr>
+				</thead>
+				<tbody>
+					{benchmarks.map((b) => {
+						return (
+							<tr>
+								<td>{b.version}</td>
+								<td>{prettyBytes(b.bytesSent)}</td>
+							</tr>
+						);
+					})}
+				</tbody>
+			</table>
+		</div>
 	);
 }
 
 /**
  * @typedef {import('./global').JsonOutputFile} TachResults
  * @typedef {TachResults["benchmarks"][0]} BenchmarkResult
- * @typedef {{ results: TachResults["benchmarks"]; summary: string; tableHtml: string; }} BenchmarkReport
+ * @typedef {{ summary: string; body: string; results: TachResults["benchmarks"]; }} BenchmarkReport
  * @typedef {Map<string, Map<string, BenchmarkReport>>} Report Results of
  * Tachometer grouped by benchmark name, then browser
  *
@@ -100,7 +107,7 @@ function buildReport(tachResults, localVersion, baseVersion) {
 			benchBrowsers.set(browserName, {
 				results: [],
 				summary: null,
-				tableHtml: null,
+				body: null,
 			});
 		}
 
@@ -113,7 +120,12 @@ function buildReport(tachResults, localVersion, baseVersion) {
 		for (let browserName of browserNames) {
 			const benchReport = report.get(benchName).get(browserName);
 			benchReport.summary = "One line summary of results";
-			benchReport.tableHtml = renderTable(benchReport.results);
+			benchReport.body = renderTable(
+				benchName,
+				browserName,
+				benchReport.summary,
+				benchReport.results
+			);
 		}
 	}
 
@@ -126,8 +138,16 @@ function buildReport(tachResults, localVersion, baseVersion) {
  * @param {CommentData} [comment]
  */
 function getCommentBody(context, report, comment) {
-	const benchReport = Array.from(Array.from(report.values())[0].values())[0];
-	return `## Benchmark Results Markdown \n<div id="test-1">${benchReport.tableHtml}</div>`;
+	// TODO: Update comment body
+
+	let body = "## Benchmark Results Markdown\n";
+	for (let [benchName, browsers] of report) {
+		for (let [browserName, benchReport] of browsers) {
+			body += benchReport.body;
+		}
+	}
+
+	return body;
 }
 
 /**

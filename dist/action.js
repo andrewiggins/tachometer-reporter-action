@@ -6481,19 +6481,21 @@ function h(tag, attrs, ...children) {
  * @param {BenchmarkResult["browser"]} browser
  */
 function getBrowserConfigName(browser) {
+	// From Tachometer: https://git.io/JJY8U
 	let s = browser.name;
 	if (browser.headless) {
 		s += "-headless";
 	}
+
 	if (browser.remoteUrl) {
 		s += `\n@${browser.remoteUrl}`;
 	}
+
 	if (browser.userAgent !== "") {
-		// We'll only have a user agent when using the built-in static server.
-		// TODO Get UA from window.navigator.userAgent so we always have it.
 		const ua = new UAParser(browser.userAgent).getBrowser();
 		s += `\n${ua.version}`;
 	}
+
 	return s;
 }
 
@@ -6531,7 +6533,7 @@ function renderTable(benchName, browserName, summary, benchmarks) {
 /**
  * @typedef {import('./global').JsonOutputFile} TachResults
  * @typedef {TachResults["benchmarks"][0]} BenchmarkResult
- * @typedef {{ results: TachResults["benchmarks"]; summary: string; body: string; }} BenchmarkReport
+ * @typedef {{ summary: string; body: string; results: TachResults["benchmarks"]; }} BenchmarkReport
  * @typedef {Map<string, Map<string, BenchmarkReport>>} Report Results of
  * Tachometer grouped by benchmark name, then browser
  *
