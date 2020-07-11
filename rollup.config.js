@@ -8,6 +8,8 @@ module.exports = {
 	output: {
 		dir: "dist",
 		format: "cjs",
+		// Don't include hash since this is a NodeJS module we check in
+		chunkFileNames: "[name].js",
 	},
 	plugins: [
 		sucrase({

@@ -2,7 +2,7 @@
 
 function _interopDefault (ex) { return (ex && (typeof ex === 'object') && 'default' in ex) ? ex['default'] : ex; }
 
-var github = require('./github-53363dd0.js');
+var github = require('./github.js');
 require('os');
 require('path');
 var fs = _interopDefault(require('fs'));
