@@ -9,7 +9,9 @@ function h(tag, attrs, ...children) {
 		attrStr += ` ${key}="${attrs[key]}"`;
 	}
 
-	return `<${tag} ${attrStr}>${children}</${tag}>`;
+	const childrenStr = children.flat(Infinity).join("");
+
+	return `<${tag} ${attrStr}>${childrenStr}</${tag}>`;
 }
 
 /**
@@ -96,6 +98,7 @@ function buildReport(tachResults, localVersion, baseVersion) {
 	}
 
 	// Generate tables for each benchmark/browser combination
+	/** @type {string[]} */
 	const tables = [];
 	for (let benchName of benchmarkNames) {
 		for (let browserName of browserNames) {

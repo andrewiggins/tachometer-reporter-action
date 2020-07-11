@@ -6395,7 +6395,9 @@ function h(tag, attrs, ...children) {
 		attrStr += ` ${key}="${attrs[key]}"`;
 	}
 
-	return `<${tag} ${attrStr}>${children}</${tag}>`;
+	const childrenStr = children.flat(Infinity).join("");
+
+	return `<${tag} ${attrStr}>${childrenStr}</${tag}>`;
 }
 
 /**
