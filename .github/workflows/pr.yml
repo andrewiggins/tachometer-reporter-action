@@ -19,3 +19,7 @@ jobs:
         uses: ./
         with:
           path: tests/test-results.json
+      # - name: Report Other Tachometer Result
+      #   uses: ./
+      #   with:
+      #     path: tests/other-results.json
