@@ -62,7 +62,7 @@ const actionLogger = {
 
 	try {
 		core.debug("Inputs: " + JSON.stringify(inputs, null, 2));
-		core.debug("Context: " + JSON.stringify(github.context, undefined, 2));
+		// core.debug("Context: " + JSON.stringify(github.context, undefined, 2));
 
 		let results = await reportTachResults(
 			octokit,
