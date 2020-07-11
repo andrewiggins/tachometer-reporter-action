@@ -128,6 +128,9 @@ const bytesSentDimension = {
 const runtimeConfidenceIntervalDimension = {
 	label: "Avg time",
 	format: (b) => formatConfidenceInterval(b.mean, (n) => n.toFixed(2) + "ms"),
+	// tableConfig: {
+	// 	alignment: "right",
+	// },
 };
 
 /**
@@ -247,29 +250,37 @@ function renderTable3({ benchmarks }) {
 			},
 		},
 		runtimeConfidenceIntervalDimension,
-		...benchmarks.map((b, i) => ({
-			label: `vs ${labelFn(b)}`,
-			format: (b) => {
-				if (b.differences === undefined) {
-					return "";
-				}
+		...benchmarks.map((b, i) => {
+			/** @type {import('./global').Dimension} */
+			const dimension = {
+				label: `vs ${labelFn(b)}`,
+				format: (b) => {
+					if (b.differences === undefined) {
+						return "";
+					}
 
-				const diff = b.differences[i];
-				if (diff === null) {
-					// return ansi.format("\n[gray]{-}       ");
-					return "-";
-				}
+					const diff = b.differences[i];
+					if (diff === null) {
+						// return ansi.format("\n[gray]{-}       ");
+						return "-";
+					}
 
-				return formatDifference(diff)
-					.split("\n")
-					.join(<br />);
-			},
-		})),
+					return formatDifference(diff)
+						.split("\n")
+						.join(<br />);
+				},
+				// tableConfig: {
+				// 	alignment: "right",
+				// },
+			};
+
+			return dimension;
+		}),
 	];
 
 	return (
 		<div id="test-1">
-			<table>
+			<table style="text-align: center">
 				<thead>
 					<tr>
 						{dimensions.map((d) => (
@@ -281,9 +292,17 @@ function renderTable3({ benchmarks }) {
 					{benchmarks.map((b) => {
 						return (
 							<tr>
-								{dimensions.map((d) => (
-									<td>{d.format(b)}</td>
-								))}
+								{dimensions.map((d, i) => {
+									// const alignment =
+									// 	b.differences[i] == null
+									// 		? "center"
+									// 		: d.tableConfig?.alignment;
+
+									// const style = alignment ? `text-align: ${alignment}` : null;
+									// return <td style={style}>{d.format(b)}</td>;
+
+									return <td>{d.format(b)}</td>;
+								})}
 							</tr>
 						);
 					})}

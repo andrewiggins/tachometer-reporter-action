@@ -6,6 +6,7 @@ import { BenchmarkResult } from "./index";
 interface Dimension {
 	label: string;
 	format: (r: BenchmarkResult) => string;
+	tableConfig?: { alignment?: "left" | "center" | "right" };
 }
 
 // Temporary until next version of Tachometer is released

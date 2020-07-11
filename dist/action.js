@@ -6469,7 +6469,9 @@ const VOID_ELEMENTS = /^(area|base|br|col|embed|hr|img|input|link|meta|param|sou
 function h(tag, attrs, ...children) {
 	let attrStr = "";
 	for (let key in attrs) {
-		attrStr += ` ${key}="${attrs[key]}"`;
+		if (attrs[key] != null) {
+			attrStr += ` ${key}="${attrs[key]}"`;
+		}
 	}
 
 	// @ts-ignore
@@ -6615,6 +6617,9 @@ const bytesSentDimension = {
 const runtimeConfidenceIntervalDimension = {
 	label: "Avg time",
 	format: (b) => formatConfidenceInterval(b.mean, (n) => n.toFixed(2) + "ms"),
+	// tableConfig: {
+	// 	alignment: "right",
+	// },
 };
 
 /**
@@ -6734,29 +6739,37 @@ function renderTable3({ benchmarks }) {
 			},
 		},
 		runtimeConfidenceIntervalDimension,
-		...benchmarks.map((b, i) => ({
-			label: `vs ${labelFn(b)}`,
-			format: (b) => {
-				if (b.differences === undefined) {
-					return "";
-				}
+		...benchmarks.map((b, i) => {
+			/** @type {import('./global').Dimension} */
+			const dimension = {
+				label: `vs ${labelFn(b)}`,
+				format: (b) => {
+					if (b.differences === undefined) {
+						return "";
+					}
 
-				const diff = b.differences[i];
-				if (diff === null) {
-					// return ansi.format("\n[gray]{-}       ");
-					return "-";
-				}
+					const diff = b.differences[i];
+					if (diff === null) {
+						// return ansi.format("\n[gray]{-}       ");
+						return "-";
+					}
 
-				return formatDifference(diff)
-					.split("\n")
-					.join(h$1('br', null ));
-			},
-		})),
+					return formatDifference(diff)
+						.split("\n")
+						.join(h$1('br', null ));
+				},
+				// tableConfig: {
+				// 	alignment: "right",
+				// },
+			};
+
+			return dimension;
+		}),
 	];
 
 	return (
 		h$1('div', { id: "test-1",}
-, h$1('table', null
+, h$1('table', { style: "text-align: center" ,}
 , h$1('thead', null
 , h$1('tr', null
 , dimensions.map((d) => (
@@ -6768,9 +6781,17 @@ function renderTable3({ benchmarks }) {
 , benchmarks.map((b) => {
 						return (
 							h$1('tr', null
-, dimensions.map((d) => (
-									h$1('td', null, d.format(b))
-								))
+, dimensions.map((d, i) => {
+									// const alignment =
+									// 	b.differences[i] == null
+									// 		? "center"
+									// 		: d.tableConfig?.alignment;
+
+									// const style = alignment ? `text-align: ${alignment}` : null;
+									// return <td style={style}>{d.format(b)}</td>;
+
+									return h$1('td', null, d.format(b));
+								})
 )
 						);
 					})
@@ -6945,7 +6966,11 @@ async function reportTachResults(
 	await postOrUpdateComment(
 		github,
 		context,
-		(comment) => getCommentBody(context, report, comment),
+		(comment) => {
+			const body = getCommentBody(context, report, comment);
+			logger.debug(() => "New Comment Body: " + body);
+			return body;
+		},
 		logger
 	);
 	return report;

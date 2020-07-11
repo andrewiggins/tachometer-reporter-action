@@ -219,7 +219,11 @@ async function reportTachResults(
 	await postOrUpdateComment(
 		github,
 		context,
-		(comment) => getCommentBody(context, report, comment),
+		(comment) => {
+			const body = getCommentBody(context, report, comment);
+			logger.debug(() => "New Comment Body: " + body);
+			return body;
+		},
 		logger
 	);
 	return report;

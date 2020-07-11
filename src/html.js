@@ -8,7 +8,9 @@ const VOID_ELEMENTS = /^(area|base|br|col|embed|hr|img|input|link|meta|param|sou
 function h(tag, attrs, ...children) {
 	let attrStr = "";
 	for (let key in attrs) {
-		attrStr += ` ${key}="${attrs[key]}"`;
+		if (attrs[key] != null) {
+			attrStr += ` ${key}="${attrs[key]}"`;
+		}
 	}
 
 	// @ts-ignore
