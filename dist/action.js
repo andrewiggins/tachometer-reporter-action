@@ -6779,6 +6779,48 @@ function renderTable3({ benchmarks }) {
 
 	return (
 		h$1('div', { id: "test-1",}
+, "\n\n", ":red_circle: :orange_circle: :yellow_circle: :green_circle: :large_blue_circle: :red_square: :orange_square: :yellow_square: :green_square: :blue_square: :large_orange_diamond: :large_blue_diamond: :heavy_check_mark: :x: :part_alternation_mark: :question: :exclamation: :left_right_arrow: :arrow_upper_right: :arrow_lower_right: :arrow_lower_left: :arrow_upper_left: :arrow_heading_up: :arrow_heading_down: :warning: :no_entry: :no_entry_sign: :hammer_and_wrench: :fire: :mag: :fireworks: :sparkles: :tada: :star2: :rocket: :racing_car: :stop_sign: :construction: :building_construction: :thinking:"
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+, "\n\n"
 , h$1('h3', null, benchNames.join(", "))
 , h$1('ul', null
 , listDimensions.map((dim) => {
