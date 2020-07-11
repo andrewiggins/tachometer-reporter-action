@@ -121,7 +121,7 @@ function getCommentBody(context, report, comment) {
  * @param {Logger} logger
  */
 async function postOrUpdateComment(github, context, getCommentBody, logger) {
-	const footer = "\n\n<sub>tachometer-reporter-action</sub>"; // used to update this comment later
+	const footer = `\n\n<a href="https://github.com/andrewiggins/tachometer-reporter-action"><sub>tachometer-reporter-action</sub></a>`; // used to update this comment later
 	const commentInfo = {
 		...context.repo,
 		issue_number: context.issue.number,
