@@ -4,9 +4,9 @@ const nodeExternals = require("rollup-plugin-node-externals");
 const sucrase = require("@rollup/plugin-sucrase");
 
 module.exports = {
-	input: "src/action.js",
+	input: ["src/action.js", "src/pre-action.js"],
 	output: {
-		file: "dist/action.js",
+		dir: "dist",
 		format: "cjs",
 	},
 	plugins: [

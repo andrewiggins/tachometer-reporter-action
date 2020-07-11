@@ -12,6 +12,9 @@ inputs:
   path:
     description: "The path to the results JSON file of running tachometer"
     required: true
+  report-id:
+    description: "A string to uniquely identify this report between other instances of tachometer-reporter-action running in this job or other jobs in the same PR"
+    require: false
   keep-old-results:
     description: Whether to keep old results in the comment on re-runs
     required: false
@@ -28,4 +31,5 @@ inputs:
     default: "false"
 runs:
   using: "node12"
+  pre: "dist/pre-action.js"
   main: "dist/action.js"
