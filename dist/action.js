@@ -6775,7 +6775,10 @@ function renderTable3({ benchmarks }) {
 
 	return (
 		h$1('div', { id: "test-1",}
+, h$1('details', { open: true,}
+, h$1('summary', null
 , h$1('h3', null, benchNames.join(", "))
+)
 , "\n\n", ":heavy_check_mark: :x: :part_alternation_mark: :question: :exclamation: :left_right_arrow: :arrow_upper_right: :arrow_lower_right: :arrow_lower_left: :arrow_upper_left: :arrow_heading_up: :arrow_heading_down: :warning: :no_entry: :no_entry_sign: :hammer_and_wrench: :fire: :mag: :fireworks: :sparkles: :tada: :star2: :rocket: :racing_car: :stop_sign: :construction: :building_construction: :thinking:"
 
 
@@ -6787,40 +6790,41 @@ function renderTable3({ benchmarks }) {
 , "\n\n"
 , h$1('ul', null
 , listDimensions.map((dim) => {
-					const uniqueValues = new Set(benchmarks.map((b) => dim.format(b)));
-					return (
-						h$1('li', null
+						const uniqueValues = new Set(benchmarks.map((b) => dim.format(b)));
+						return (
+							h$1('li', null
 , dim.label, ": " , Array.from(uniqueValues).join(", ")
 )
-					);
-				})
+						);
+					})
 )
 , h$1('table', null
 , h$1('thead', null
 , h$1('tr', null
 , tableDimensions.map((d) => (
-							h$1('th', null, d.label)
-						))
+								h$1('th', null, d.label)
+							))
 )
 )
 , h$1('tbody', null
 , benchmarks.map((b) => {
-						return (
-							h$1('tr', null
+							return (
+								h$1('tr', null
 , tableDimensions.map((d, i) => {
-									// const alignment =
-									// 	b.differences[i] == null
-									// 		? "center"
-									// 		: d.tableConfig?.alignment;
+										// const alignment =
+										// 	b.differences[i] == null
+										// 		? "center"
+										// 		: d.tableConfig?.alignment;
 
-									// const style = alignment ? `text-align: ${alignment}` : null;
-									// return <td style={style}>{d.format(b)}</td>;
+										// const style = alignment ? `text-align: ${alignment}` : null;
+										// return <td style={style}>{d.format(b)}</td>;
 
-									return h$1('td', { align: "center",}, d.format(b));
-								})
+										return h$1('td', { align: "center",}, d.format(b));
+									})
 )
-						);
-					})
+							);
+						})
+)
 )
 )
 )

@@ -286,54 +286,58 @@ function renderTable3({ benchmarks }) {
 
 	return (
 		<div id="test-1">
-			<h3>{benchNames.join(", ")}</h3>
-			{"\n\n"}
-			:heavy_check_mark: :x: :part_alternation_mark: :question: :exclamation:
-			:left_right_arrow: :arrow_upper_right: :arrow_lower_right:
-			:arrow_lower_left: :arrow_upper_left: :arrow_heading_up:
-			:arrow_heading_down: :warning: :no_entry: :no_entry_sign:
-			:hammer_and_wrench: :fire: :mag: :fireworks: :sparkles: :tada: :star2:
-			:rocket: :racing_car: :stop_sign: :construction: :building_construction:
-			:thinking:
-			{"\n\n"}
-			<ul>
-				{listDimensions.map((dim) => {
-					const uniqueValues = new Set(benchmarks.map((b) => dim.format(b)));
-					return (
-						<li>
-							{dim.label}: {Array.from(uniqueValues).join(", ")}
-						</li>
-					);
-				})}
-			</ul>
-			<table>
-				<thead>
-					<tr>
-						{tableDimensions.map((d) => (
-							<th>{d.label}</th>
-						))}
-					</tr>
-				</thead>
-				<tbody>
-					{benchmarks.map((b) => {
+			<details open>
+				<summary>
+					<h3>{benchNames.join(", ")}</h3>
+				</summary>
+				{"\n\n"}
+				:heavy_check_mark: :x: :part_alternation_mark: :question: :exclamation:
+				:left_right_arrow: :arrow_upper_right: :arrow_lower_right:
+				:arrow_lower_left: :arrow_upper_left: :arrow_heading_up:
+				:arrow_heading_down: :warning: :no_entry: :no_entry_sign:
+				:hammer_and_wrench: :fire: :mag: :fireworks: :sparkles: :tada: :star2:
+				:rocket: :racing_car: :stop_sign: :construction: :building_construction:
+				:thinking:
+				{"\n\n"}
+				<ul>
+					{listDimensions.map((dim) => {
+						const uniqueValues = new Set(benchmarks.map((b) => dim.format(b)));
 						return (
-							<tr>
-								{tableDimensions.map((d, i) => {
-									// const alignment =
-									// 	b.differences[i] == null
-									// 		? "center"
-									// 		: d.tableConfig?.alignment;
-
-									// const style = alignment ? `text-align: ${alignment}` : null;
-									// return <td style={style}>{d.format(b)}</td>;
-
-									return <td align="center">{d.format(b)}</td>;
-								})}
-							</tr>
+							<li>
+								{dim.label}: {Array.from(uniqueValues).join(", ")}
+							</li>
 						);
 					})}
-				</tbody>
-			</table>
+				</ul>
+				<table>
+					<thead>
+						<tr>
+							{tableDimensions.map((d) => (
+								<th>{d.label}</th>
+							))}
+						</tr>
+					</thead>
+					<tbody>
+						{benchmarks.map((b) => {
+							return (
+								<tr>
+									{tableDimensions.map((d, i) => {
+										// const alignment =
+										// 	b.differences[i] == null
+										// 		? "center"
+										// 		: d.tableConfig?.alignment;
+
+										// const style = alignment ? `text-align: ${alignment}` : null;
+										// return <td style={style}>{d.format(b)}</td>;
+
+										return <td align="center">{d.format(b)}</td>;
+									})}
+								</tr>
+							);
+						})}
+					</tbody>
+				</table>
+			</details>
 		</div>
 	);
 }
