@@ -1334,10 +1334,10 @@ function Summary({ reportId, benchmarks, localVersion, baseVersion }) {
 
 	return (
 		h('div', { id: getSummaryId(reportId),}
-, h('a', { href: "#" + getTableId(reportId),}, localResults.name), ": " , diff.label, " "
-, h('em', null
-, diff.relative, " (" , diff.absolute, ")"
-)
+, "\n\n"
+, `[${localResults.name}](#${getTableId(reportId)}): `
+, `${diff.label} *${diff.relative} (${diff.absolute})*`
+, "\n\n"
 )
 	);
 }
