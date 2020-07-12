@@ -41,10 +41,10 @@ function h(tag, attrs, ...children) {
 }
 
 /**
- * @param {{ reportId: string; benchmarks: import('./global').BenchmarkResult[]; }} props
+ * @param {{ reportId: string; benchmarks: import('./global').BenchmarkResult[]; open: boolean }} props
  * @returns {string}
  */
-function Table({ reportId, benchmarks }) {
+function Table({ reportId, benchmarks, open }) {
 	// Hard code what dimensions are rendered in the main table since GitHub comments
 	// have limited horizontal space
 
@@ -65,7 +65,7 @@ function Table({ reportId, benchmarks }) {
 
 	return (
 		<div id={getId("table-" + reportId)}>
-			<details open>
+			<details open={open ? "open" : null}>
 				<summary>
 					<strong>{benchNames.join(", ")}</strong>
 				</summary>

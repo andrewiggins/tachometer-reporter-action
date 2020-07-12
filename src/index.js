@@ -36,7 +36,7 @@ function getReportId(benchmarks) {
 
 /**
  * @param {import('./global').TachResults} tachResults
- * @param {{ localVersion: string; baseVersion: string; reportId: string; }} inputs
+ * @param {Pick<import('./global').Inputs, 'localVersion' | 'baseVersion' | 'defaultOpen' | 'reportId'>} inputs
  * @returns {import('./global').Report}
  */
 function buildReport(tachResults, inputs) {
@@ -55,7 +55,13 @@ function buildReport(tachResults, inputs) {
 
 	return {
 		id: reportId,
-		body: <Table reportId={reportId} benchmarks={benchmarks} />,
+		body: (
+			<Table
+				reportId={reportId}
+				benchmarks={benchmarks}
+				open={inputs.defaultOpen}
+			/>
+		),
 		results: benchmarks,
 		localVersion: inputs.localVersion,
 		baseVersion: inputs.baseVersion,

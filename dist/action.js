@@ -1259,10 +1259,10 @@ function h(tag, attrs, ...children) {
 }
 
 /**
- * @param {{ reportId: string; benchmarks: import('./global').BenchmarkResult[]; }} props
+ * @param {{ reportId: string; benchmarks: import('./global').BenchmarkResult[]; open: boolean }} props
  * @returns {string}
  */
-function Table({ reportId, benchmarks }) {
+function Table({ reportId, benchmarks, open }) {
 	// Hard code what dimensions are rendered in the main table since GitHub comments
 	// have limited horizontal space
 
@@ -1283,7 +1283,7 @@ function Table({ reportId, benchmarks }) {
 
 	return (
 		h('div', { id: getId("table-" + reportId),}
-, h('details', { open: true,}
+, h('details', { open: open ? "open" : null,}
 , h('summary', null
 , h('strong', null, benchNames.join(", "))
 )
@@ -1389,7 +1389,7 @@ function getReportId(benchmarks) {
 
 /**
  * @param {import('./global').TachResults} tachResults
- * @param {{ localVersion: string; baseVersion: string; reportId: string; }} inputs
+ * @param {Pick<import('./global').Inputs, 'localVersion' | 'baseVersion' | 'defaultOpen' | 'reportId'>} inputs
  * @returns {import('./global').Report}
  */
 function buildReport(tachResults, inputs) {
@@ -1408,7 +1408,13 @@ function buildReport(tachResults, inputs) {
 
 	return {
 		id: reportId,
-		body: h$1(Table$1, { reportId: reportId, benchmarks: benchmarks,} ),
+		body: (
+			h$1(Table$1, {
+				reportId: reportId,
+				benchmarks: benchmarks,
+				open: inputs.defaultOpen,}
+			)
+		),
 		results: benchmarks,
 		localVersion: inputs.localVersion,
 		baseVersion: inputs.baseVersion,

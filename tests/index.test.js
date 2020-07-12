@@ -17,6 +17,7 @@ test("Initial test", () => {
 		localVersion,
 		baseVersion,
 		reportId: null,
+		defaultOpen: false,
 	});
 	assert.ok(report, "Returns a report");
 	console.log(report);
