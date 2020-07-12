@@ -149,6 +149,7 @@ function SummaryList({ children }) {
 }
 
 function Icon() {
+	// Argh... SVGs get stripped out of markdown so this doesn't work :(
 	return (
 		<svg
 			xmlns="http://www.w3.org/2000/svg"
@@ -169,17 +170,8 @@ function Icon() {
 	);
 }
 
-function Title() {
-	return (
-		<h2>
-			<Icon /> Tachometer Benchmark Results
-		</h2>
-	);
-}
-
 module.exports = {
 	h,
-	Title,
 	Table,
 	Summary,
 	SummaryList,
