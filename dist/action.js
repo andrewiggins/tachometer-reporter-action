@@ -16,6 +16,7 @@ require('assert');
 require('util');
 require('stream');
 require('zlib');
+var crypto = _interopDefault(require('crypto'));
 
 const BYTE_UNITS = [
 	'B',
@@ -1362,14 +1363,28 @@ var html = {
 };
 
 const { readFile } = fs.promises;
+
 const { h: h$1, Table: Table$1, Summary: Summary$1, SummaryList: SummaryList$1 } = html;
 
 /**
  * @param {import('./global').BenchmarkResult[]} benchmarks
- * @returns {string}
  */
 function getReportId(benchmarks) {
-	return "0";
+	/** @type {(b: import('./global').BenchmarkResult) => string} */
+	const getBrowserKey = (b) =>
+		b.browser.name + (b.browser.headless ? "-headless" : "");
+
+	const benchKeys = benchmarks.map((b) => {
+		return `${b.name},${b.version},${getBrowserKey(b)}`;
+	});
+
+	return crypto
+		.createHash("sha1")
+		.update(benchKeys.join("::"))
+		.digest("base64")
+		.replace(/\+/g, "-")
+		.replace(/\//g, "_")
+		.replace(/=*$/, "");
 }
 
 /**
@@ -1389,7 +1404,7 @@ function buildReport(tachResults, inputs) {
 	// 		- replace `base-version` with `branch@SHA`
 
 	const benchmarks = tachResults.benchmarks;
-	const reportId = inputs.reportId ? inputs.reportId : getReportId();
+	const reportId = inputs.reportId ? inputs.reportId : getReportId(benchmarks);
 
 	return {
 		id: reportId,

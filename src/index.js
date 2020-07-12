@@ -1,4 +1,5 @@
 const { readFile } = require("fs").promises;
+const crypto = require("crypto");
 const { h, Table, Summary, SummaryList } = require("./html");
 
 function acquireCommentLock() {
@@ -14,10 +15,23 @@ function acquireCommentLock() {
 
 /**
  * @param {import('./global').BenchmarkResult[]} benchmarks
- * @returns {string}
  */
 function getReportId(benchmarks) {
-	return "0";
+	/** @type {(b: import('./global').BenchmarkResult) => string} */
+	const getBrowserKey = (b) =>
+		b.browser.name + (b.browser.headless ? "-headless" : "");
+
+	const benchKeys = benchmarks.map((b) => {
+		return `${b.name},${b.version},${getBrowserKey(b)}`;
+	});
+
+	return crypto
+		.createHash("sha1")
+		.update(benchKeys.join("::"))
+		.digest("base64")
+		.replace(/\+/g, "-")
+		.replace(/\//g, "_")
+		.replace(/=*$/, "");
 }
 
 /**
