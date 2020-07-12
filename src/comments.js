@@ -1,4 +1,20 @@
 function acquireCommentLock() {
+	// config values:
+	// - minLockHold: Minimum amount of time lock must be consistently held before
+	//   safely assuming it was successfully acquired. Default: 500ms (or 1s?)
+	// - minLockWait: Minimum amount of time to wait before trying to acquire the
+	//   lock again after seeing it is held. Default: 500ms (or 1s?)
+	//
+	// Check every 500ms (or half minLockHold if <500ms) to see if lock is still
+	// held to eagerly go back to waiting state
+	//
+	// Consider using https://npm.im/@xstate/fsm
+	// Sample States:
+	// - https://xstate.js.org/viz/?gist=33685dc6569747e6156af33503e77e26
+	// - https://xstate.js.org/viz/?gist=80c62c3012452b6c4ab96a9c9c995975
+	//
+	// Tutorial: https://egghead.io/courses/introduction-to-state-machines-using-xstate
+	//
 	// 1. read if comment exists
 	// 1. if comment exists and has lock, wait then try again
 	// 1. if comment doesn't exist or is not locked, continue
