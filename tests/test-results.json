@@ -3,7 +3,7 @@
     {
       "name": "test_bench",
       "bytesSent": 75584,
-      "version": "fast-version",
+      "version": "fast-framework",
       "browser": {
         "name": "chrome",
         "headless": true,
@@ -106,7 +106,7 @@
     {
       "name": "test_bench",
       "bytesSent": 9047,
-      "version": "base-version",
+      "version": "base-framework",
       "browser": {
         "name": "chrome",
         "headless": true,
@@ -209,7 +209,7 @@
     {
       "name": "test_bench",
       "bytesSent": 9047,
-      "version": "local-version",
+      "version": "local-framework",
       "browser": {
         "name": "chrome",
         "headless": true,

@@ -3,7 +3,7 @@
     {
       "name": "test_bench_2",
       "bytesSent": 15370,
-      "version": "other-version",
+      "version": "other-framework",
       "browser": {
         "name": "chrome",
         "headless": true,
@@ -116,7 +116,7 @@
     {
       "name": "test_bench_2",
       "bytesSent": 9047,
-      "version": "base-version",
+      "version": "base-framework",
       "browser": {
         "name": "chrome",
         "headless": true,
@@ -229,7 +229,7 @@
     {
       "name": "test_bench_2",
       "bytesSent": 9047,
-      "version": "local-version",
+      "version": "local-framework",
       "browser": {
         "name": "chrome",
         "headless": true,
@@ -342,7 +342,7 @@
     {
       "name": "test_bench_2",
       "bytesSent": 75584,
-      "version": "fast-version",
+      "version": "fast-framework",
       "browser": {
         "name": "chrome",
         "headless": true,
