@@ -108,7 +108,7 @@ function formatConfidenceInterval(ci, format) {
  * @param {(n: number) => string} format
  */
 const colorizeSign = (n, format) => {
-	// TODO: Determine if we can mimic this behavior with GitHub markdown
+	// Argh, it appears we can't color text using inline styes :(
 	if (n > 0) {
 		// return ansi.format(`[red bold]{+}${format(n)}`);
 		return `+${format(n)}`;

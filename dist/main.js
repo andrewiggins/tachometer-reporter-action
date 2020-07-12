@@ -1100,7 +1100,7 @@ function formatConfidenceInterval(ci, format) {
  * @param {(n: number) => string} format
  */
 const colorizeSign = (n, format) => {
-	// TODO: Determine if we can mimic this behavior with GitHub markdown
+	// Argh, it appears we can't color text using inline styes :(
 	if (n > 0) {
 		// return ansi.format(`[red bold]{+}${format(n)}`);
 		return `+${format(n)}`;
@@ -1525,9 +1525,9 @@ function getCommentBody(context, report, comment) {
 	if (report.summary) {
 		body.push(
 			"### Summary",
+			// TODO: Should these be grouped by how they are summarized in case not
+			// all benchmarks compare the same?
 			`<sub>${report.localVersion} vs ${report.baseVersion}</sub>\n`,
-			// TODO: Consider if numbers should inline or below result
-			// "- test_bench: unsure 🔍 *-4.10ms - +5.24ms (-10% - +12%)*",
 			h$1(SummaryList$1, null, [report.summary]),
 			""
 		);
