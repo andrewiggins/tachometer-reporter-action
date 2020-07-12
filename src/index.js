@@ -2,6 +2,7 @@ const { readFile } = require("fs").promises;
 const crypto = require("crypto");
 const { h, Table, Summary, SummaryList } = require("./html");
 const { postOrUpdateComment } = require("./comments");
+const { getWorkflowRun } = require("./utils/github");
 
 /**
  * @param {import('./global').BenchmarkResult[]} benchmarks
@@ -25,12 +26,12 @@ function getReportId(benchmarks) {
 }
 
 /**
- * @param {import('./global').TachResults} tachResults
+ * @param {import('./global').WorkflowRunData} workflowRun
  * @param {Pick<import('./global').Inputs, 'localVersion' | 'baseVersion' | 'defaultOpen' | 'reportId'>} inputs
+ * @param {import('./global').TachResults} tachResults
  * @returns {import('./global').Report}
  */
-function buildReport(tachResults, inputs) {
-	// TODO: Include which action generated the results (e.g. Main #13) (in Table?)
+function buildReport(workflowRun, inputs, tachResults) {
 	// TODO: Consider improving names (likely needs to happen in runner repo)
 	//		- "before" and "this PR"
 	//		- Allow different names for local runs and CI runs
@@ -46,6 +47,7 @@ function buildReport(tachResults, inputs) {
 			<Table
 				reportId={reportId}
 				benchmarks={benchmarks}
+				workflowRun={workflowRun}
 				open={inputs.defaultOpen}
 			/>
 		),
@@ -131,7 +133,8 @@ async function reportTachResults(
 	inputs = { ...defaultInputs, ...inputs };
 
 	const tachResults = JSON.parse(await readFile(inputs.path, "utf8"));
-	const report = buildReport(tachResults, inputs);
+	const workflowRun = await getWorkflowRun(context, github);
+	const report = buildReport(workflowRun, inputs, tachResults);
 
 	await postOrUpdateComment(
 		github,

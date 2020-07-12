@@ -1,5 +1,6 @@
 const core = require("@actions/core");
 const github = require("@actions/github");
+const { getWorkflowRun } = require("../utils/github");
 
 (async function () {
 	// TODO: Render `Running...` status at start of job and setup general
@@ -16,11 +17,8 @@ const github = require("@actions/github");
 
 	const context = github.context;
 	const octokit = github.getOctokit(token);
-	const workflowRun = await octokit.actions.getWorkflowRun({
-		...context.repo,
-		run_id: context.runId,
-	});
+	const workflowRun = await getWorkflowRun(context, octokit);
 
-	core.debug("Run name: " + `${context.workflow} #${context.runNumber}`);
-	core.debug("Run URL : " + workflowRun.data.html_url);
+	core.debug("Run name: " + workflowRun.run_name);
+	core.debug("Run URL : " + workflowRun.html_url);
 })();

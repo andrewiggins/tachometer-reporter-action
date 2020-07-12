@@ -11,15 +11,22 @@ const testResults = JSON.parse(readFileSync(testResultsPath, "utf8"));
 
 const localVersion = "local-framework";
 const baseVersion = "base-framework";
+const defaultInputs = {
+	localVersion,
+	baseVersion,
+	reportId: null,
+	defaultOpen: false,
+};
+
+const fakeWorkflowRun = {
+	run_name: "Pull Request Test #50",
+	html_url:
+		"https://github.com/andrewiggins/tachometer-reporter-action/actions/runs/166208365",
+};
 
 const buildReportSuite = suite("buildReport");
 buildReportSuite("Body snapshot", () => {
-	const report = buildReport(testResults, {
-		localVersion,
-		baseVersion,
-		reportId: null,
-		defaultOpen: false,
-	});
+	const report = buildReport(fakeWorkflowRun, defaultInputs, testResults);
 	assert.ok(report, "Returns a report");
 	console.log(report);
 

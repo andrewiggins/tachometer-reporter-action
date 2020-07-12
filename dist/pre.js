@@ -15,6 +15,8 @@ require('util');
 require('stream');
 require('zlib');
 
+const { getWorkflowRun } = github.github;
+
 (async function () {
 	// TODO: Render `Running...` status at start of job and setup general
 	// structure of comment including Summary and Results section
@@ -28,13 +30,10 @@ require('zlib');
 	github.core.debug("Report ID: " + JSON.stringify(reportId));
 	// core.debug("Context: " + JSON.stringify(github.context, undefined, 2));
 
-	const context = github.github.context;
-	const octokit = github.github.getOctokit(token);
-	const workflowRun = await octokit.actions.getWorkflowRun({
-		...context.repo,
-		run_id: context.runId,
-	});
+	const context = github.github$1.context;
+	const octokit = github.github$1.getOctokit(token);
+	const workflowRun = await getWorkflowRun(context, octokit);
 
-	github.core.debug("Run name: " + `${context.workflow} #${context.runNumber}`);
-	github.core.debug("Run URL : " + workflowRun.data.html_url);
+	github.core.debug("Run name: " + workflowRun.run_name);
+	github.core.debug("Run URL : " + workflowRun.html_url);
 })();
