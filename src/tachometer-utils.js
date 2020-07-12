@@ -9,72 +9,33 @@ const { h } = require("./html");
 const lineBreak = <br />;
 
 /**
- * @typedef {ReturnType<typeof buildTableData>} TableData
- * @param {import('./index').TachResults["benchmarks"]} results
+ * @param {import('./index').TachResults["benchmarks"]} benchmarks
  */
-function buildTableData(results) {
-	// Typically most dimensions for a set of results share the same value (e.g
-	// because we're only running one benchmark, one browser, etc.). To save
-	// horizontal space and make the results easier to read, we first show the
-	// fixed values in one table, then the unfixed values in another.
+function makeDifferenceDimensions(labelFn, benchmarks) {
+	return benchmarks.map((b, i) => {
+		/** @type {import('./global').Dimension} */
+		const dimension = {
+			label: `vs ${labelFn(b)}`,
+			format: (b) => {
+				if (b.differences === undefined) {
+					return "";
+				}
 
-	/** @type {import("./global").Dimension[]} */
-	const fixed = [];
+				const diff = b.differences[i];
+				if (diff === null) {
+					// return ansi.format("\n[gray]{-}       ");
+					return "-";
+				}
 
-	/** @type {import("./global").Dimension[]} */
-	const unfixed = [];
+				return formatDifference(diff);
+			},
+			// tableConfig: {
+			// 	alignment: "right",
+			// },
+		};
 
-	const possiblyFixed = [
-		benchmarkDimension,
-		versionDimension,
-		browserDimension,
-		sampleSizeDimension,
-		bytesSentDimension,
-	];
-
-	for (const dimension of possiblyFixed) {
-		const values = new Set();
-		for (const res of results) {
-			values.add(dimension.format(res));
-		}
-
-		if (values.size === 1) {
-			fixed.push(dimension);
-		} else {
-			unfixed.push(dimension);
-		}
-	}
-
-	// These are the primary observed results, so they always go in the main
-	// result table, even if they happen to be the same in one run.
-	unfixed.push(runtimeConfidenceIntervalDimension);
-
-	if (results.length > 1) {
-		// Create an NxN matrix comparing every result to every other result.
-		const labelFn = makeUniqueLabelFn(results);
-		for (let i = 0; i < results.length; i++) {
-			unfixed.push({
-				label: `vs ${labelFn(results[i])}`,
-				format: (b) => {
-					if (b.differences === undefined) {
-						return "";
-					}
-
-					const diff = b.differences[i];
-					if (diff === null) {
-						// return ansi.format("\n[gray]{-}       ");
-						return "-";
-					}
-
-					return formatDifference(diff);
-				},
-			});
-		}
-	}
-
-	const fixedData = { dimensions: fixed, results: [results[0]] };
-	const unfixedData = { dimensions: unfixed, results };
-	return { fixed: fixedData, unfixed: unfixedData };
+		return dimension;
+	});
 }
 
 /** @type {import("./global").Dimension} */
@@ -103,11 +64,6 @@ const browserDimension = {
 		// 	s += `\n@${browser.remoteUrl}`;
 		// }
 
-		// if (browser.userAgent !== "") {
-		// 	const ua = new UAParser(browser.userAgent).getBrowser();
-		// 	s += `\n${ua.version}`;
-		// }
-
 		if (browser.userAgent) {
 			const ua = new UAParser(browser.userAgent).getBrowser();
 			s += ` ${ua.version}`;
@@ -132,7 +88,7 @@ const bytesSentDimension = {
 /** @type {import("./global").Dimension} */
 const runtimeConfidenceIntervalDimension = {
 	label: "Avg time",
-	format: (b) => formatConfidenceInterval(b.mean, (n) => n.toFixed(2) + "ms"),
+	format: (b) => formatConfidenceInterval(b.mean, milli),
 	// tableConfig: {
 	// 	alignment: "right",
 	// },
@@ -154,6 +110,7 @@ function formatConfidenceInterval(ci, format) {
  * @param {(n: number) => string} format
  */
 const colorizeSign = (n, format) => {
+	// TODO: Determine if we can mimic this behavior with GitHub markdown
 	if (n > 0) {
 		// return ansi.format(`[red bold]{+}${format(n)}`);
 		return `+${format(n)}`;
@@ -170,26 +127,22 @@ const colorizeSign = (n, format) => {
  * @param {import('./index').BenchmarkResult["differences"][0]} difference
  * @returns {string}
  */
-function formatDifference({ absolute, percentChange }) {
+function formatDifference({ absolute, percentChange: relative }) {
 	let word, rel, abs;
-	if (absolute.low > 0 && percentChange.low > 0) {
+	if (absolute.low > 0 && relative.low > 0) {
 		word = <strong>slower ❌</strong>; // bold red
-		rel = `${percent(percentChange.low)}% - ${percent(percentChange.high)}%`;
-		abs = `${absolute.low.toFixed(2)}ms - ${absolute.high.toFixed(2)}ms`;
-	} else if (absolute.high < 0 && percentChange.high < 0) {
+		rel = formatConfidenceInterval(relative, percent);
+		abs = formatConfidenceInterval(absolute, milli);
+	} else if (absolute.high < 0 && relative.high < 0) {
 		word = <strong>faster ✔</strong>; // bold green
-		rel = `${percent(-percentChange.high)}% - ${percent(-percentChange.low)}%`;
-		abs = `${-absolute.high.toFixed(2)}ms - ${-absolute.low.toFixed(2)}ms`;
+		rel = formatConfidenceInterval(negate(relative), percent);
+		abs = formatConfidenceInterval(negate(absolute), milli);
 	} else {
 		word = <strong>unsure 🔍</strong>; // bold blue
-		rel = `${colorizeSign(percentChange.low, percent)}% - ${colorizeSign(
-			percentChange.high,
-			percent
-		)}%`;
-		abs = `${colorizeSign(absolute.low, (n) =>
-			n.toFixed(2)
-		)}ms - ${colorizeSign(absolute.high, (n) => n.toFixed(2))}ms`;
+		rel = formatConfidenceInterval(relative, (n) => colorizeSign(n, percent));
+		abs = formatConfidenceInterval(absolute, (n) => colorizeSign(n, milli));
 	}
+
 	return [word, rel, abs].join(lineBreak);
 }
 
@@ -199,7 +152,26 @@ function formatDifference({ absolute, percentChange }) {
  */
 function percent(n) {
 	// return (n * 100).toFixed(0);
-	return n.toFixed(0);
+	return n.toFixed(0) + "%";
+}
+
+/**
+ * @param {number} n
+ * @returns {string}
+ */
+function milli(n) {
+	return n.toFixed(2) + "ms";
+}
+
+/**
+ * @param {import('./index').BenchmarkResult["mean"]} ci
+ * @returns {import('./index').BenchmarkResult["mean"]}
+ */
+function negate(ci) {
+	return {
+		low: -ci.high,
+		high: -ci.low,
+	};
 }
 
 /**
@@ -238,108 +210,13 @@ function makeUniqueLabelFn(results) {
 	};
 }
 
-/**
- * @param {{ benchmarks: import('./index').TachResults["benchmarks"] }} props
- */
-function renderTable3({ benchmarks }) {
-	// Hard code what dimensions are rendered in the main table since GitHub comments
-	// have limited horizontal space
-
-	const benchNames = Array.from(new Set(benchmarks.map((b) => b.name)));
-
-	const listDimensions = [browserDimension, sampleSizeDimension];
-
-	const labelFn = makeUniqueLabelFn(benchmarks);
-
-	/** @type {import("./global").Dimension[]} */
-	const tableDimensions = [
-		{
-			label: "Version",
-			format: labelFn,
-		},
-		runtimeConfidenceIntervalDimension,
-		...benchmarks.map((b, i) => {
-			/** @type {import('./global').Dimension} */
-			const dimension = {
-				label: `vs ${labelFn(b)}`,
-				format: (b) => {
-					if (b.differences === undefined) {
-						return "";
-					}
-
-					const diff = b.differences[i];
-					if (diff === null) {
-						// return ansi.format("\n[gray]{-}       ");
-						return "-";
-					}
-
-					return formatDifference(diff);
-				},
-				// tableConfig: {
-				// 	alignment: "right",
-				// },
-			};
-
-			return dimension;
-		}),
-	];
-
-	return (
-		<div id="test-1">
-			<details open>
-				<summary>
-					<strong>{benchNames.join(", ")}</strong>
-				</summary>
-				<ul>
-					{listDimensions.map((dim) => {
-						const uniqueValues = new Set(benchmarks.map((b) => dim.format(b)));
-						return (
-							<li>
-								{dim.label}: {Array.from(uniqueValues).join(", ")}
-							</li>
-						);
-					})}
-				</ul>
-				<table>
-					<thead>
-						<tr>
-							{tableDimensions.map((d) => (
-								<th>{d.label}</th>
-							))}
-						</tr>
-					</thead>
-					<tbody>
-						{benchmarks.map((b) => {
-							return (
-								<tr>
-									{tableDimensions.map((d, i) => {
-										// const alignment =
-										// 	b.differences[i] == null
-										// 		? "center"
-										// 		: d.tableConfig?.alignment;
-
-										// const style = alignment ? `text-align: ${alignment}` : null;
-										// return <td style={style}>{d.format(b)}</td>;
-
-										return <td align="center">{d.format(b)}</td>;
-									})}
-								</tr>
-							);
-						})}
-					</tbody>
-				</table>
-			</details>
-		</div>
-	);
-}
-
 module.exports = {
-	// benchmarkDimension,
-	// versionDimension,
-	// browserDimension,
-	// sampleSizeDimension,
-	// bytesSentDimension,
-	// runtimeConfidenceIntervalDimension,
-	buildTableData,
-	renderTable3,
+	makeUniqueLabelFn,
+	makeDifferenceDimensions,
+	benchmarkDimension,
+	versionDimension,
+	browserDimension,
+	sampleSizeDimension,
+	bytesSentDimension,
+	runtimeConfidenceIntervalDimension,
 };

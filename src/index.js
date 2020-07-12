@@ -1,8 +1,16 @@
 const { readFile } = require("fs").promises;
-const { UAParser } = require("ua-parser-js");
-const prettyBytes = require("pretty-bytes");
-const { h } = require("./html");
-const { buildTableData, renderTable3 } = require("./tachometer-utils");
+const { renderTable } = require("./html");
+
+function acquireCommentLock() {
+	// 1. read if comment exists
+	// 1. if comment exists and has lock, wait then try again
+	// 1. if comment doesn't exist or is not locked, continue
+	// 1. update comment with lock id
+	// 1. wait a random short time for any other inflight writes
+	// 1. read comment again to see we still have the lock
+	// 1. if we have lock, continue
+	// 1. if we don't have lock, wait a random time and try again
+}
 
 /** @jsx h */
 
@@ -31,7 +39,7 @@ function buildReport(tachResults, localVersion, baseVersion) {
 	// 		- Allowing aliases
 	// 		- replace `base-version` with `branch@SHA`
 
-	return renderTable3({ benchmarks: tachResults.benchmarks });
+	return renderTable({ benchmarks: tachResults.benchmarks });
 }
 
 /**
@@ -55,7 +63,7 @@ function getCommentBody(context, report, comment) {
 		"<sub>local_version vs base_version</sub>",
 		"",
 		// TODO: Consider if numbers should inline or below result
-		"- test_bench: unsure 🔍   *-4.10ms - +5.24ms (-10% - +12%)*",
+		"- test_bench: unsure 🔍 *-4.10ms - +5.24ms (-10% - +12%)*",
 		"",
 		"### Results",
 		"",

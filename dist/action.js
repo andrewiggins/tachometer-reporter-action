@@ -17,6 +17,81 @@ require('util');
 require('stream');
 require('zlib');
 
+const BYTE_UNITS = [
+	'B',
+	'kB',
+	'MB',
+	'GB',
+	'TB',
+	'PB',
+	'EB',
+	'ZB',
+	'YB'
+];
+
+const BIT_UNITS = [
+	'b',
+	'kbit',
+	'Mbit',
+	'Gbit',
+	'Tbit',
+	'Pbit',
+	'Ebit',
+	'Zbit',
+	'Ybit'
+];
+
+/*
+Formats the given number using `Number#toLocaleString`.
+- If locale is a string, the value is expected to be a locale-key (for example: `de`).
+- If locale is true, the system default locale is used for translation.
+- If no value for locale is specified, the number is returned unmodified.
+*/
+const toLocaleString = (number, locale) => {
+	let result = number;
+	if (typeof locale === 'string') {
+		result = number.toLocaleString(locale);
+	} else if (locale === true) {
+		result = number.toLocaleString();
+	}
+
+	return result;
+};
+
+var prettyBytes = (number, options) => {
+	if (!Number.isFinite(number)) {
+		throw new TypeError(`Expected a finite number, got ${typeof number}: ${number}`);
+	}
+
+	options = Object.assign({bits: false}, options);
+	const UNITS = options.bits ? BIT_UNITS : BYTE_UNITS;
+
+	if (options.signed && number === 0) {
+		return ' 0 ' + UNITS[0];
+	}
+
+	const isNegative = number < 0;
+	const prefix = isNegative ? '-' : (options.signed ? '+' : '');
+
+	if (isNegative) {
+		number = -number;
+	}
+
+	if (number < 1) {
+		const numberString = toLocaleString(number, options.locale);
+		return prefix + numberString + ' ' + UNITS[0];
+	}
+
+	const exponent = Math.min(Math.floor(Math.log10(number) / 3), UNITS.length - 1);
+	// eslint-disable-next-line unicorn/prefer-exponentiation-operator
+	number = Number((number / Math.pow(1000, exponent)).toPrecision(3));
+	const numberString = toLocaleString(number, options.locale);
+
+	const unit = UNITS[exponent];
+
+	return prefix + numberString + ' ' + unit;
+};
+
 var uaParser = github.createCommonjsModule(function (module, exports) {
 /*!
  * UAParser.js v0.7.21
@@ -915,186 +990,43 @@ var uaParser = github.createCommonjsModule(function (module, exports) {
 })(typeof window === 'object' ? window : github.commonjsGlobal);
 });
 
-const BYTE_UNITS = [
-	'B',
-	'kB',
-	'MB',
-	'GB',
-	'TB',
-	'PB',
-	'EB',
-	'ZB',
-	'YB'
-];
-
-const BIT_UNITS = [
-	'b',
-	'kbit',
-	'Mbit',
-	'Gbit',
-	'Tbit',
-	'Pbit',
-	'Ebit',
-	'Zbit',
-	'Ybit'
-];
-
-/*
-Formats the given number using `Number#toLocaleString`.
-- If locale is a string, the value is expected to be a locale-key (for example: `de`).
-- If locale is true, the system default locale is used for translation.
-- If no value for locale is specified, the number is returned unmodified.
-*/
-const toLocaleString = (number, locale) => {
-	let result = number;
-	if (typeof locale === 'string') {
-		result = number.toLocaleString(locale);
-	} else if (locale === true) {
-		result = number.toLocaleString();
-	}
-
-	return result;
-};
-
-var prettyBytes = (number, options) => {
-	if (!Number.isFinite(number)) {
-		throw new TypeError(`Expected a finite number, got ${typeof number}: ${number}`);
-	}
-
-	options = Object.assign({bits: false}, options);
-	const UNITS = options.bits ? BIT_UNITS : BYTE_UNITS;
-
-	if (options.signed && number === 0) {
-		return ' 0 ' + UNITS[0];
-	}
-
-	const isNegative = number < 0;
-	const prefix = isNegative ? '-' : (options.signed ? '+' : '');
-
-	if (isNegative) {
-		number = -number;
-	}
-
-	if (number < 1) {
-		const numberString = toLocaleString(number, options.locale);
-		return prefix + numberString + ' ' + UNITS[0];
-	}
-
-	const exponent = Math.min(Math.floor(Math.log10(number) / 3), UNITS.length - 1);
-	// eslint-disable-next-line unicorn/prefer-exponentiation-operator
-	number = Number((number / Math.pow(1000, exponent)).toPrecision(3));
-	const numberString = toLocaleString(number, options.locale);
-
-	const unit = UNITS[exponent];
-
-	return prefix + numberString + ' ' + unit;
-};
-
-const VOID_ELEMENTS = /^(area|base|br|col|embed|hr|img|input|link|meta|param|source|track|wbr)$/;
-
-/**
- * @param {string} tag
- * @param {object} attrs
- * @param  {...any} children
- */
-function h(tag, attrs, ...children) {
-	let attrStr = "";
-	for (let key in attrs) {
-		if (attrs[key] != null) {
-			attrStr += ` ${key}="${attrs[key]}"`;
-		}
-	}
-
-	// @ts-ignore
-	const childrenStr = children.flat(Infinity).join("");
-
-	if (tag.match(VOID_ELEMENTS)) {
-		return `<${tag}${attrStr} />`;
-	} else {
-		return `<${tag}${attrStr}>${childrenStr}</${tag}>`;
-	}
-}
-
-var html = {
-	h,
-};
-
 const { UAParser } = uaParser;
-const { h: h$1 } = html;
+const { h } = html;
 
 /** @jsx h */
 
 // Utilities from Tachometer, adapted from: https://github.com/Polymer/tachometer/blob/ac0bc64e4521fb0ba9c78ceea0d382e55724be75/src/format.ts
 
-const lineBreak = h$1('br', null );
+const lineBreak = h('br', null );
 
 /**
- * @typedef {ReturnType<typeof buildTableData>} TableData
- * @param {import('./index').TachResults["benchmarks"]} results
+ * @param {import('./index').TachResults["benchmarks"]} benchmarks
  */
-function buildTableData(results) {
-	// Typically most dimensions for a set of results share the same value (e.g
-	// because we're only running one benchmark, one browser, etc.). To save
-	// horizontal space and make the results easier to read, we first show the
-	// fixed values in one table, then the unfixed values in another.
+function makeDifferenceDimensions(labelFn, benchmarks) {
+	return benchmarks.map((b, i) => {
+		/** @type {import('./global').Dimension} */
+		const dimension = {
+			label: `vs ${labelFn(b)}`,
+			format: (b) => {
+				if (b.differences === undefined) {
+					return "";
+				}
 
-	/** @type {import("./global").Dimension[]} */
-	const fixed = [];
+				const diff = b.differences[i];
+				if (diff === null) {
+					// return ansi.format("\n[gray]{-}       ");
+					return "-";
+				}
 
-	/** @type {import("./global").Dimension[]} */
-	const unfixed = [];
+				return formatDifference(diff);
+			},
+			// tableConfig: {
+			// 	alignment: "right",
+			// },
+		};
 
-	const possiblyFixed = [
-		benchmarkDimension,
-		versionDimension,
-		browserDimension,
-		sampleSizeDimension,
-		bytesSentDimension,
-	];
-
-	for (const dimension of possiblyFixed) {
-		const values = new Set();
-		for (const res of results) {
-			values.add(dimension.format(res));
-		}
-
-		if (values.size === 1) {
-			fixed.push(dimension);
-		} else {
-			unfixed.push(dimension);
-		}
-	}
-
-	// These are the primary observed results, so they always go in the main
-	// result table, even if they happen to be the same in one run.
-	unfixed.push(runtimeConfidenceIntervalDimension);
-
-	if (results.length > 1) {
-		// Create an NxN matrix comparing every result to every other result.
-		const labelFn = makeUniqueLabelFn(results);
-		for (let i = 0; i < results.length; i++) {
-			unfixed.push({
-				label: `vs ${labelFn(results[i])}`,
-				format: (b) => {
-					if (b.differences === undefined) {
-						return "";
-					}
-
-					const diff = b.differences[i];
-					if (diff === null) {
-						// return ansi.format("\n[gray]{-}       ");
-						return "-";
-					}
-
-					return formatDifference(diff);
-				},
-			});
-		}
-	}
-
-	const fixedData = { dimensions: fixed, results: [results[0]] };
-	const unfixedData = { dimensions: unfixed, results };
-	return { fixed: fixedData, unfixed: unfixedData };
+		return dimension;
+	});
 }
 
 /** @type {import("./global").Dimension} */
@@ -1123,11 +1055,6 @@ const browserDimension = {
 		// 	s += `\n@${browser.remoteUrl}`;
 		// }
 
-		// if (browser.userAgent !== "") {
-		// 	const ua = new UAParser(browser.userAgent).getBrowser();
-		// 	s += `\n${ua.version}`;
-		// }
-
 		if (browser.userAgent) {
 			const ua = new UAParser(browser.userAgent).getBrowser();
 			s += ` ${ua.version}`;
@@ -1152,7 +1079,7 @@ const bytesSentDimension = {
 /** @type {import("./global").Dimension} */
 const runtimeConfidenceIntervalDimension = {
 	label: "Avg time",
-	format: (b) => formatConfidenceInterval(b.mean, (n) => n.toFixed(2) + "ms"),
+	format: (b) => formatConfidenceInterval(b.mean, milli),
 	// tableConfig: {
 	// 	alignment: "right",
 	// },
@@ -1174,6 +1101,7 @@ function formatConfidenceInterval(ci, format) {
  * @param {(n: number) => string} format
  */
 const colorizeSign = (n, format) => {
+	// TODO: Determine if we can mimic this behavior with GitHub markdown
 	if (n > 0) {
 		// return ansi.format(`[red bold]{+}${format(n)}`);
 		return `+${format(n)}`;
@@ -1190,26 +1118,22 @@ const colorizeSign = (n, format) => {
  * @param {import('./index').BenchmarkResult["differences"][0]} difference
  * @returns {string}
  */
-function formatDifference({ absolute, percentChange }) {
+function formatDifference({ absolute, percentChange: relative }) {
 	let word, rel, abs;
-	if (absolute.low > 0 && percentChange.low > 0) {
-		word = h$1('strong', null, "slower ❌" ); // bold red
-		rel = `${percent(percentChange.low)}% - ${percent(percentChange.high)}%`;
-		abs = `${absolute.low.toFixed(2)}ms - ${absolute.high.toFixed(2)}ms`;
-	} else if (absolute.high < 0 && percentChange.high < 0) {
-		word = h$1('strong', null, "faster ✔" ); // bold green
-		rel = `${percent(-percentChange.high)}% - ${percent(-percentChange.low)}%`;
-		abs = `${-absolute.high.toFixed(2)}ms - ${-absolute.low.toFixed(2)}ms`;
+	if (absolute.low > 0 && relative.low > 0) {
+		word = h('strong', null, "slower ❌" ); // bold red
+		rel = formatConfidenceInterval(relative, percent);
+		abs = formatConfidenceInterval(absolute, milli);
+	} else if (absolute.high < 0 && relative.high < 0) {
+		word = h('strong', null, "faster ✔" ); // bold green
+		rel = formatConfidenceInterval(negate(relative), percent);
+		abs = formatConfidenceInterval(negate(absolute), milli);
 	} else {
-		word = h$1('strong', null, "unsure 🔍" ); // bold blue
-		rel = `${colorizeSign(percentChange.low, percent)}% - ${colorizeSign(
-			percentChange.high,
-			percent
-		)}%`;
-		abs = `${colorizeSign(absolute.low, (n) =>
-			n.toFixed(2)
-		)}ms - ${colorizeSign(absolute.high, (n) => n.toFixed(2))}ms`;
+		word = h('strong', null, "unsure 🔍" ); // bold blue
+		rel = formatConfidenceInterval(relative, (n) => colorizeSign(n, percent));
+		abs = formatConfidenceInterval(absolute, (n) => colorizeSign(n, milli));
 	}
+
 	return [word, rel, abs].join(lineBreak);
 }
 
@@ -1219,7 +1143,26 @@ function formatDifference({ absolute, percentChange }) {
  */
 function percent(n) {
 	// return (n * 100).toFixed(0);
-	return n.toFixed(0);
+	return n.toFixed(0) + "%";
+}
+
+/**
+ * @param {number} n
+ * @returns {string}
+ */
+function milli(n) {
+	return n.toFixed(2) + "ms";
+}
+
+/**
+ * @param {import('./index').BenchmarkResult["mean"]} ci
+ * @returns {import('./index').BenchmarkResult["mean"]}
+ */
+function negate(ci) {
+	return {
+		low: -ci.high,
+		high: -ci.low,
+	};
 }
 
 /**
@@ -1258,50 +1201,72 @@ function makeUniqueLabelFn(results) {
 	};
 }
 
+var tachometerUtils = {
+	makeUniqueLabelFn,
+	makeDifferenceDimensions,
+	benchmarkDimension,
+	versionDimension,
+	browserDimension,
+	sampleSizeDimension,
+	bytesSentDimension,
+	runtimeConfidenceIntervalDimension,
+};
+
+const {
+	runtimeConfidenceIntervalDimension: runtimeConfidenceIntervalDimension$1,
+	makeUniqueLabelFn: makeUniqueLabelFn$1,
+	makeDifferenceDimensions: makeDifferenceDimensions$1,
+	browserDimension: browserDimension$1,
+	sampleSizeDimension: sampleSizeDimension$1,
+} = tachometerUtils;
+
+/** @jsx h */
+
+const VOID_ELEMENTS = /^(area|base|br|col|embed|hr|img|input|link|meta|param|source|track|wbr)$/;
+
+/**
+ * @param {string} tag
+ * @param {object} attrs
+ * @param  {...any} children
+ */
+function h$1(tag, attrs, ...children) {
+	let attrStr = "";
+	for (let key in attrs) {
+		if (attrs[key] != null) {
+			attrStr += ` ${key}="${attrs[key]}"`;
+		}
+	}
+
+	// @ts-ignore
+	const childrenStr = children.flat(Infinity).join("");
+
+	if (tag.match(VOID_ELEMENTS)) {
+		return `<${tag}${attrStr} />`;
+	} else {
+		return `<${tag}${attrStr}>${childrenStr}</${tag}>`;
+	}
+}
+
 /**
  * @param {{ benchmarks: import('./index').TachResults["benchmarks"] }} props
  */
-function renderTable3({ benchmarks }) {
+function renderTable({ benchmarks }) {
 	// Hard code what dimensions are rendered in the main table since GitHub comments
 	// have limited horizontal space
 
+	const labelFn = makeUniqueLabelFn$1(benchmarks);
 	const benchNames = Array.from(new Set(benchmarks.map((b) => b.name)));
-
-	const listDimensions = [browserDimension, sampleSizeDimension];
-
-	const labelFn = makeUniqueLabelFn(benchmarks);
+	const listDimensions = [browserDimension$1, sampleSizeDimension$1];
 
 	/** @type {import("./global").Dimension[]} */
 	const tableDimensions = [
+		// Custom dimension that combines Tachometer's benchmark & version dimensions
 		{
 			label: "Version",
 			format: labelFn,
 		},
-		runtimeConfidenceIntervalDimension,
-		...benchmarks.map((b, i) => {
-			/** @type {import('./global').Dimension} */
-			const dimension = {
-				label: `vs ${labelFn(b)}`,
-				format: (b) => {
-					if (b.differences === undefined) {
-						return "";
-					}
-
-					const diff = b.differences[i];
-					if (diff === null) {
-						// return ansi.format("\n[gray]{-}       ");
-						return "-";
-					}
-
-					return formatDifference(diff);
-				},
-				// tableConfig: {
-				// 	alignment: "right",
-				// },
-			};
-
-			return dimension;
-		}),
+		runtimeConfidenceIntervalDimension$1,
+		...makeDifferenceDimensions$1(labelFn, benchmarks),
 	];
 
 	return (
@@ -1333,14 +1298,6 @@ function renderTable3({ benchmarks }) {
 							return (
 								h$1('tr', null
 , tableDimensions.map((d, i) => {
-										// const alignment =
-										// 	b.differences[i] == null
-										// 		? "center"
-										// 		: d.tableConfig?.alignment;
-
-										// const style = alignment ? `text-align: ${alignment}` : null;
-										// return <td style={style}>{d.format(b)}</td>;
-
 										return h$1('td', { align: "center",}, d.format(b));
 									})
 )
@@ -1353,19 +1310,13 @@ function renderTable3({ benchmarks }) {
 	);
 }
 
-var tachometerUtils = {
-	// benchmarkDimension,
-	// versionDimension,
-	// browserDimension,
-	// sampleSizeDimension,
-	// bytesSentDimension,
-	// runtimeConfidenceIntervalDimension,
-	buildTableData,
-	renderTable3,
+var html = {
+	h: h$1,
+	renderTable,
 };
 
 const { readFile } = fs.promises;
-const { buildTableData: buildTableData$1, renderTable3: renderTable3$1 } = tachometerUtils;
+const { renderTable: renderTable$1 } = html;
 
 /** @jsx h */
 
@@ -1394,7 +1345,7 @@ function buildReport(tachResults, localVersion, baseVersion) {
 	// 		- Allowing aliases
 	// 		- replace `base-version` with `branch@SHA`
 
-	return renderTable3$1({ benchmarks: tachResults.benchmarks });
+	return renderTable$1({ benchmarks: tachResults.benchmarks });
 }
 
 /**
@@ -1418,7 +1369,7 @@ function getCommentBody(context, report, comment) {
 		"<sub>local_version vs base_version</sub>",
 		"",
 		// TODO: Consider if numbers should inline or below result
-		"- test_bench: unsure 🔍   *-4.10ms - +5.24ms (-10% - +12%)*",
+		"- test_bench: unsure 🔍 *-4.10ms - +5.24ms (-10% - +12%)*",
 		"",
 		"### Results",
 		"",
