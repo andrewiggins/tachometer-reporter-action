@@ -1,11 +1,45 @@
-import { BenchmarkResult } from "./index";
-
 declare global {
 	namespace JSX {
 		interface ElementChildrenAttribute {
 			children: any;
 		}
 	}
+}
+
+type GitHubActionClient = ReturnType<
+	typeof import("@actions/github").getOctokit
+>;
+type GitHubActionContext = typeof import("@actions/github").context;
+type CommentData = import("@octokit/types").IssuesGetCommentResponseData;
+
+interface Inputs {
+	path: string;
+	localVersion: string;
+	baseVersion: string;
+	reportId: string;
+	keepOldResults: boolean;
+	defaultOpen: boolean;
+}
+
+type TachResults = JsonOutputFile;
+type BenchmarkResult = TachResults["benchmarks"][0];
+type ConfidenceInterval = BenchmarkResult["mean"];
+
+interface Report {
+	id: string;
+	summary: string | null;
+	body: string;
+	localVersion: string | null;
+	baseVersion: string | null;
+	results: BenchmarkResult[];
+}
+
+interface Logger {
+	warn(msg: string): void;
+	info(msg: string): void;
+	debug(getMsg: () => string): void;
+	startGroup(name: string): void;
+	endGroup(): void;
 }
 
 /**

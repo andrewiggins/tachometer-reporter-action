@@ -4,8 +4,8 @@ const { reportTachResults } = require("./index");
 
 /**
  * Create a status check, and return a function that updates (completes) it.
- * @param {import('./index').GitHubActionClient} github
- * @param {import('./index').GitHubActionContext} context
+ * @param {import('./global').GitHubActionClient} github
+ * @param {import('./global').GitHubActionContext} context
  */
 async function createCheck(github, context) {
 	const check = await github.checks.create({
@@ -47,13 +47,22 @@ const actionLogger = {
 (async () => {
 	const token = core.getInput("github-token", { required: true });
 	const path = core.getInput("path", { required: true });
+	const reportId = core.getInput("report-id", { required: false });
 	const keepOldResults = core.getInput("keep-old-results", { required: false });
+	const defaultOpen = core.getInput("default-open", { required: false });
 	const localVersion = core.getInput("local-version", { required: false });
 	const baseVersion = core.getInput("base-version", { required: false });
 	const useCheck = core.getInput("use-check", { required: true });
 
 	const octokit = github.getOctokit(token);
-	const inputs = { path, localVersion, baseVersion };
+	const inputs = {
+		path,
+		reportId: reportId ? reportId : null,
+		keepOldResults: keepOldResults != "false",
+		defaultOpen: defaultOpen !== "false",
+		localVersion: localVersion ? localVersion : null,
+		baseVersion: baseVersion ? baseVersion : null,
+	};
 
 	let finish = (checkResult) =>
 		core.debug("Check Result: " + JSON.stringify(checkResult));

@@ -997,7 +997,7 @@ const { UAParser } = uaParser;
 const lineBreak = "<br />";
 
 /**
- * @param {import('./index').BenchmarkResult[]} benchmarks
+ * @param {import('./global').BenchmarkResult[]} benchmarks
  */
 function makeDifferenceDimensions(labelFn, benchmarks) {
 	return benchmarks.map((b, i) => {
@@ -1085,7 +1085,7 @@ const runtimeConfidenceIntervalDimension = {
 
 /**
  * Format a confidence interval as "[low, high]".
- * @param {import('./index').BenchmarkResult["mean"]} ci Confidence interval
+ * @param {import('./global').BenchmarkResult["mean"]} ci Confidence interval
  * @param {(n: number) => string} format
  * @returns {string}
  */
@@ -1113,7 +1113,7 @@ const colorizeSign = (n, format) => {
 };
 
 /**
- * @param {import('./index').BenchmarkResult["differences"][0]} difference
+ * @param {import('./global').BenchmarkResult["differences"][0]} difference
  * @returns {{ label: string; relative: string; absolute: string }}
  */
 function formatDifference({ absolute, percentChange: relative }) {
@@ -1157,8 +1157,8 @@ function milli(n) {
 }
 
 /**
- * @param {import('./index').BenchmarkResult["mean"]} ci
- * @returns {import('./index').BenchmarkResult["mean"]}
+ * @param {import('./global').ConfidenceInterval} ci
+ * @returns {import('./global').ConfidenceInterval}
  */
 function negate(ci) {
 	return {
@@ -1170,8 +1170,8 @@ function negate(ci) {
 /**
  * Create a function that will return the shortest unambiguous label for a
  * result, given the full array of results.
- * @param {import('./index').BenchmarkResult[]} results
- * @returns {(result: import('./index').BenchmarkResult) => string}
+ * @param {import('./global').BenchmarkResult[]} results
+ * @returns {(result: import('./global').BenchmarkResult) => string}
  */
 function makeUniqueLabelFn(results) {
 	const names = new Set();
@@ -1258,10 +1258,10 @@ function h(tag, attrs, ...children) {
 }
 
 /**
- * @param {{ benchmarks: import('./index').BenchmarkResult[] }} props
+ * @param {{ reportId: string; benchmarks: import('./global').BenchmarkResult[]; }} props
  * @returns {string}
  */
-function Table({ benchmarks }) {
+function Table({ reportId, benchmarks }) {
 	// Hard code what dimensions are rendered in the main table since GitHub comments
 	// have limited horizontal space
 
@@ -1281,7 +1281,7 @@ function Table({ benchmarks }) {
 	];
 
 	return (
-		h('div', { id: getId("table-0"),}
+		h('div', { id: getId("table-" + reportId),}
 , h('details', { open: true,}
 , h('summary', null
 , h('strong', null, benchNames.join(", "))
@@ -1322,15 +1322,15 @@ function Table({ benchmarks }) {
 }
 
 /**
- * @param {{ benchmarks: import('./index').BenchmarkResult[]; localVersion: string; baseVersion: string; }} props
+ * @param {{ reportId: string; benchmarks: import('./global').BenchmarkResult[]; localVersion: string; baseVersion: string; }} props
  */
-function Summary({ benchmarks, localVersion, baseVersion }) {
+function Summary({ reportId, benchmarks, localVersion, baseVersion }) {
 	const baseIndex = benchmarks.findIndex((b) => b.version == baseVersion);
 	const localResults = benchmarks.find((b) => b.version == localVersion);
 	const diff = formatDifference$1(localResults.differences[baseIndex]);
 
 	return (
-		h('div', { id: getId("summary-0"),}
+		h('div', { id: getId("summary-" + reportId),}
 , localResults.name, ": " , diff.label, " "
 , h('em', null
 , diff.relative, " (" , diff.absolute, ")"
@@ -1365,19 +1365,19 @@ const { readFile } = fs.promises;
 const { h: h$1, Table: Table$1, Summary: Summary$1, SummaryList: SummaryList$1 } = html;
 
 /**
- * @typedef {import('./global').JsonOutputFile} TachResults
- * @typedef {TachResults["benchmarks"][0]} BenchmarkResult
- * @typedef {{ summary: string | null; body: string; localVersion: string | null; baseVersion: string | null; results: BenchmarkResult[]; }} Report Results of
- * Tachometer grouped by benchmark name, then browser
- *
- * @param {TachResults} tachResults
- * @param {string | null} localVersion
- * @param {string | null} baseVersion
- *
- * @returns {Report}
+ * @param {import('./global').BenchmarkResult[]} benchmarks
+ * @returns {string}
  */
-function buildReport(tachResults, localVersion, baseVersion) {
-	// TODO: Generate summaries
+function getReportId(benchmarks) {
+	return "0";
+}
+
+/**
+ * @param {import('./global').TachResults} tachResults
+ * @param {{ localVersion: string; baseVersion: string; reportId: string; }} inputs
+ * @returns {import('./global').Report}
+ */
+function buildReport(tachResults, inputs) {
 	// TODO: Write comment update code
 	// TODO: Determine if we can render `Running...` status at start of job
 	//		- might need to add a label/id input values so we can update comments
@@ -1388,26 +1388,31 @@ function buildReport(tachResults, localVersion, baseVersion) {
 	// 		- Allowing aliases
 	// 		- replace `base-version` with `branch@SHA`
 
+	const benchmarks = tachResults.benchmarks;
+	const reportId = inputs.reportId ? inputs.reportId : getReportId();
+
 	return {
-		body: h$1(Table$1, { benchmarks: tachResults.benchmarks,} ),
-		results: tachResults.benchmarks,
-		localVersion,
-		baseVersion,
+		id: reportId,
+		body: h$1(Table$1, { reportId: reportId, benchmarks: benchmarks,} ),
+		results: benchmarks,
+		localVersion: inputs.localVersion,
+		baseVersion: inputs.baseVersion,
 		summary:
-			baseVersion && localVersion ? (
+			inputs.baseVersion && inputs.localVersion ? (
 				h$1(Summary$1, {
-					benchmarks: tachResults.benchmarks,
-					localVersion: localVersion,
-					baseVersion: baseVersion,}
+					reportId: reportId,
+					benchmarks: benchmarks,
+					localVersion: inputs.localVersion,
+					baseVersion: inputs.baseVersion,}
 				)
 			) : null,
 	};
 }
 
 /**
- * @param {GitHubActionContext} context
- * @param {Report} report
- * @param {CommentData | null} comment
+ * @param {import('./global').GitHubActionContext} context
+ * @param {import('./global').Report} report
+ * @param {import('./global').CommentData | null} comment
  */
 function getCommentBody(context, report, comment) {
 	// TODO: Update comment body
@@ -1440,13 +1445,10 @@ function getCommentBody(context, report, comment) {
 
 /**
  * Create a PR comment, or update one if it already exists
- *
- * @typedef {import('@octokit/types').IssuesGetCommentResponseData} CommentData
- *
- * @param {GitHubActionClient} github,
- * @param {GitHubActionContext} context
- * @param {(comment: CommentData | null) => string} getCommentBody
- * @param {Logger} logger
+ * @param {import('./global').GitHubActionClient} github,
+ * @param {import('./global').GitHubActionContext} context
+ * @param {(comment: import('./global').CommentData | null) => string} getCommentBody
+ * @param {import('./global').Logger} logger
  */
 async function postOrUpdateComment(github, context, getCommentBody, logger) {
 	const footer = `\n\n<a href="https://github.com/andrewiggins/tachometer-reporter-action"><sub>tachometer-reporter-action</sub></a>`; // used to update this comment later
@@ -1457,7 +1459,7 @@ async function postOrUpdateComment(github, context, getCommentBody, logger) {
 
 	logger.startGroup(`Updating PR comment`);
 
-	/** @type {CommentData} */
+	/** @type {import('./global').CommentData} */
 	let comment;
 	try {
 		logger.info(`Looking for existing comment...`);
@@ -1507,7 +1509,7 @@ async function postOrUpdateComment(github, context, getCommentBody, logger) {
 	logger.endGroup();
 }
 
-/** @type {Logger} */
+/** @type {import('./global').Logger} */
 const defaultLogger = {
 	warn(getMsg) {
 		console.warn(getMsg);
@@ -1525,17 +1527,11 @@ const defaultLogger = {
 };
 
 /**
- * @typedef {ReturnType<typeof import('@actions/github').getOctokit>} GitHubActionClient
- * @typedef {typeof import('@actions/github').context} GitHubActionContext
- * @typedef {{ path: string; localVersion: string; baseVersion: string; }} Inputs
- * @typedef {{ warn(msg: string): void; info(msg: string): void; debug(getMsg: () => string): void; startGroup(name: string): void; endGroup(): void; }} Logger
- *
- * @param {GitHubActionClient} github
- * @param {GitHubActionContext} context
- * @param {Inputs} inputs
- * @param {Logger} [logger]
- *
- * @returns {Promise<Report>}
+ * @param {import('./global').GitHubActionClient} github
+ * @param {import('./global').GitHubActionContext} context
+ * @param {import('./global').Inputs} inputs
+ * @param {import('./global').Logger} [logger]
+ * @returns {Promise<import('./global').Report>}
  */
 async function reportTachResults(
 	github,
@@ -1544,11 +1540,7 @@ async function reportTachResults(
 	logger = defaultLogger
 ) {
 	const tachResults = JSON.parse(await readFile(inputs.path, "utf8"));
-	const report = buildReport(
-		tachResults,
-		inputs.localVersion,
-		inputs.baseVersion
-	);
+	const report = buildReport(tachResults, inputs);
 
 	await postOrUpdateComment(
 		github,
@@ -1573,8 +1565,8 @@ const { reportTachResults: reportTachResults$1 } = src;
 
 /**
  * Create a status check, and return a function that updates (completes) it.
- * @param {import('./index').GitHubActionClient} github
- * @param {import('./index').GitHubActionContext} context
+ * @param {import('./global').GitHubActionClient} github
+ * @param {import('./global').GitHubActionContext} context
  */
 async function createCheck(github, context) {
 	const check = await github.checks.create({
@@ -1616,13 +1608,22 @@ const actionLogger = {
 (async () => {
 	const token = github.core.getInput("github-token", { required: true });
 	const path = github.core.getInput("path", { required: true });
+	const reportId = github.core.getInput("report-id", { required: false });
 	const keepOldResults = github.core.getInput("keep-old-results", { required: false });
+	const defaultOpen = github.core.getInput("default-open", { required: false });
 	const localVersion = github.core.getInput("local-version", { required: false });
 	const baseVersion = github.core.getInput("base-version", { required: false });
 	const useCheck = github.core.getInput("use-check", { required: true });
 
 	const octokit = github.github.getOctokit(token);
-	const inputs = { path, localVersion, baseVersion };
+	const inputs = {
+		path,
+		reportId: reportId ? reportId : null,
+		keepOldResults: keepOldResults != "false",
+		defaultOpen: defaultOpen !== "false",
+		localVersion: localVersion ? localVersion : null,
+		baseVersion: baseVersion ? baseVersion : null,
+	};
 
 	let finish = (checkResult) =>
 		github.core.debug("Check Result: " + JSON.stringify(checkResult));

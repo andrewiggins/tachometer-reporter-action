@@ -13,19 +13,19 @@ function acquireCommentLock() {
 }
 
 /**
- * @typedef {import('./global').JsonOutputFile} TachResults
- * @typedef {TachResults["benchmarks"][0]} BenchmarkResult
- * @typedef {{ summary: string | null; body: string; localVersion: string | null; baseVersion: string | null; results: BenchmarkResult[]; }} Report Results of
- * Tachometer grouped by benchmark name, then browser
- *
- * @param {TachResults} tachResults
- * @param {string | null} localVersion
- * @param {string | null} baseVersion
- *
- * @returns {Report}
+ * @param {import('./global').BenchmarkResult[]} benchmarks
+ * @returns {string}
  */
-function buildReport(tachResults, localVersion, baseVersion) {
-	// TODO: Generate summaries
+function getReportId(benchmarks) {
+	return "0";
+}
+
+/**
+ * @param {import('./global').TachResults} tachResults
+ * @param {{ localVersion: string; baseVersion: string; reportId: string; }} inputs
+ * @returns {import('./global').Report}
+ */
+function buildReport(tachResults, inputs) {
 	// TODO: Write comment update code
 	// TODO: Determine if we can render `Running...` status at start of job
 	//		- might need to add a label/id input values so we can update comments
@@ -36,26 +36,31 @@ function buildReport(tachResults, localVersion, baseVersion) {
 	// 		- Allowing aliases
 	// 		- replace `base-version` with `branch@SHA`
 
+	const benchmarks = tachResults.benchmarks;
+	const reportId = inputs.reportId ? inputs.reportId : getReportId(benchmarks);
+
 	return {
-		body: <Table benchmarks={tachResults.benchmarks} />,
-		results: tachResults.benchmarks,
-		localVersion,
-		baseVersion,
+		id: reportId,
+		body: <Table reportId={reportId} benchmarks={benchmarks} />,
+		results: benchmarks,
+		localVersion: inputs.localVersion,
+		baseVersion: inputs.baseVersion,
 		summary:
-			baseVersion && localVersion ? (
+			inputs.baseVersion && inputs.localVersion ? (
 				<Summary
-					benchmarks={tachResults.benchmarks}
-					localVersion={localVersion}
-					baseVersion={baseVersion}
+					reportId={reportId}
+					benchmarks={benchmarks}
+					localVersion={inputs.localVersion}
+					baseVersion={inputs.baseVersion}
 				/>
 			) : null,
 	};
 }
 
 /**
- * @param {GitHubActionContext} context
- * @param {Report} report
- * @param {CommentData | null} comment
+ * @param {import('./global').GitHubActionContext} context
+ * @param {import('./global').Report} report
+ * @param {import('./global').CommentData | null} comment
  */
 function getCommentBody(context, report, comment) {
 	// TODO: Update comment body
@@ -88,13 +93,10 @@ function getCommentBody(context, report, comment) {
 
 /**
  * Create a PR comment, or update one if it already exists
- *
- * @typedef {import('@octokit/types').IssuesGetCommentResponseData} CommentData
- *
- * @param {GitHubActionClient} github,
- * @param {GitHubActionContext} context
- * @param {(comment: CommentData | null) => string} getCommentBody
- * @param {Logger} logger
+ * @param {import('./global').GitHubActionClient} github,
+ * @param {import('./global').GitHubActionContext} context
+ * @param {(comment: import('./global').CommentData | null) => string} getCommentBody
+ * @param {import('./global').Logger} logger
  */
 async function postOrUpdateComment(github, context, getCommentBody, logger) {
 	const footer = `\n\n<a href="https://github.com/andrewiggins/tachometer-reporter-action"><sub>tachometer-reporter-action</sub></a>`; // used to update this comment later
@@ -105,7 +107,7 @@ async function postOrUpdateComment(github, context, getCommentBody, logger) {
 
 	logger.startGroup(`Updating PR comment`);
 
-	/** @type {CommentData} */
+	/** @type {import('./global').CommentData} */
 	let comment;
 	try {
 		logger.info(`Looking for existing comment...`);
@@ -155,7 +157,7 @@ async function postOrUpdateComment(github, context, getCommentBody, logger) {
 	logger.endGroup();
 }
 
-/** @type {Logger} */
+/** @type {import('./global').Logger} */
 const defaultLogger = {
 	warn(getMsg) {
 		console.warn(getMsg);
@@ -173,17 +175,11 @@ const defaultLogger = {
 };
 
 /**
- * @typedef {ReturnType<typeof import('@actions/github').getOctokit>} GitHubActionClient
- * @typedef {typeof import('@actions/github').context} GitHubActionContext
- * @typedef {{ path: string; localVersion: string; baseVersion: string; }} Inputs
- * @typedef {{ warn(msg: string): void; info(msg: string): void; debug(getMsg: () => string): void; startGroup(name: string): void; endGroup(): void; }} Logger
- *
- * @param {GitHubActionClient} github
- * @param {GitHubActionContext} context
- * @param {Inputs} inputs
- * @param {Logger} [logger]
- *
- * @returns {Promise<Report>}
+ * @param {import('./global').GitHubActionClient} github
+ * @param {import('./global').GitHubActionContext} context
+ * @param {import('./global').Inputs} inputs
+ * @param {import('./global').Logger} [logger]
+ * @returns {Promise<import('./global').Report>}
  */
 async function reportTachResults(
 	github,
@@ -192,11 +188,7 @@ async function reportTachResults(
 	logger = defaultLogger
 ) {
 	const tachResults = JSON.parse(await readFile(inputs.path, "utf8"));
-	const report = buildReport(
-		tachResults,
-		inputs.localVersion,
-		inputs.baseVersion
-	);
+	const report = buildReport(tachResults, inputs);
 
 	await postOrUpdateComment(
 		github,

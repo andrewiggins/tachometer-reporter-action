@@ -41,10 +41,10 @@ function h(tag, attrs, ...children) {
 }
 
 /**
- * @param {{ benchmarks: import('./index').BenchmarkResult[] }} props
+ * @param {{ reportId: string; benchmarks: import('./global').BenchmarkResult[]; }} props
  * @returns {string}
  */
-function Table({ benchmarks }) {
+function Table({ reportId, benchmarks }) {
 	// Hard code what dimensions are rendered in the main table since GitHub comments
 	// have limited horizontal space
 
@@ -64,7 +64,7 @@ function Table({ benchmarks }) {
 	];
 
 	return (
-		<div id={getId("table-0")}>
+		<div id={getId("table-" + reportId)}>
 			<details open>
 				<summary>
 					<strong>{benchNames.join(", ")}</strong>
@@ -105,15 +105,15 @@ function Table({ benchmarks }) {
 }
 
 /**
- * @param {{ benchmarks: import('./index').BenchmarkResult[]; localVersion: string; baseVersion: string; }} props
+ * @param {{ reportId: string; benchmarks: import('./global').BenchmarkResult[]; localVersion: string; baseVersion: string; }} props
  */
-function Summary({ benchmarks, localVersion, baseVersion }) {
+function Summary({ reportId, benchmarks, localVersion, baseVersion }) {
 	const baseIndex = benchmarks.findIndex((b) => b.version == baseVersion);
 	const localResults = benchmarks.find((b) => b.version == localVersion);
 	const diff = formatDifference(localResults.differences[baseIndex]);
 
 	return (
-		<div id={getId("summary-0")}>
+		<div id={getId("summary-" + reportId)}>
 			{localResults.name}: {diff.label}{" "}
 			<em>
 				{diff.relative} ({diff.absolute})

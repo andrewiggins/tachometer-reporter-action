@@ -6,7 +6,7 @@ const { UAParser } = require("ua-parser-js");
 const lineBreak = "<br />";
 
 /**
- * @param {import('./index').BenchmarkResult[]} benchmarks
+ * @param {import('./global').BenchmarkResult[]} benchmarks
  */
 function makeDifferenceDimensions(labelFn, benchmarks) {
 	return benchmarks.map((b, i) => {
@@ -94,7 +94,7 @@ const runtimeConfidenceIntervalDimension = {
 
 /**
  * Format a confidence interval as "[low, high]".
- * @param {import('./index').BenchmarkResult["mean"]} ci Confidence interval
+ * @param {import('./global').BenchmarkResult["mean"]} ci Confidence interval
  * @param {(n: number) => string} format
  * @returns {string}
  */
@@ -122,7 +122,7 @@ const colorizeSign = (n, format) => {
 };
 
 /**
- * @param {import('./index').BenchmarkResult["differences"][0]} difference
+ * @param {import('./global').BenchmarkResult["differences"][0]} difference
  * @returns {{ label: string; relative: string; absolute: string }}
  */
 function formatDifference({ absolute, percentChange: relative }) {
@@ -166,8 +166,8 @@ function milli(n) {
 }
 
 /**
- * @param {import('./index').BenchmarkResult["mean"]} ci
- * @returns {import('./index').BenchmarkResult["mean"]}
+ * @param {import('./global').ConfidenceInterval} ci
+ * @returns {import('./global').ConfidenceInterval}
  */
 function negate(ci) {
 	return {
@@ -179,8 +179,8 @@ function negate(ci) {
 /**
  * Create a function that will return the shortest unambiguous label for a
  * result, given the full array of results.
- * @param {import('./index').BenchmarkResult[]} results
- * @returns {(result: import('./index').BenchmarkResult) => string}
+ * @param {import('./global').BenchmarkResult[]} results
+ * @returns {(result: import('./global').BenchmarkResult) => string}
  */
 function makeUniqueLabelFn(results) {
 	const names = new Set();
