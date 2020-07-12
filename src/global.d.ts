@@ -14,11 +14,11 @@ type CommentData = import("@octokit/types").IssuesGetCommentResponseData;
 
 interface Inputs {
 	path: string;
-	localVersion: string;
-	baseVersion: string;
-	reportId: string;
-	keepOldResults: boolean;
-	defaultOpen: boolean;
+	localVersion?: string;
+	baseVersion: ?string;
+	reportId?: string;
+	keepOldResults?: boolean;
+	defaultOpen?: boolean;
 }
 
 type TachResults = JsonOutputFile;
