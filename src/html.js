@@ -6,16 +6,20 @@ const {
 	sampleSizeDimension,
 } = require("./tachometer-utils");
 
-/** @jsx h */
-
 const VOID_ELEMENTS = /^(area|base|br|col|embed|hr|img|input|link|meta|param|source|track|wbr)$/;
 
 /**
- * @param {string} tag
+ * @typedef {(props: any) => string} Component
+ * @param {string | Component} tag
  * @param {object} attrs
  * @param  {...any} children
+ * @returns {string}
  */
 function h(tag, attrs, ...children) {
+	if (typeof tag == "function") {
+		return tag({ ...attrs, children });
+	}
+
 	let attrStr = "";
 	for (let key in attrs) {
 		if (attrs[key] != null) {
@@ -35,8 +39,9 @@ function h(tag, attrs, ...children) {
 
 /**
  * @param {{ benchmarks: import('./index').TachResults["benchmarks"] }} props
+ * @returns {string}
  */
-function renderTable({ benchmarks }) {
+function Table({ benchmarks }) {
 	// Hard code what dimensions are rendered in the main table since GitHub comments
 	// have limited horizontal space
 
@@ -98,5 +103,5 @@ function renderTable({ benchmarks }) {
 
 module.exports = {
 	h,
-	renderTable,
+	Table,
 };

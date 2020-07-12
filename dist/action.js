@@ -991,13 +991,10 @@ var uaParser = github.createCommonjsModule(function (module, exports) {
 });
 
 const { UAParser } = uaParser;
-const { h } = html;
-
-/** @jsx h */
 
 // Utilities from Tachometer, adapted from: https://github.com/Polymer/tachometer/blob/ac0bc64e4521fb0ba9c78ceea0d382e55724be75/src/format.ts
 
-const lineBreak = h('br', null );
+const lineBreak = "<br />";
 
 /**
  * @param {import('./index').TachResults["benchmarks"]} benchmarks
@@ -1121,15 +1118,15 @@ const colorizeSign = (n, format) => {
 function formatDifference({ absolute, percentChange: relative }) {
 	let word, rel, abs;
 	if (absolute.low > 0 && relative.low > 0) {
-		word = h('strong', null, "slower ❌" ); // bold red
+		word = `<strong>slower ❌</strong>`; // bold red
 		rel = formatConfidenceInterval(relative, percent);
 		abs = formatConfidenceInterval(absolute, milli);
 	} else if (absolute.high < 0 && relative.high < 0) {
-		word = h('strong', null, "faster ✔" ); // bold green
+		word = `<strong>faster ✔</strong>`; // bold green
 		rel = formatConfidenceInterval(negate(relative), percent);
 		abs = formatConfidenceInterval(negate(absolute), milli);
 	} else {
-		word = h('strong', null, "unsure 🔍" ); // bold blue
+		word = `<strong>unsure 🔍</strong>`; // bold blue
 		rel = formatConfidenceInterval(relative, (n) => colorizeSign(n, percent));
 		abs = formatConfidenceInterval(absolute, (n) => colorizeSign(n, milli));
 	}
@@ -1220,16 +1217,20 @@ const {
 	sampleSizeDimension: sampleSizeDimension$1,
 } = tachometerUtils;
 
-/** @jsx h */
-
 const VOID_ELEMENTS = /^(area|base|br|col|embed|hr|img|input|link|meta|param|source|track|wbr)$/;
 
 /**
- * @param {string} tag
+ * @typedef {(props: any) => string} Component
+ * @param {string | Component} tag
  * @param {object} attrs
  * @param  {...any} children
+ * @returns {string}
  */
-function h$1(tag, attrs, ...children) {
+function h(tag, attrs, ...children) {
+	if (typeof tag == "function") {
+		return tag({ ...attrs, children });
+	}
+
 	let attrStr = "";
 	for (let key in attrs) {
 		if (attrs[key] != null) {
@@ -1249,8 +1250,9 @@ function h$1(tag, attrs, ...children) {
 
 /**
  * @param {{ benchmarks: import('./index').TachResults["benchmarks"] }} props
+ * @returns {string}
  */
-function renderTable({ benchmarks }) {
+function Table({ benchmarks }) {
 	// Hard code what dimensions are rendered in the main table since GitHub comments
 	// have limited horizontal space
 
@@ -1270,35 +1272,35 @@ function renderTable({ benchmarks }) {
 	];
 
 	return (
-		h$1('div', { id: "test-1",}
-, h$1('details', { open: true,}
-, h$1('summary', null
-, h$1('strong', null, benchNames.join(", "))
+		h('div', { id: "test-1",}
+, h('details', { open: true,}
+, h('summary', null
+, h('strong', null, benchNames.join(", "))
 )
-, h$1('ul', null
+, h('ul', null
 , listDimensions.map((dim) => {
 						const uniqueValues = new Set(benchmarks.map((b) => dim.format(b)));
 						return (
-							h$1('li', null
+							h('li', null
 , dim.label, ": " , Array.from(uniqueValues).join(", ")
 )
 						);
 					})
 )
-, h$1('table', null
-, h$1('thead', null
-, h$1('tr', null
+, h('table', null
+, h('thead', null
+, h('tr', null
 , tableDimensions.map((d) => (
-								h$1('th', null, d.label)
+								h('th', null, d.label)
 							))
 )
 )
-, h$1('tbody', null
+, h('tbody', null
 , benchmarks.map((b) => {
 							return (
-								h$1('tr', null
+								h('tr', null
 , tableDimensions.map((d, i) => {
-										return h$1('td', { align: "center",}, d.format(b));
+										return h('td', { align: "center",}, d.format(b));
 									})
 )
 							);
@@ -1311,14 +1313,12 @@ function renderTable({ benchmarks }) {
 }
 
 var html = {
-	h: h$1,
-	renderTable,
+	h,
+	Table,
 };
 
 const { readFile } = fs.promises;
-const { renderTable: renderTable$1 } = html;
-
-/** @jsx h */
+const { renderTable, h: h$1, Table: Table$1 } = html;
 
 /**
  * @typedef {import('./global').JsonOutputFile} TachResults
@@ -1345,7 +1345,7 @@ function buildReport(tachResults, localVersion, baseVersion) {
 	// 		- Allowing aliases
 	// 		- replace `base-version` with `branch@SHA`
 
-	return renderTable$1({ benchmarks: tachResults.benchmarks });
+	return h$1(Table$1, { benchmarks: tachResults.benchmarks,} );
 }
 
 /**

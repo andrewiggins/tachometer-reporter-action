@@ -1,5 +1,5 @@
 const { readFile } = require("fs").promises;
-const { renderTable } = require("./html");
+const { renderTable, h, Table } = require("./html");
 
 function acquireCommentLock() {
 	// 1. read if comment exists
@@ -11,8 +11,6 @@ function acquireCommentLock() {
 	// 1. if we have lock, continue
 	// 1. if we don't have lock, wait a random time and try again
 }
-
-/** @jsx h */
 
 /**
  * @typedef {import('./global').JsonOutputFile} TachResults
@@ -39,7 +37,7 @@ function buildReport(tachResults, localVersion, baseVersion) {
 	// 		- Allowing aliases
 	// 		- replace `base-version` with `branch@SHA`
 
-	return renderTable({ benchmarks: tachResults.benchmarks });
+	return <Table benchmarks={tachResults.benchmarks} />;
 }
 
 /**

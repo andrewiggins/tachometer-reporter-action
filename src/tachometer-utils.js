@@ -1,12 +1,9 @@
 const prettyBytes = require("pretty-bytes");
 const { UAParser } = require("ua-parser-js");
-const { h } = require("./html");
-
-/** @jsx h */
 
 // Utilities from Tachometer, adapted from: https://github.com/Polymer/tachometer/blob/ac0bc64e4521fb0ba9c78ceea0d382e55724be75/src/format.ts
 
-const lineBreak = <br />;
+const lineBreak = "<br />";
 
 /**
  * @param {import('./index').TachResults["benchmarks"]} benchmarks
@@ -130,15 +127,15 @@ const colorizeSign = (n, format) => {
 function formatDifference({ absolute, percentChange: relative }) {
 	let word, rel, abs;
 	if (absolute.low > 0 && relative.low > 0) {
-		word = <strong>slower ❌</strong>; // bold red
+		word = `<strong>slower ❌</strong>`; // bold red
 		rel = formatConfidenceInterval(relative, percent);
 		abs = formatConfidenceInterval(absolute, milli);
 	} else if (absolute.high < 0 && relative.high < 0) {
-		word = <strong>faster ✔</strong>; // bold green
+		word = `<strong>faster ✔</strong>`; // bold green
 		rel = formatConfidenceInterval(negate(relative), percent);
 		abs = formatConfidenceInterval(negate(absolute), milli);
 	} else {
-		word = <strong>unsure 🔍</strong>; // bold blue
+		word = `<strong>unsure 🔍</strong>`; // bold blue
 		rel = formatConfidenceInterval(relative, (n) => colorizeSign(n, percent));
 		abs = formatConfidenceInterval(absolute, (n) => colorizeSign(n, milli));
 	}
