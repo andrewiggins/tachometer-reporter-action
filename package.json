@@ -9,7 +9,7 @@
     "build": "npm run build:index && npm run build:action ",
     "build:index": "sucrase --production -t jsx --jsx-pragma h -d lib ./src",
     "build:action": "rollup -c ./rollup.config.js",
-    "test": "node tests/index.test.js"
+    "test": "uvu tests"
   },
   "repository": {
     "type": "git",
@@ -50,7 +50,7 @@
     "rollup-plugin-node-externals": "^2.2.0",
     "sucrase": "^3.15.0",
     "tachometer": "^0.4.20",
-    "uvu": "^0.2.0",
+    "uvu": "^0.2.1",
     "watch": "^1.0.2"
   },
   "dependencies": {

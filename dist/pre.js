@@ -16,6 +16,11 @@ require('stream');
 require('zlib');
 
 (async function () {
+	// TODO: Render `Running...` status at start of job and setup general
+	// structure of comment including Summary and Results section
+	//    - might need to add a label/id input values so we can update comments
+	//      before we have results
+
 	const token = github.core.getInput("github-token", { required: true });
 	const reportId = github.core.getInput("report-id", { required: false });
 

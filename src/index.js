@@ -30,10 +30,7 @@ function getReportId(benchmarks) {
  * @returns {import('./global').Report}
  */
 function buildReport(tachResults, inputs) {
-	// TODO: Write comment update code
-	// TODO: Determine if we can render `Running...` status at start of job
-	//		- might need to add a label/id input values so we can update comments
-	// 			before we have results
+	// TODO: Include which action generated the results (e.g. Main #13) (in Table?)
 	// TODO: Consider improving names (likely needs to happen in runner repo)
 	//		- "before" and "this PR"
 	//		- Allow different names for local runs and CI runs
@@ -74,14 +71,6 @@ function buildReport(tachResults, inputs) {
  */
 function getCommentBody(context, report, comment) {
 	// TODO: Update comment body
-	// TODO: Include which action generated the results (e.g. Main#13)
-	// TODO: Add tests for getCommentBody
-	//		- new comment (null comment arg)
-	//		- new comment with no local and/or base version defined
-	//		- existing comment with no existing id
-	//		- existing comment with existing id & replace
-	//		- existing comment with existing id & no replace
-	//		- existing comment with no local and/or base version defined
 
 	let body = ["## Tachometer Benchmark Results\n"];
 

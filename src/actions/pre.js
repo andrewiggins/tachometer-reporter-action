@@ -2,6 +2,11 @@ const core = require("@actions/core");
 const github = require("@actions/github");
 
 (async function () {
+	// TODO: Render `Running...` status at start of job and setup general
+	// structure of comment including Summary and Results section
+	//    - might need to add a label/id input values so we can update comments
+	//      before we have results
+
 	const token = core.getInput("github-token", { required: true });
 	const reportId = core.getInput("report-id", { required: false });
 
