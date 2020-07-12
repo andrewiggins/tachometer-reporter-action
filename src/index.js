@@ -1,6 +1,6 @@
 const { readFile } = require("fs").promises;
 const crypto = require("crypto");
-const { h, Table, Summary, SummaryList } = require("./html");
+const { h, Table, Summary, SummaryList, Title } = require("./html");
 const { postOrUpdateComment } = require("./comments");
 const { getWorkflowRun } = require("./utils/github");
 
@@ -74,7 +74,8 @@ function buildReport(workflowRun, inputs, tachResults) {
 function getCommentBody(context, report, comment) {
 	// TODO: Update comment body
 
-	let body = ["## Tachometer Benchmark Results\n"];
+	/** @type {string[]} */
+	let body = [<Title /> + "\n"];
 
 	if (report.summary) {
 		body.push(

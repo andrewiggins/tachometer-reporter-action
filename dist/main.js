@@ -1366,8 +1366,38 @@ function SummaryList({ children }) {
 	);
 }
 
+function Icon() {
+	return (
+		h('svg', {
+			xmlns: "http://www.w3.org/2000/svg",
+			width: "24",
+			height: "24",
+			viewBox: "0 0 24 24"   ,
+			fill: "none",
+			stroke: "currentColor",
+			'stroke-width': "2",
+			'stroke-linecap': "round",
+			'stroke-linejoin': "round",
+			class: "octicon",}
+		
+, h('line', { x1: "18", y1: "20", x2: "18", y2: "10",} )
+, h('line', { x1: "12", y1: "20", x2: "12", y2: "4",} )
+, h('line', { x1: "6", y1: "20", x2: "6", y2: "14",} )
+)
+	);
+}
+
+function Title() {
+	return (
+		h('h2', null
+, h(Icon, null ), " Tachometer Benchmark Results"
+)
+	);
+}
+
 var html = {
 	h,
+	Title,
 	Table,
 	Summary,
 	SummaryList,
@@ -1445,7 +1475,7 @@ var comments = {
 
 const { readFile } = fs.promises;
 
-const { h: h$1, Table: Table$1, Summary: Summary$1, SummaryList: SummaryList$1 } = html;
+const { h: h$1, Table: Table$1, Summary: Summary$1, SummaryList: SummaryList$1, Title: Title$1 } = html;
 const { postOrUpdateComment: postOrUpdateComment$1 } = comments;
 const { getWorkflowRun } = github.github;
 
@@ -1519,7 +1549,8 @@ function buildReport(workflowRun, inputs, tachResults) {
 function getCommentBody(context, report, comment) {
 	// TODO: Update comment body
 
-	let body = ["## Tachometer Benchmark Results\n"];
+	/** @type {string[]} */
+	let body = [h$1(Title$1, null ) + "\n"];
 
 	if (report.summary) {
 		body.push(
