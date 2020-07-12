@@ -19,6 +19,10 @@ inputs:
     description: Whether to keep old results in the comment on re-runs
     required: false
     default: "false"
+  default-open:
+    description: "Whether to open this action's results table by default"
+    required: false
+    default: "false"
   local-version:
     description: "The name of the version in tachometer results (i.e. packageVersions.label config) that is under test or being built by this action"
     required: false
