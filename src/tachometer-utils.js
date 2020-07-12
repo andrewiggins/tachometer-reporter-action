@@ -6,7 +6,7 @@ const { UAParser } = require("ua-parser-js");
 const lineBreak = "<br />";
 
 /**
- * @param {import('./index').TachResults["benchmarks"]} benchmarks
+ * @param {import('./index').BenchmarkResult[]} benchmarks
  */
 function makeDifferenceDimensions(labelFn, benchmarks) {
 	return benchmarks.map((b, i) => {
@@ -24,7 +24,8 @@ function makeDifferenceDimensions(labelFn, benchmarks) {
 					return "-";
 				}
 
-				return formatDifference(diff);
+				const { label, relative, absolute } = formatDifference(diff);
+				return [label, relative, absolute].join(lineBreak);
 			},
 			// tableConfig: {
 			// 	alignment: "right",
@@ -122,7 +123,7 @@ const colorizeSign = (n, format) => {
 
 /**
  * @param {import('./index').BenchmarkResult["differences"][0]} difference
- * @returns {string}
+ * @returns {{ label: string; relative: string; absolute: string }}
  */
 function formatDifference({ absolute, percentChange: relative }) {
 	let word, rel, abs;
@@ -140,7 +141,11 @@ function formatDifference({ absolute, percentChange: relative }) {
 		abs = formatConfidenceInterval(absolute, (n) => colorizeSign(n, milli));
 	}
 
-	return [word, rel, abs].join(lineBreak);
+	return {
+		label: word,
+		relative: rel,
+		absolute: abs,
+	};
 }
 
 /**
@@ -174,7 +179,7 @@ function negate(ci) {
 /**
  * Create a function that will return the shortest unambiguous label for a
  * result, given the full array of results.
- * @param {import('./index').TachResults["benchmarks"]} results
+ * @param {import('./index').BenchmarkResult[]} results
  * @returns {(result: import('./index').BenchmarkResult) => string}
  */
 function makeUniqueLabelFn(results) {
@@ -208,6 +213,7 @@ function makeUniqueLabelFn(results) {
 }
 
 module.exports = {
+	formatDifference,
 	makeUniqueLabelFn,
 	makeDifferenceDimensions,
 	benchmarkDimension,

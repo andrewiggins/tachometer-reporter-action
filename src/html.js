@@ -1,12 +1,15 @@
 const {
-	runtimeConfidenceIntervalDimension,
+	formatDifference,
 	makeUniqueLabelFn,
 	makeDifferenceDimensions,
 	browserDimension,
 	sampleSizeDimension,
+	runtimeConfidenceIntervalDimension,
 } = require("./tachometer-utils");
 
 const VOID_ELEMENTS = /^(area|base|br|col|embed|hr|img|input|link|meta|param|source|track|wbr)$/;
+
+const getId = (id) => `tachometer-reporter-action--${id}`;
 
 /**
  * @typedef {(props: any) => string} Component
@@ -38,7 +41,7 @@ function h(tag, attrs, ...children) {
 }
 
 /**
- * @param {{ benchmarks: import('./index').TachResults["benchmarks"] }} props
+ * @param {{ benchmarks: import('./index').BenchmarkResult[] }} props
  * @returns {string}
  */
 function Table({ benchmarks }) {
@@ -61,7 +64,7 @@ function Table({ benchmarks }) {
 	];
 
 	return (
-		<div id="test-1">
+		<div id={getId("table-0")}>
 			<details open>
 				<summary>
 					<strong>{benchNames.join(", ")}</strong>
@@ -101,7 +104,42 @@ function Table({ benchmarks }) {
 	);
 }
 
+/**
+ * @param {{ benchmarks: import('./index').BenchmarkResult[]; localVersion: string; baseVersion: string; }} props
+ */
+function Summary({ benchmarks, localVersion, baseVersion }) {
+	const baseIndex = benchmarks.findIndex((b) => b.version == baseVersion);
+	const localResults = benchmarks.find((b) => b.version == localVersion);
+	const diff = formatDifference(localResults.differences[baseIndex]);
+
+	return (
+		<div id={getId("summary-0")}>
+			{localResults.name}: {diff.label}{" "}
+			<em>
+				{diff.relative} ({diff.absolute})
+			</em>
+		</div>
+	);
+}
+
+/**
+ * @param {{ children: string[] }} props
+ */
+function SummaryList({ children }) {
+	// @ts-ignore
+	children = children.flat(Infinity);
+	return (
+		<ul id={getId("summaries")}>
+			{children.map((child) => (
+				<li>{child}</li>
+			))}
+		</ul>
+	);
+}
+
 module.exports = {
 	h,
 	Table,
+	Summary,
+	SummaryList,
 };

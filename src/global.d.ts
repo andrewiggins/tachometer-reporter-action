@@ -1,5 +1,13 @@
 import { BenchmarkResult } from "./index";
 
+declare global {
+	namespace JSX {
+		interface ElementChildrenAttribute {
+			children: any;
+		}
+	}
+}
+
 /**
  * An abstraction for the various dimensions of data we display.
  */

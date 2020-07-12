@@ -997,7 +997,7 @@ const { UAParser } = uaParser;
 const lineBreak = "<br />";
 
 /**
- * @param {import('./index').TachResults["benchmarks"]} benchmarks
+ * @param {import('./index').BenchmarkResult[]} benchmarks
  */
 function makeDifferenceDimensions(labelFn, benchmarks) {
 	return benchmarks.map((b, i) => {
@@ -1015,7 +1015,8 @@ function makeDifferenceDimensions(labelFn, benchmarks) {
 					return "-";
 				}
 
-				return formatDifference(diff);
+				const { label, relative, absolute } = formatDifference(diff);
+				return [label, relative, absolute].join(lineBreak);
 			},
 			// tableConfig: {
 			// 	alignment: "right",
@@ -1113,7 +1114,7 @@ const colorizeSign = (n, format) => {
 
 /**
  * @param {import('./index').BenchmarkResult["differences"][0]} difference
- * @returns {string}
+ * @returns {{ label: string; relative: string; absolute: string }}
  */
 function formatDifference({ absolute, percentChange: relative }) {
 	let word, rel, abs;
@@ -1131,7 +1132,11 @@ function formatDifference({ absolute, percentChange: relative }) {
 		abs = formatConfidenceInterval(absolute, (n) => colorizeSign(n, milli));
 	}
 
-	return [word, rel, abs].join(lineBreak);
+	return {
+		label: word,
+		relative: rel,
+		absolute: abs,
+	};
 }
 
 /**
@@ -1165,7 +1170,7 @@ function negate(ci) {
 /**
  * Create a function that will return the shortest unambiguous label for a
  * result, given the full array of results.
- * @param {import('./index').TachResults["benchmarks"]} results
+ * @param {import('./index').BenchmarkResult[]} results
  * @returns {(result: import('./index').BenchmarkResult) => string}
  */
 function makeUniqueLabelFn(results) {
@@ -1199,6 +1204,7 @@ function makeUniqueLabelFn(results) {
 }
 
 var tachometerUtils = {
+	formatDifference,
 	makeUniqueLabelFn,
 	makeDifferenceDimensions,
 	benchmarkDimension,
@@ -1210,14 +1216,17 @@ var tachometerUtils = {
 };
 
 const {
-	runtimeConfidenceIntervalDimension: runtimeConfidenceIntervalDimension$1,
+	formatDifference: formatDifference$1,
 	makeUniqueLabelFn: makeUniqueLabelFn$1,
 	makeDifferenceDimensions: makeDifferenceDimensions$1,
 	browserDimension: browserDimension$1,
 	sampleSizeDimension: sampleSizeDimension$1,
+	runtimeConfidenceIntervalDimension: runtimeConfidenceIntervalDimension$1,
 } = tachometerUtils;
 
 const VOID_ELEMENTS = /^(area|base|br|col|embed|hr|img|input|link|meta|param|source|track|wbr)$/;
+
+const getId = (id) => `tachometer-reporter-action--${id}`;
 
 /**
  * @typedef {(props: any) => string} Component
@@ -1249,7 +1258,7 @@ function h(tag, attrs, ...children) {
 }
 
 /**
- * @param {{ benchmarks: import('./index').TachResults["benchmarks"] }} props
+ * @param {{ benchmarks: import('./index').BenchmarkResult[] }} props
  * @returns {string}
  */
 function Table({ benchmarks }) {
@@ -1272,7 +1281,7 @@ function Table({ benchmarks }) {
 	];
 
 	return (
-		h('div', { id: "test-1",}
+		h('div', { id: getId("table-0"),}
 , h('details', { open: true,}
 , h('summary', null
 , h('strong', null, benchNames.join(", "))
@@ -1312,19 +1321,53 @@ function Table({ benchmarks }) {
 	);
 }
 
+/**
+ * @param {{ benchmarks: import('./index').BenchmarkResult[]; localVersion: string; baseVersion: string; }} props
+ */
+function Summary({ benchmarks, localVersion, baseVersion }) {
+	const baseIndex = benchmarks.findIndex((b) => b.version == baseVersion);
+	const localResults = benchmarks.find((b) => b.version == localVersion);
+	const diff = formatDifference$1(localResults.differences[baseIndex]);
+
+	return (
+		h('div', { id: getId("summary-0"),}
+, localResults.name, ": " , diff.label, " "
+, h('em', null
+, diff.relative, " (" , diff.absolute, ")"
+)
+)
+	);
+}
+
+/**
+ * @param {{ children: string[] }} props
+ */
+function SummaryList({ children }) {
+	// @ts-ignore
+	children = children.flat(Infinity);
+	return (
+		h('ul', { id: getId("summaries"),}
+, children.map((child) => (
+				h('li', null, child)
+			))
+)
+	);
+}
+
 var html = {
 	h,
 	Table,
+	Summary,
+	SummaryList,
 };
 
 const { readFile } = fs.promises;
-const { renderTable, h: h$1, Table: Table$1 } = html;
+const { h: h$1, Table: Table$1, Summary: Summary$1, SummaryList: SummaryList$1 } = html;
 
 /**
  * @typedef {import('./global').JsonOutputFile} TachResults
  * @typedef {TachResults["benchmarks"][0]} BenchmarkResult
- * @typedef {{ summary: string; body: string; results: TachResults["benchmarks"]; }} BenchmarkReport
- * @typedef {string} Report Results of
+ * @typedef {{ summary: string | null; body: string; localVersion: string | null; baseVersion: string | null; results: BenchmarkResult[]; }} Report Results of
  * Tachometer grouped by benchmark name, then browser
  *
  * @param {TachResults} tachResults
@@ -1345,7 +1388,20 @@ function buildReport(tachResults, localVersion, baseVersion) {
 	// 		- Allowing aliases
 	// 		- replace `base-version` with `branch@SHA`
 
-	return h$1(Table$1, { benchmarks: tachResults.benchmarks,} );
+	return {
+		body: h$1(Table$1, { benchmarks: tachResults.benchmarks,} ),
+		results: tachResults.benchmarks,
+		localVersion,
+		baseVersion,
+		summary:
+			baseVersion && localVersion ? (
+				h$1(Summary$1, {
+					benchmarks: tachResults.benchmarks,
+					localVersion: localVersion,
+					baseVersion: baseVersion,}
+				)
+			) : null,
+	};
 }
 
 /**
@@ -1358,25 +1414,28 @@ function getCommentBody(context, report, comment) {
 	// TODO: Include which action generated the results (e.g. Main#13)
 	// TODO: Add tests for getCommentBody
 	//		- new comment (null comment arg)
+	//		- new comment with no local and/or base version defined
 	//		- existing comment with no existing id
 	//		- existing comment with existing id & replace
 	//		- existing comment with existing id & no replace
+	//		- existing comment with no local and/or base version defined
 
-	let body = [
-		"## Tachometer Benchmark Results",
-		"",
-		"### Summary",
-		"<sub>local_version vs base_version</sub>",
-		"",
-		// TODO: Consider if numbers should inline or below result
-		"- test_bench: unsure 🔍 *-4.10ms - +5.24ms (-10% - +12%)*",
-		"",
-		"### Results",
-		"",
-		report,
-	].join("\n");
+	let body = ["## Tachometer Benchmark Results\n"];
 
-	return body;
+	if (report.summary) {
+		body.push(
+			"### Summary",
+			`<sub>${report.localVersion} vs ${report.baseVersion}</sub>\n`,
+			// TODO: Consider if numbers should inline or below result
+			// "- test_bench: unsure 🔍 *-4.10ms - +5.24ms (-10% - +12%)*",
+			h$1(SummaryList$1, null, [report.summary]),
+			""
+		);
+	}
+
+	body.push("### Results\n", report.body);
+
+	return body.join("\n");
 }
 
 /**

@@ -19,6 +19,8 @@ jobs:
         uses: ./
         with:
           path: tests/test-results.json
+          local-version: local-version
+          base-version: base-version
       # - name: Report Other Tachometer Result
       #   uses: ./
       #   with:

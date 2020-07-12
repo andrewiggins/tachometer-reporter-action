@@ -1,5 +1,5 @@
 const { readFile } = require("fs").promises;
-const { renderTable, h, Table } = require("./html");
+const { h, Table, Summary, SummaryList } = require("./html");
 
 function acquireCommentLock() {
 	// 1. read if comment exists
@@ -15,8 +15,7 @@ function acquireCommentLock() {
 /**
  * @typedef {import('./global').JsonOutputFile} TachResults
  * @typedef {TachResults["benchmarks"][0]} BenchmarkResult
- * @typedef {{ summary: string; body: string; results: TachResults["benchmarks"]; }} BenchmarkReport
- * @typedef {string} Report Results of
+ * @typedef {{ summary: string | null; body: string; localVersion: string | null; baseVersion: string | null; results: BenchmarkResult[]; }} Report Results of
  * Tachometer grouped by benchmark name, then browser
  *
  * @param {TachResults} tachResults
@@ -37,7 +36,20 @@ function buildReport(tachResults, localVersion, baseVersion) {
 	// 		- Allowing aliases
 	// 		- replace `base-version` with `branch@SHA`
 
-	return <Table benchmarks={tachResults.benchmarks} />;
+	return {
+		body: <Table benchmarks={tachResults.benchmarks} />,
+		results: tachResults.benchmarks,
+		localVersion,
+		baseVersion,
+		summary:
+			baseVersion && localVersion ? (
+				<Summary
+					benchmarks={tachResults.benchmarks}
+					localVersion={localVersion}
+					baseVersion={baseVersion}
+				/>
+			) : null,
+	};
 }
 
 /**
@@ -50,25 +62,28 @@ function getCommentBody(context, report, comment) {
 	// TODO: Include which action generated the results (e.g. Main#13)
 	// TODO: Add tests for getCommentBody
 	//		- new comment (null comment arg)
+	//		- new comment with no local and/or base version defined
 	//		- existing comment with no existing id
 	//		- existing comment with existing id & replace
 	//		- existing comment with existing id & no replace
+	//		- existing comment with no local and/or base version defined
 
-	let body = [
-		"## Tachometer Benchmark Results",
-		"",
-		"### Summary",
-		"<sub>local_version vs base_version</sub>",
-		"",
-		// TODO: Consider if numbers should inline or below result
-		"- test_bench: unsure 🔍 *-4.10ms - +5.24ms (-10% - +12%)*",
-		"",
-		"### Results",
-		"",
-		report,
-	].join("\n");
+	let body = ["## Tachometer Benchmark Results\n"];
 
-	return body;
+	if (report.summary) {
+		body.push(
+			"### Summary",
+			`<sub>${report.localVersion} vs ${report.baseVersion}</sub>\n`,
+			// TODO: Consider if numbers should inline or below result
+			// "- test_bench: unsure 🔍 *-4.10ms - +5.24ms (-10% - +12%)*",
+			<SummaryList>{[report.summary]}</SummaryList>,
+			""
+		);
+	}
+
+	body.push("### Results\n", report.body);
+
+	return body.join("\n");
 }
 
 /**
