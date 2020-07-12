@@ -1,11 +1,11 @@
 const core = require("@actions/core");
 const github = require("@actions/github");
-const { reportTachResults } = require("./index");
+const { reportTachResults } = require("../index");
 
 /**
  * Create a status check, and return a function that updates (completes) it.
- * @param {import('./global').GitHubActionClient} github
- * @param {import('./global').GitHubActionContext} context
+ * @param {import('../global').GitHubActionClient} github
+ * @param {import('../global').GitHubActionContext} context
  */
 async function createCheck(github, context) {
 	const check = await github.checks.create({

@@ -35,5 +35,5 @@ inputs:
     default: "false"
 runs:
   using: "node12"
-  pre: "dist/pre-action.js"
-  main: "dist/action.js"
+  pre: "dist/pre.js"
+  main: "dist/main.js"

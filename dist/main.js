@@ -1601,8 +1601,8 @@ const { reportTachResults: reportTachResults$1 } = src;
 
 /**
  * Create a status check, and return a function that updates (completes) it.
- * @param {import('./global').GitHubActionClient} github
- * @param {import('./global').GitHubActionContext} context
+ * @param {import('../global').GitHubActionClient} github
+ * @param {import('../global').GitHubActionContext} context
  */
 async function createCheck(github, context) {
 	const check = await github.checks.create({
