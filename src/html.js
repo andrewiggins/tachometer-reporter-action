@@ -10,6 +10,8 @@ const {
 const VOID_ELEMENTS = /^(area|base|br|col|embed|hr|img|input|link|meta|param|source|track|wbr)$/;
 
 const getId = (id) => `tachometer-reporter-action--${id}`;
+const getTableId = (id) => getId(`table-${id}`);
+const getSummaryId = (id) => getId(`summary-${id}`);
 
 /**
  * @typedef {(props: any) => string} Component
@@ -64,7 +66,7 @@ function Table({ reportId, benchmarks, open }) {
 	];
 
 	return (
-		<div id={getId("table-" + reportId)}>
+		<div id={getTableId(reportId)}>
 			<details open={open ? "open" : null}>
 				<summary>
 					<strong>{benchNames.join(", ")}</strong>
@@ -113,8 +115,8 @@ function Summary({ reportId, benchmarks, localVersion, baseVersion }) {
 	const diff = formatDifference(localResults.differences[baseIndex]);
 
 	return (
-		<div id={getId("summary-" + reportId)}>
-			{localResults.name}: {diff.label}{" "}
+		<div id={getSummaryId(reportId)}>
+			<a href={"#" + getTableId(reportId)}>{localResults.name}</a>: {diff.label}{" "}
 			<em>
 				{diff.relative} ({diff.absolute})
 			</em>

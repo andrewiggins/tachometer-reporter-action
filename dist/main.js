@@ -1228,6 +1228,8 @@ const {
 const VOID_ELEMENTS = /^(area|base|br|col|embed|hr|img|input|link|meta|param|source|track|wbr)$/;
 
 const getId = (id) => `tachometer-reporter-action--${id}`;
+const getTableId = (id) => getId(`table-${id}`);
+const getSummaryId = (id) => getId(`summary-${id}`);
 
 /**
  * @typedef {(props: any) => string} Component
@@ -1282,7 +1284,7 @@ function Table({ reportId, benchmarks, open }) {
 	];
 
 	return (
-		h('div', { id: getId("table-" + reportId),}
+		h('div', { id: getTableId(reportId),}
 , h('details', { open: open ? "open" : null,}
 , h('summary', null
 , h('strong', null, benchNames.join(", "))
@@ -1331,8 +1333,8 @@ function Summary({ reportId, benchmarks, localVersion, baseVersion }) {
 	const diff = formatDifference$1(localResults.differences[baseIndex]);
 
 	return (
-		h('div', { id: getId("summary-" + reportId),}
-, localResults.name, ": " , diff.label, " "
+		h('div', { id: getSummaryId(reportId),}
+, h('a', { href: "#" + getTableId(reportId),}, localResults.name), ": " , diff.label, " "
 , h('em', null
 , diff.relative, " (" , diff.absolute, ")"
 )
