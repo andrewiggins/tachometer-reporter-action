@@ -18,10 +18,10 @@ jobs:
       - name: Report Tachometer Result
         uses: ./
         with:
-          path: tests/test-results.json
+          path: tests/results/test-results.json
           local-version: local-framework
           base-version: base-framework
       # - name: Report Other Tachometer Result
       #   uses: ./
       #   with:
-      #     path: tests/other-results.json
+      #     path: tests/results/other-results.json
