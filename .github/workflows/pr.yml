@@ -16,7 +16,7 @@ jobs:
       - run: npm ci
       - run: npm test
       - name: Report Tachometer Result
-        uses: ./
+        uses: andrewiggins/tachometer-reporter-action@master
         with:
           path: tests/results/test-results.json
           pr-bench-name: local-framework
