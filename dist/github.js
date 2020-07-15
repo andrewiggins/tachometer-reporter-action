@@ -5504,8 +5504,25 @@ async function getWorkflowRun(context, github) {
 	};
 }
 
+/**
+ * @param {import('../global').GitHubActionContext} context
+ * @param {import('../global').GitHubActionClient} github
+ * @returns {Promise<import('../global').CommitInfo>}
+ */
+async function getCommit(context, github) {
+	// Octokit types are wrong - html_url is returned in GitGetCommitResponseData
+	// @ts-ignore
+	return github.git
+		.getCommit({
+			...context.repo,
+			commit_sha: context.sha,
+		})
+		.then((res) => res.data);
+}
+
 var github$1 = {
 	getWorkflowRun,
+	getCommit,
 };
 
 exports.commonjsGlobal = commonjsGlobal;

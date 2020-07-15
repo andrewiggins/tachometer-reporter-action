@@ -39,34 +39,99 @@ const fakeWorkflowRun = {
 // @ts-ignore
 const fakeContext = {};
 
+/** @type {import('../src/global').CommitInfo} */
+const fakeCommit = {
+	sha: "626e78c2446b8d1afc917fc9b0059aa65cc9a07d",
+	node_id:
+		"MDY6Q29tbWl0Mjc4NzIyMjI3OjYyNmU3OGMyNDQ2YjhkMWFmYzkxN2ZjOWIwMDU5YWE2NWNjOWEwN2Q=",
+	url:
+		"https://api.github.com/repos/andrewiggins/tachometer-reporter-action/git/commits/626e78c2446b8d1afc917fc9b0059aa65cc9a07d",
+	html_url:
+		"https://github.com/andrewiggins/tachometer-reporter-action/commit/626e78c2446b8d1afc917fc9b0059aa65cc9a07d",
+	author: {
+		name: "Andre Wiggins",
+		email: "author@email.com",
+		date: "2020-07-15T07:22:26Z",
+	},
+	committer: {
+		name: "Andre Wiggins",
+		email: "committer@email.com",
+		date: "2020-07-15T07:22:26Z",
+	},
+	tree: {
+		sha: "860ccb10b8f2866599fb3a1256ce65bfea59589b",
+		url:
+			"https://api.github.com/repos/andrewiggins/tachometer-reporter-action/git/trees/860ccb10b8f2866599fb3a1256ce65bfea59589b",
+	},
+	message: "Fill in readme",
+	parents: [
+		{
+			sha: "e14f6dfcaca042ac8fa174d96afa9fabe0e0516b",
+			url:
+				"https://api.github.com/repos/andrewiggins/tachometer-reporter-action/git/commits/e14f6dfcaca042ac8fa174d96afa9fabe0e0516b",
+			// html_url: "https://github.com/andrewiggins/tachometer-reporter-action/commit/e14f6dfcaca042ac8fa174d96afa9fabe0e0516b",
+		},
+	],
+	verification: {
+		verified: false,
+		reason: "unsigned",
+		signature: null,
+		payload: null,
+	},
+};
+
 const getTableId = (id) => `tachometer-reporter-action--table-${id ? id : ""}`;
 const getSummaryId = (id) =>
 	`tachometer-reporter-action--summary-${id ? id : ""}`;
 
+/**
+ * @typedef BuildReportParams
+ * @property {import('../src/global').Commit} [commit]
+ * @property {import('../src/global').WorkflowRunData} [workflow]
+ * @property {Partial<import('../src/global').Inputs>} [inputs]
+ * @property {import('../src/global').TachResults} [results]
+ * @param {BuildReportParams} params
+ */
+function invokeBuildReport({
+	commit = fakeCommit,
+	workflow = fakeWorkflowRun,
+	inputs = null,
+	results = testResults,
+} = {}) {
+	const fullInputs = {
+		...defaultInputs,
+		...inputs,
+	};
+
+	return buildReport(commit, workflow, fullInputs, results);
+}
+
 const buildReportSuite = suite("buildReport");
 
 buildReportSuite("Body snapshot", async () => {
-	const report = buildReport(fakeWorkflowRun, defaultInputs, testResults);
+	const report = invokeBuildReport();
 	const html = formatHtml(report.body);
 
 	const snapshotPath = testRoot("snapshots/test-results-body.html");
 	const snapshot = await readFile(snapshotPath, "utf-8");
 
-	assert.fixture(html, snapshot, "Report body matches snapshot");
-
+	// Uncomment to update snapshot
 	// await writeFile(snapshotPath, html, "utf8");
+
+	assert.fixture(html, snapshot, "Report body matches snapshot");
 });
 
 buildReportSuite("Summary snapshot", async () => {
-	const report = buildReport(fakeWorkflowRun, defaultInputs, testResults);
+	const report = invokeBuildReport();
 	const html = formatHtml(report.summary);
 
 	const snapshotPath = testRoot("snapshots/test-results-summary.html");
 	const snapshot = await readFile(snapshotPath, "utf-8");
 
-	assert.fixture(html, snapshot, "Report summary matches snapshot");
-
+	// Uncomment to update snapshot
 	// await writeFile(snapshotPath, html, "utf8");
+
+	assert.fixture(html, snapshot, "Report summary matches snapshot");
 });
 
 buildReportSuite("Uses input.reportId", () => {
@@ -74,8 +139,7 @@ buildReportSuite("Uses input.reportId", () => {
 	const bodyIdRe = new RegExp(`<div id="${getTableId(reportId)}"`);
 	const summaryIdRe = new RegExp(`<div id="${getSummaryId(reportId)}"`);
 
-	const inputs = { ...defaultInputs, reportId };
-	const report = buildReport(fakeWorkflowRun, inputs, testResults);
+	const report = invokeBuildReport({ inputs: { reportId } });
 
 	assert.is(report.id, reportId, "report.id matches input id");
 	assert.ok(report.body.match(bodyIdRe), "body contains input id");
@@ -87,7 +151,7 @@ buildReportSuite("Generates reportId if not given", () => {
 	const bodyIdRe = new RegExp(`<div id="${getTableId(expectedId)}"`);
 	const summaryIdRe = new RegExp(`<div id="${getSummaryId(expectedId)}"`);
 
-	const report = buildReport(fakeWorkflowRun, defaultInputs, testResults);
+	const report = invokeBuildReport();
 
 	assert.is(report.id, expectedId, "report.id matches expectation");
 	assert.ok(report.body.match(bodyIdRe), "body contains valid id");
@@ -97,8 +161,7 @@ buildReportSuite("Generates reportId if not given", () => {
 buildReportSuite("Sets open attribute if defaultOpen is true", () => {
 	const openRe = /<details open="open">/;
 
-	const inputs = { ...defaultInputs, defaultOpen: true };
-	const report = buildReport(fakeWorkflowRun, inputs, testResults);
+	const report = invokeBuildReport({ inputs: { defaultOpen: true } });
 
 	assert.ok(report.body.match(openRe), "body contains <details open>");
 });
@@ -108,16 +171,14 @@ buildReportSuite(
 	() => {
 		const openRe = /<details open/;
 
-		let inputs = { ...defaultInputs, defaultOpen: false };
-		let report = buildReport(fakeWorkflowRun, inputs, testResults);
+		let report = invokeBuildReport({ inputs: { defaultOpen: false } });
 
 		assert.not.ok(
 			report.body.match(openRe),
 			"body does not contain <details open> for false"
 		);
 
-		inputs = { ...defaultInputs, defaultOpen: null };
-		report = buildReport(fakeWorkflowRun, inputs, testResults);
+		report = invokeBuildReport({ inputs: { defaultOpen: null } });
 
 		assert.not.ok(
 			report.body.match(openRe),
@@ -127,22 +188,21 @@ buildReportSuite(
 );
 
 buildReportSuite("No summary if base version is null", () => {
-	const inputs = { ...defaultInputs, baseBenchName: null };
-	const report = buildReport(fakeWorkflowRun, inputs, testResults);
+	const report = invokeBuildReport({ inputs: { baseBenchName: null } });
 	assert.not.ok(report.baseBenchName, "report.baseBenchName is null");
 	assert.not.ok(report.summary, "report.summary is null");
 });
 
 buildReportSuite("No summary if local version is null", () => {
-	const inputs = { ...defaultInputs, prBenchName: null };
-	const report = buildReport(fakeWorkflowRun, inputs, testResults);
+	const report = invokeBuildReport({ inputs: { prBenchName: null } });
 	assert.not.ok(report.prBenchName, "report.prBenchName is null");
 	assert.not.ok(report.summary, "report.summary is null");
 });
 
 buildReportSuite("No summary if base and local version are null", () => {
-	const inputs = { ...defaultInputs, prBenchName: null, baseBenchName: null };
-	const report = buildReport(fakeWorkflowRun, inputs, testResults);
+	const report = invokeBuildReport({
+		inputs: { prBenchName: null, baseBenchName: null },
+	});
 	assert.not.ok(report.prBenchName, "report.prBenchName is null");
 	assert.not.ok(report.baseBenchName, "report.baseBenchName is null");
 	assert.not.ok(report.summary, "report.summary is null");
@@ -153,7 +213,7 @@ buildReportSuite("Supports benchmarks with different names", () => {
 	const otherBenchName = "other-bench";
 
 	results.benchmarks[0].name = otherBenchName;
-	const report = buildReport(fakeWorkflowRun, defaultInputs, results);
+	const report = invokeBuildReport({ results });
 	const bodyDoc = parse(report.body);
 
 	const allBenchNames = results.benchmarks.map((b) => b.name);
@@ -211,7 +271,7 @@ buildReportSuite("Lists all browsers used in details", () => {
 		windowSize: { width: 1024, height: 768 },
 	};
 
-	const report = buildReport(fakeWorkflowRun, defaultInputs, results);
+	const report = invokeBuildReport({ results });
 	const bodyDoc = parse(report.body);
 
 	// console.log(prettier.format(report.body, { parser: "html" }));
@@ -273,7 +333,7 @@ buildReportSuite("Supports benchmarks with no version field", () => {
 const newCommentSuite = suite("getCommentBody (new)");
 
 newCommentSuite("Generates full comment if comment null", () => {
-	const report = buildReport(fakeWorkflowRun, defaultInputs, testResults);
+	const report = invokeBuildReport();
 	const body = getCommentBody(fakeContext, report, null);
 
 	assert.ok(body.includes("Tachometer Benchmark Results"), "Includes title");
@@ -284,7 +344,7 @@ newCommentSuite("Generates full comment if comment null", () => {
 });
 
 newCommentSuite("Generates full comment with no summary", () => {
-	const report = buildReport(fakeWorkflowRun, defaultInputs, testResults);
+	const report = invokeBuildReport();
 	report.summary = null;
 
 	const body = getCommentBody(fakeContext, report, null);

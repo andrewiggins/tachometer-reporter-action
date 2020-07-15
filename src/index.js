@@ -2,7 +2,7 @@ const { readFile } = require("fs").promises;
 const crypto = require("crypto");
 const { h, Table, Summary, SummaryList } = require("./html");
 const { postOrUpdateComment } = require("./comments");
-const { getWorkflowRun } = require("./utils/github");
+const { getWorkflowRun, getCommit } = require("./utils/github");
 
 /**
  * @param {import('./global').BenchmarkResult[]} benchmarks
@@ -26,15 +26,13 @@ function getReportId(benchmarks) {
 }
 
 /**
+ * @param {import("./global").CommitInfo} commitInfo
  * @param {import('./global').WorkflowRunData} workflowRun
  * @param {Pick<import('./global').Inputs, 'prBenchName' | 'baseBenchName' | 'defaultOpen' | 'reportId'>} inputs
  * @param {import('./global').TachResults} tachResults
  * @returns {import('./global').Report}
  */
-function buildReport(workflowRun, inputs, tachResults) {
-	// TODO: Add the commit of the current context to the body so that latest/old
-	// results are differentiated
-	//
+function buildReport(commitInfo, workflowRun, inputs, tachResults) {
 	// TODO: Consider improving names (likely needs to happen in runner repo)
 	//    - "before" and "this PR"
 	//    - Allow different names for local runs and CI runs
@@ -52,6 +50,7 @@ function buildReport(workflowRun, inputs, tachResults) {
 				benchmarks={benchmarks}
 				workflowRun={workflowRun}
 				open={inputs.defaultOpen}
+				commitInfo={commitInfo}
 			/>
 		).toString(),
 		results: benchmarks,
@@ -139,9 +138,14 @@ async function reportTachResults(
 ) {
 	inputs = { ...defaultInputs, ...inputs };
 
-	const tachResults = JSON.parse(await readFile(inputs.path, "utf8"));
-	const workflowRun = await getWorkflowRun(context, github);
-	const report = buildReport(workflowRun, inputs, tachResults);
+	/** @type {[ any, import('./global').WorkflowRunData, import('./global').CommitInfo ]} */
+	const [tachResults, workflowRun, commitInfo] = await Promise.all([
+		readFile(inputs.path, "utf8").then((contents) => JSON.parse(contents)),
+		getWorkflowRun(context, github),
+		getCommit(context, github),
+	]);
+
+	const report = buildReport(commitInfo, workflowRun, inputs, tachResults);
 
 	await postOrUpdateComment(
 		github,

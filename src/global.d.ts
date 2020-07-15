@@ -15,6 +15,11 @@ type GitHubActionClient = ReturnType<
 type GitHubActionContext = typeof import("@actions/github").context;
 type CommentData = import("@octokit/types").IssuesGetCommentResponseData;
 type WorkflowRun = import("@octokit/types").ActionsGetWorkflowRunResponseData;
+type Commit = import("@octokit/types").GitGetCommitResponseData;
+
+interface CommitInfo extends Commit {
+	html_url: string;
+}
 
 interface WorkflowRunData extends WorkflowRun {
 	workflow_name: string;
