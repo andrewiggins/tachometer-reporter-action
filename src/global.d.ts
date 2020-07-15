@@ -37,7 +37,6 @@ interface Inputs {
 
 type TachResults = JsonOutputFile;
 type BenchmarkResult = TachResults["benchmarks"][0];
-type ConfidenceInterval = BenchmarkResult["mean"];
 
 interface Report {
 	id: string;
