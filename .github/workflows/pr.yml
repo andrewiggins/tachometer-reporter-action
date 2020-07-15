@@ -16,11 +16,12 @@ jobs:
       - run: npm ci
       - run: npm test
       - name: Report Tachometer Result
-        uses: andrewiggins/tachometer-reporter-action@master
+        uses: andrewiggins/tachometer-reporter-action@keep-old-results
         with:
           path: tests/results/test-results.json
           pr-bench-name: local-framework
           base-bench-name: base-framework
+          keep-old-results: true
       # - name: Report Other Tachometer Result
       #   uses: ./
       #   with:
