@@ -5486,62 +5486,30 @@ exports.getOctokit = getOctokit;
 
 });
 
-const defaultLogger = {
-	warn(getMsg) {
-		console.warn(getMsg);
-	},
-	info(getMsg) {
-		console.log(getMsg);
-	},
-	debug() {},
-};
-
 /**
- * @typedef {ReturnType<typeof import('@actions/github').getOctokit>} GitHubActionClient
- * @typedef {typeof import('@actions/github').context} GitHubActionContext
- * @typedef {{ path: string; }} Inputs
- * @typedef {{ warn(msg: string): void; info(msg: string): void; debug(getMsg: () => string): void; }} Logger
- *
- * @param {GitHubActionClient} client
- * @param {GitHubActionContext} context
- * @param {Inputs} inputs
- * @param {Logger} [log]
+ * @param {import('../global').GitHubActionContext} context
+ * @param {import('../global').GitHubActionClient} github
+ * @returns {Promise<import('../global').WorkflowRunData>}
  */
-function reportTachResults(client, context, inputs, log = defaultLogger) {
-	log.info("[reportTachResults] Testing... 1.. 2.. Is this thing on?");
+async function getWorkflowRun(context, github) {
+	const workflowRun = await github.actions.getWorkflowRun({
+		...context.repo,
+		run_id: context.runId,
+	});
+
+	return {
+		...workflowRun.data,
+		workflow_name: context.workflow,
+		run_name: `${context.workflow} #${context.runNumber}`,
+	};
 }
 
-var tachometerReporterAction = {
-	reportTachResults,
+var github$1 = {
+	getWorkflowRun,
 };
 
-const { reportTachResults: reportTachResults$1 } = tachometerReporterAction;
-
-(async () => {
-	try {
-		const token = core.getInput("github_token", { required: true });
-		const path = core.getInput("path", { required: true });
-
-		const octokit = github.getOctokit(token);
-		const inputs = { path };
-
-		core.debug("Inputs: " + JSON.stringify(inputs, null, 2));
-		core.debug("Context: " + JSON.stringify(github.context, undefined, 2));
-
-		const actionLogger = {
-			warn(msg) {
-				core.warning(msg);
-			},
-			info(msg) {
-				core.info(msg);
-			},
-			debug(getMsg) {
-				core.debug(getMsg());
-			},
-		};
-
-		await reportTachResults$1(octokit, github.context, inputs, actionLogger);
-	} catch (e) {
-		core.setFailed(e.message);
-	}
-})();
+exports.commonjsGlobal = commonjsGlobal;
+exports.core = core;
+exports.createCommonjsModule = createCommonjsModule;
+exports.github = github$1;
+exports.github$1 = github;

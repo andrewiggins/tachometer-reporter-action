@@ -2,10 +2,14 @@
   "name": "tachometer-reporter-action",
   "version": "1.0.0",
   "description": "Report the results of Polymer/tachometer in a comment for PRs",
-  "main": "index.js",
+  "main": "lib/index.js",
   "scripts": {
-    "build": "rollup -c ./rollup.config.js",
-    "test": "node tests/index.test.js"
+    "prepare": "npm run build",
+    "dev": "watch \"sucrase --production -t jsx --jsx-pragma h -d lib ./src\" src",
+    "build": "npm run build:index && npm run build:action ",
+    "build:index": "sucrase --production -t jsx --jsx-pragma h -d lib ./src",
+    "build:action": "rollup -c ./rollup.config.js",
+    "test": "uvu tests"
   },
   "repository": {
     "type": "git",
@@ -38,11 +42,20 @@
     "@actions/github": "^4.0.0",
     "@rollup/plugin-commonjs": "^13.0.0",
     "@rollup/plugin-node-resolve": "^8.1.0",
+    "@rollup/plugin-sucrase": "^3.1.0",
+    "cheerio": "^1.0.0-rc.3",
     "husky": "^4.2.5",
     "lint-staged": "^10.2.11",
     "prettier": "^2.0.5",
     "rollup": "^2.21.0",
     "rollup-plugin-node-externals": "^2.2.0",
-    "uvu": "^0.1.0"
+    "sucrase": "^3.15.0",
+    "tachometer": "^0.4.20",
+    "uvu": "^0.2.1",
+    "watch": "^1.0.2"
+  },
+  "dependencies": {
+    "pretty-bytes": "^5.3.0",
+    "ua-parser-js": "^0.7.21"
   }
 }
