@@ -20,8 +20,8 @@ interface WorkflowRunData extends WorkflowRun {
 
 interface Inputs {
 	path: string;
-	localVersion?: string;
-	baseVersion: ?string;
+	prBenchName?: string;
+	baseBenchName: ?string;
 	reportId?: string;
 	keepOldResults?: boolean;
 	defaultOpen?: boolean;
@@ -35,8 +35,8 @@ interface Report {
 	id: string;
 	summary: string | null;
 	body: string;
-	localVersion: string | null;
-	baseVersion: string | null;
+	prBenchName: string | null;
+	baseBenchName: string | null;
 	results: BenchmarkResult[];
 }
 

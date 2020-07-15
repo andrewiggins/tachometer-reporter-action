@@ -116,11 +116,11 @@ function Table({ reportId, benchmarks, workflowRun, open }) {
 }
 
 /**
- * @param {{ reportId: string; benchmarks: import('./global').BenchmarkResult[]; localVersion: string; baseVersion: string; }} props
+ * @param {{ reportId: string; benchmarks: import('./global').BenchmarkResult[]; prBenchName: string; baseBenchName: string; }} props
  */
-function Summary({ reportId, benchmarks, localVersion, baseVersion }) {
-	const baseIndex = benchmarks.findIndex((b) => b.version == baseVersion);
-	const localResults = benchmarks.find((b) => b.version == localVersion);
+function Summary({ reportId, benchmarks, prBenchName, baseBenchName }) {
+	const baseIndex = benchmarks.findIndex((b) => b.version == baseBenchName);
+	const localResults = benchmarks.find((b) => b.version == prBenchName);
 	const diff = formatDifference(localResults.differences[baseIndex]);
 
 	return (

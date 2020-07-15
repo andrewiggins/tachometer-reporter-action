@@ -27,16 +27,19 @@ function getReportId(benchmarks) {
 
 /**
  * @param {import('./global').WorkflowRunData} workflowRun
- * @param {Pick<import('./global').Inputs, 'localVersion' | 'baseVersion' | 'defaultOpen' | 'reportId'>} inputs
+ * @param {Pick<import('./global').Inputs, 'prBenchName' | 'baseBenchName' | 'defaultOpen' | 'reportId'>} inputs
  * @param {import('./global').TachResults} tachResults
  * @returns {import('./global').Report}
  */
 function buildReport(workflowRun, inputs, tachResults) {
+	// TODO: Add the commit of the current context to the body so that latest/old
+	// results are differentiated
+	//
 	// TODO: Consider improving names (likely needs to happen in runner repo)
-	//		- "before" and "this PR"
-	//		- Allow different names for local runs and CI runs
-	// 		- Allowing aliases
-	// 		- replace `base-version` with `branch@SHA`
+	//    - "before" and "this PR"
+	//    - Allow different names for local runs and CI runs
+	//    - Allowing aliases
+	//    - replace `base-bench-name` with `branch@SHA`
 
 	const benchmarks = tachResults.benchmarks;
 	const reportId = inputs.reportId ? inputs.reportId : getReportId(benchmarks);
@@ -52,15 +55,15 @@ function buildReport(workflowRun, inputs, tachResults) {
 			/>
 		),
 		results: benchmarks,
-		localVersion: inputs.localVersion,
-		baseVersion: inputs.baseVersion,
+		prBenchName: inputs.prBenchName,
+		baseBenchName: inputs.baseBenchName,
 		summary:
-			inputs.baseVersion && inputs.localVersion ? (
+			inputs.baseBenchName && inputs.prBenchName ? (
 				<Summary
 					reportId={reportId}
 					benchmarks={benchmarks}
-					localVersion={inputs.localVersion}
-					baseVersion={inputs.baseVersion}
+					prBenchName={inputs.prBenchName}
+					baseBenchName={inputs.baseBenchName}
 				/>
 			) : null,
 	};
@@ -82,7 +85,7 @@ function getCommentBody(context, report, comment) {
 			"### Summary",
 			// TODO: Should these be grouped by how they are summarized in case not
 			// all benchmarks compare the same?
-			`<sub>${report.localVersion} vs ${report.baseVersion}</sub>\n`,
+			`<sub>${report.prBenchName} vs ${report.baseBenchName}</sub>\n`,
 			<SummaryList>{[report.summary]}</SummaryList>,
 			""
 		);
@@ -110,9 +113,10 @@ const defaultLogger = {
 	},
 };
 
+/** @type {Partial<import('./global').Inputs>} */
 const defaultInputs = {
-	localVersion: null,
-	baseVersion: null,
+	prBenchName: null,
+	baseBenchName: null,
 	reportId: null,
 	keepOldResults: false,
 	defaultOpen: false,

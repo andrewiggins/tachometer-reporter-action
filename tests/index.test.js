@@ -16,11 +16,11 @@ const testResults = JSON.parse(readFileSync(testResultsPath, "utf8"));
 /** @type {() => import('../src/global').TachResults} */
 const copyResults = () => JSON.parse(JSON.stringify(testResults));
 
-const localVersion = "local-framework";
-const baseVersion = "base-framework";
+const prBenchName = "local-framework";
+const baseBenchName = "base-framework";
 const defaultInputs = Object.freeze({
-	localVersion,
-	baseVersion,
+	prBenchName,
+	baseBenchName,
 	reportId: null,
 	defaultOpen: false,
 });
@@ -125,24 +125,24 @@ buildReportSuite(
 );
 
 buildReportSuite("No summary if base version is null", () => {
-	const inputs = { ...defaultInputs, baseVersion: null };
+	const inputs = { ...defaultInputs, baseBenchName: null };
 	const report = buildReport(fakeWorkflowRun, inputs, testResults);
-	assert.not.ok(report.baseVersion, "report.baseVersion is null");
+	assert.not.ok(report.baseBenchName, "report.baseBenchName is null");
 	assert.not.ok(report.summary, "report.summary is null");
 });
 
 buildReportSuite("No summary if local version is null", () => {
-	const inputs = { ...defaultInputs, localVersion: null };
+	const inputs = { ...defaultInputs, prBenchName: null };
 	const report = buildReport(fakeWorkflowRun, inputs, testResults);
-	assert.not.ok(report.localVersion, "report.localVersion is null");
+	assert.not.ok(report.prBenchName, "report.prBenchName is null");
 	assert.not.ok(report.summary, "report.summary is null");
 });
 
 buildReportSuite("No summary if base and local version are null", () => {
-	const inputs = { ...defaultInputs, localVersion: null, baseVersion: null };
+	const inputs = { ...defaultInputs, prBenchName: null, baseBenchName: null };
 	const report = buildReport(fakeWorkflowRun, inputs, testResults);
-	assert.not.ok(report.localVersion, "report.localVersion is null");
-	assert.not.ok(report.baseVersion, "report.baseVersion is null");
+	assert.not.ok(report.prBenchName, "report.prBenchName is null");
+	assert.not.ok(report.baseBenchName, "report.baseBenchName is null");
 	assert.not.ok(report.summary, "report.summary is null");
 });
 
@@ -263,7 +263,7 @@ buildReportSuite("Lists all browsers used in details", () => {
 });
 
 buildReportSuite("Supports benchmarks with no version field", () => {
-	// TODO: How to do Summary?? Perhaps rename localVersion to localBenchId which
+	// TODO: How to do Summary?? Perhaps rework prBenchName to be something that
 	// can be a benchmark name or version field value?
 	// Check <summary> tag includes all names
 	// Check table row labels

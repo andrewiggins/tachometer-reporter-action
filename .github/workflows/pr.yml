@@ -19,8 +19,8 @@ jobs:
         uses: ./
         with:
           path: tests/results/test-results.json
-          local-version: local-framework
-          base-version: base-framework
+          pr-bench-name: local-framework
+          base-bench-name: base-framework
       # - name: Report Other Tachometer Result
       #   uses: ./
       #   with:

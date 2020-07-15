@@ -50,18 +50,20 @@ const actionLogger = {
 	const reportId = core.getInput("report-id", { required: false });
 	const keepOldResults = core.getInput("keep-old-results", { required: false });
 	const defaultOpen = core.getInput("default-open", { required: false });
-	const localVersion = core.getInput("local-version", { required: false });
-	const baseVersion = core.getInput("base-version", { required: false });
+	const prBenchName = core.getInput("pr-bench-name", { required: false });
+	const baseBenchName = core.getInput("base-bench-name", { required: false });
 	const useCheck = core.getInput("use-check", { required: true });
 
 	const octokit = github.getOctokit(token);
+
+	/** @type {import('../global').Inputs} */
 	const inputs = {
 		path,
 		reportId: reportId ? reportId : null,
 		keepOldResults: keepOldResults != "false",
 		defaultOpen: defaultOpen !== "false",
-		localVersion: localVersion ? localVersion : null,
-		baseVersion: baseVersion ? baseVersion : null,
+		prBenchName: prBenchName ? prBenchName : null,
+		baseBenchName: baseBenchName ? baseBenchName : null,
 	};
 
 	let finish = (checkResult) =>
