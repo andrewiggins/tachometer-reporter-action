@@ -3,7 +3,7 @@ const { readFileSync } = require("fs");
 const { readFile, writeFile } = require("fs").promises;
 const { suite } = require("uvu");
 const assert = require("uvu/assert");
-const { parse } = require("node-html-parser");
+const { parse, HTMLElement } = require("node-html-parser");
 const prettier = require("prettier");
 const { buildReport, getCommentBody } = require("../lib/index");
 
@@ -15,16 +15,18 @@ const testResults = JSON.parse(readFileSync(testResultsPath, "utf8"));
 
 /** @type {() => import('../src/global').TachResults} */
 const copyResults = () => JSON.parse(JSON.stringify(testResults));
-
+/** @type {(html: string) => string} */
 const formatHtml = (html) => prettier.format(html, { parser: "html" });
 
 const prBenchName = "local-framework";
 const baseBenchName = "base-framework";
 const defaultInputs = Object.freeze({
+	path: testRoot("results/test-results.json"),
+	reportId: null,
 	prBenchName,
 	baseBenchName,
-	reportId: null,
 	defaultOpen: false,
+	keepOldResults: false,
 });
 
 /** @type {import('../src/global').WorkflowRunData} */
@@ -34,10 +36,6 @@ const fakeWorkflowRun = {
 	html_url:
 		"https://github.com/andrewiggins/tachometer-reporter-action/actions/runs/166208365",
 };
-
-/** @type {import('../src/global').GitHubActionContext} */
-// @ts-ignore
-const fakeContext = {};
 
 /** @type {import('../src/global').CommitInfo} */
 const fakeCommit = {
@@ -80,13 +78,14 @@ const fakeCommit = {
 	},
 };
 
-const getTableId = (id) => `tachometer-reporter-action--table-${id ? id : ""}`;
+const getBenchmarkSectionId = (id) =>
+	`tachometer-reporter-action--results-${id ? id : ""}`;
 const getSummaryId = (id) =>
 	`tachometer-reporter-action--summary-${id ? id : ""}`;
 
 /**
  * @typedef BuildReportParams
- * @property {import('../src/global').Commit} [commit]
+ * @property {import('../src/global').CommitInfo} [commit]
  * @property {import('../src/global').WorkflowRunData} [workflow]
  * @property {Partial<import('../src/global').Inputs>} [inputs]
  * @property {import('../src/global').TachResults} [results]
@@ -106,11 +105,35 @@ function invokeBuildReport({
 	return buildReport(commit, workflow, fullInputs, results);
 }
 
+/**
+ * @typedef GetCommentBodyParams
+ * @property {Partial<import('../src/global').Inputs>} [inputs]
+ * @property {import('../src/global').Report} [report]
+ * @property {import('../src/global').CommentData} [comment]
+ * @param {GetCommentBodyParams} params
+ */
+function invokeGetCommentBody({
+	inputs = null,
+	report = null,
+	comment = null,
+} = {}) {
+	const fullInputs = {
+		...defaultInputs,
+		...inputs,
+	};
+
+	if (!report) {
+		report = invokeBuildReport({ inputs: fullInputs });
+	}
+
+	return getCommentBody(fullInputs, report, comment);
+}
+
 const buildReportSuite = suite("buildReport");
 
 buildReportSuite("Body snapshot", async () => {
 	const report = invokeBuildReport();
-	const html = formatHtml(report.body);
+	const html = formatHtml(report.body.toString());
 
 	const snapshotPath = testRoot("snapshots/test-results-body.html");
 	const snapshot = await readFile(snapshotPath, "utf-8");
@@ -123,7 +146,7 @@ buildReportSuite("Body snapshot", async () => {
 
 buildReportSuite("Summary snapshot", async () => {
 	const report = invokeBuildReport();
-	const html = formatHtml(report.summary);
+	const html = formatHtml(report.summary.toString());
 
 	const snapshotPath = testRoot("snapshots/test-results-summary.html");
 	const snapshot = await readFile(snapshotPath, "utf-8");
@@ -136,56 +159,17 @@ buildReportSuite("Summary snapshot", async () => {
 
 buildReportSuite("Uses input.reportId", () => {
 	const reportId = "test-input-id";
-	const bodyIdRe = new RegExp(`<div id="${getTableId(reportId)}"`);
-	const summaryIdRe = new RegExp(`<div id="${getSummaryId(reportId)}"`);
-
 	const report = invokeBuildReport({ inputs: { reportId } });
 
 	assert.is(report.id, reportId, "report.id matches input id");
-	assert.ok(report.body.match(bodyIdRe), "body contains input id");
-	assert.ok(report.summary.match(summaryIdRe), "summary contains input id");
 });
 
 buildReportSuite("Generates reportId if not given", () => {
 	const expectedId = "l5UdXHMZ2m10Bdp0kqRnW0cWarA";
-	const bodyIdRe = new RegExp(`<div id="${getTableId(expectedId)}"`);
-	const summaryIdRe = new RegExp(`<div id="${getSummaryId(expectedId)}"`);
-
 	const report = invokeBuildReport();
 
 	assert.is(report.id, expectedId, "report.id matches expectation");
-	assert.ok(report.body.match(bodyIdRe), "body contains valid id");
-	assert.ok(report.summary.match(summaryIdRe), "summary contains valid id");
 });
-
-buildReportSuite("Sets open attribute if defaultOpen is true", () => {
-	const openRe = /<details open="open">/;
-
-	const report = invokeBuildReport({ inputs: { defaultOpen: true } });
-
-	assert.ok(report.body.match(openRe), "body contains <details open>");
-});
-
-buildReportSuite(
-	"Does not set open attribute if defaultOpen is false or null",
-	() => {
-		const openRe = /<details open/;
-
-		let report = invokeBuildReport({ inputs: { defaultOpen: false } });
-
-		assert.not.ok(
-			report.body.match(openRe),
-			"body does not contain <details open> for false"
-		);
-
-		report = invokeBuildReport({ inputs: { defaultOpen: null } });
-
-		assert.not.ok(
-			report.body.match(openRe),
-			"body does not contain <details open> for null"
-		);
-	}
-);
 
 buildReportSuite("No summary if base version is null", () => {
 	const report = invokeBuildReport({ inputs: { baseBenchName: null } });
@@ -214,19 +198,10 @@ buildReportSuite("Supports benchmarks with different names", () => {
 
 	results.benchmarks[0].name = otherBenchName;
 	const report = invokeBuildReport({ results });
-	const bodyDoc = parse(report.body);
-
-	const allBenchNames = results.benchmarks.map((b) => b.name);
-	const expectedTitle = Array.from(new Set(allBenchNames)).join(", ");
+	const bodyDoc =
+		report.body instanceof HTMLElement ? report.body : parse(report.body);
 
 	// console.log(prettier.format(report.body, { parser: "html" }));
-
-	// Check <summary> tag includes all names
-	assert.is(
-		bodyDoc.querySelector("summary").text,
-		expectedTitle,
-		"Title includes all bench names"
-	);
 
 	// Check row and columns include both bench name and version name
 	const rowLabels = bodyDoc
@@ -272,9 +247,10 @@ buildReportSuite("Lists all browsers used in details", () => {
 	};
 
 	const report = invokeBuildReport({ results });
-	const bodyDoc = parse(report.body);
+	const bodyDoc =
+		report.body instanceof HTMLElement ? report.body : parse(report.body);
 
-	// console.log(prettier.format(report.body, { parser: "html" }));
+	// console.log(prettier.format(report.body.toString(), { parser: "html" }));
 
 	// Check details list includes all browsers
 	const listItems = bodyDoc.querySelectorAll("ul li").map((li) => li.text);
@@ -332,26 +308,114 @@ buildReportSuite("Supports benchmarks with no version field", () => {
 
 const newCommentSuite = suite("getCommentBody (new)");
 
+newCommentSuite("New comment snapshot", async () => {
+	const body = invokeGetCommentBody();
+	const html = formatHtml(body.toString());
+
+	const snapshotPath = testRoot("snapshots/test-results-new-comment.html");
+	const snapshot = await readFile(snapshotPath, "utf-8");
+
+	// Uncomment to update snapshot
+	// await writeFile(snapshotPath, html, "utf8");
+
+	assert.fixture(html, snapshot, "Report body matches snapshot");
+});
+
+newCommentSuite("Uses input.reportId", () => {
+	const reportId = "test-input-id";
+	const bodyIdRe = new RegExp(`<div id="${getBenchmarkSectionId(reportId)}"`);
+	const summaryIdRe = new RegExp(`<div id="${getSummaryId(reportId)}"`);
+
+	const body = invokeGetCommentBody({ inputs: { reportId } });
+
+	assert.ok(body.match(bodyIdRe), "body contains input id");
+	assert.ok(body.match(summaryIdRe), "summary contains input id");
+});
+
+newCommentSuite("Generates reportId if not given", () => {
+	const expectedId = "l5UdXHMZ2m10Bdp0kqRnW0cWarA";
+	const bodyIdRe = new RegExp(`<div id="${getBenchmarkSectionId(expectedId)}"`);
+	const summaryIdRe = new RegExp(`<div id="${getSummaryId(expectedId)}"`);
+
+	const body = invokeGetCommentBody();
+
+	assert.ok(body.match(bodyIdRe), "body contains valid id");
+	assert.ok(body.match(summaryIdRe), "summary contains valid id");
+});
+
+newCommentSuite("Sets open attribute if defaultOpen is true", () => {
+	const openRe = /<details open="open">/;
+	const body = invokeGetCommentBody({ inputs: { defaultOpen: true } });
+
+	assert.ok(body.match(openRe), "body contains <details open>");
+});
+
+newCommentSuite(
+	"Does not set open attribute if defaultOpen is false or null",
+	() => {
+		let body;
+		const openRe = /<details open/;
+
+		body = invokeGetCommentBody({ inputs: { defaultOpen: false } });
+
+		assert.not.ok(
+			body.match(openRe),
+			"body does not contain <details open> for false"
+		);
+
+		body = invokeGetCommentBody({ inputs: { defaultOpen: null } });
+
+		assert.not.ok(
+			body.match(openRe),
+			"body does not contain <details open> for null"
+		);
+	}
+);
+
 newCommentSuite("Generates full comment if comment null", () => {
 	const report = invokeBuildReport();
-	const body = getCommentBody(fakeContext, report, null);
+	const body = invokeGetCommentBody({ report });
 
 	assert.ok(body.includes("Tachometer Benchmark Results"), "Includes title");
-	assert.ok(body.includes("### Summary"), "Includes summary title");
-	assert.ok(body.includes("### Results"), "Includes results title");
-	assert.ok(body.includes(report.summary), "Includes report.summary");
-	assert.ok(body.includes(report.body), "Includes report.body");
+	assert.ok(body.includes("<h3>Summary</h3>"), "Includes summary title");
+	assert.ok(body.includes("<h3>Results</h3>"), "Includes results title");
+	assert.ok(
+		body.includes(report.summary.toString()),
+		"Includes report.summary"
+	);
+	assert.ok(body.includes(report.body.toString()), "Includes report.body");
 });
 
 newCommentSuite("Generates full comment with no summary", () => {
 	const report = invokeBuildReport();
 	report.summary = null;
 
-	const body = getCommentBody(fakeContext, report, null);
+	const body = invokeGetCommentBody({ report });
 	assert.not.ok(
-		body.includes("### Summary"),
+		body.includes("<h3>Summary</h3>"),
 		"Does not include summary section"
 	);
+});
+
+newCommentSuite("Supports benchmarks with different names", () => {
+	const results = copyResults();
+	const otherBenchName = "other-bench";
+
+	results.benchmarks[0].name = otherBenchName;
+	const report = invokeBuildReport({ results });
+	const body = invokeGetCommentBody({ report });
+
+	const allBenchNames = results.benchmarks.map((b) => b.name);
+	const expectedTitle = Array.from(new Set(allBenchNames)).join(", ");
+
+	// console.log(prettier.format(body, { parser: "html" }));
+
+	const benchSectionId = getBenchmarkSectionId(report.id);
+	const bodyDoc = parse(body);
+	const actualTitle = bodyDoc.querySelector(`#${benchSectionId} summary`).text;
+
+	// Check <summary> tag includes all names
+	assert.is(actualTitle, expectedTitle, "Title includes all bench names");
 });
 
 // const updateCommentSuite = suite("getCommentBody (update)");

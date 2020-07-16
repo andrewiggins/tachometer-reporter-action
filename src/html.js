@@ -9,7 +9,7 @@ const {
 } = require("./tachometer-utils");
 
 const getId = (id) => `tachometer-reporter-action--${id}`;
-const getBenchmarkSectionId = (id) => getId(`table-${id}`);
+const getBenchmarkSectionId = (id) => getId(`results-${id}`);
 const getSummaryId = (id) => getId(`summary-${id}`);
 
 /**
@@ -58,27 +58,19 @@ function h(tag, attrs, ...children) {
 }
 
 /**
- * @typedef BenchmarkSectionProps
+ * @typedef ResultsEntryProps
  * @property {string} reportId
  * @property {import('./global').BenchmarkResult[]} benchmarks
  * @property {import('./global').WorkflowRunData} workflowRun
  * @property {import('./global').CommitInfo} commitInfo
- * @property {boolean} open
  *
- * @param {BenchmarkSectionProps} props
+ * @param {ResultsEntryProps} props
  */
-function BenchmarkSection({
-	reportId,
-	benchmarks,
-	workflowRun,
-	commitInfo: commitInfo,
-	open,
-}) {
+function ResultsEntry({ reportId, benchmarks, workflowRun, commitInfo }) {
 	// Hard code what dimensions are rendered in the main table since GitHub comments
 	// have limited horizontal space
 
 	const labelFn = makeUniqueLabelFn(benchmarks);
-	const benchNames = Array.from(new Set(benchmarks.map((b) => b.name)));
 	const listDimensions = [browserDimension, sampleSizeDimension];
 
 	const sha = <tt>{commitInfo.sha.slice(0, 7)}</tt>;
@@ -100,45 +92,61 @@ function BenchmarkSection({
 	];
 
 	return (
-		<div id={getBenchmarkSectionId(reportId)}>
-			<details open={open ? "open" : null}>
-				<summary>
-					<strong>{benchNames.join(", ")}</strong>
-				</summary>
-				<ul>
-					{listDimensions.map((dim) => {
-						const uniqueValues = new Set(benchmarks.map((b) => dim.format(b)));
+		<div>
+			<ul>
+				{listDimensions.map((dim) => {
+					const uniqueValues = new Set(benchmarks.map((b) => dim.format(b)));
+					return (
+						<li>
+							{dim.label}: {Array.from(uniqueValues).join(", ")}
+						</li>
+					);
+				})}
+				<li>Commit: {commitHtml}</li>
+				<li>
+					Built by: <a href={workflowRun.html_url}>{workflowRun.run_name}</a>
+				</li>
+			</ul>
+			<table>
+				<thead>
+					<tr>
+						{tableDimensions.map((d) => (
+							<th>{d.label}</th>
+						))}
+					</tr>
+				</thead>
+				<tbody>
+					{benchmarks.map((b) => {
 						return (
-							<li>
-								{dim.label}: {Array.from(uniqueValues).join(", ")}
-							</li>
+							<tr>
+								{tableDimensions.map((d, i) => {
+									return <td align="center">{d.format(b)}</td>;
+								})}
+							</tr>
 						);
 					})}
-					<li>Commit: {commitHtml}</li>
-					<li>
-						Built by: <a href={workflowRun.html_url}>{workflowRun.run_name}</a>
-					</li>
-				</ul>
-				<table>
-					<thead>
-						<tr>
-							{tableDimensions.map((d) => (
-								<th>{d.label}</th>
-							))}
-						</tr>
-					</thead>
-					<tbody>
-						{benchmarks.map((b) => {
-							return (
-								<tr>
-									{tableDimensions.map((d, i) => {
-										return <td align="center">{d.format(b)}</td>;
-									})}
-								</tr>
-							);
-						})}
-					</tbody>
-				</table>
+				</tbody>
+			</table>
+		</div>
+	);
+}
+
+/**
+ * @typedef BenchmarkSectionProps
+ * @property {import('./global').Report} report
+ * @property {boolean} open
+ * @property {JSX.Element | string} children
+ *
+ * @param {BenchmarkSectionProps} props
+ */
+function BenchmarkSection({ report, open, children }) {
+	return (
+		<div id={getBenchmarkSectionId(report.id)}>
+			<details open={open ? "open" : null}>
+				<summary>
+					<strong>{report.title}</strong>
+				</summary>
+				{children}
 			</details>
 		</div>
 	);
@@ -169,7 +177,7 @@ function Summary({ reportId, benchmarks, prBenchName, baseBenchName }) {
 }
 
 /**
- * @param {{ children: string[] }} props
+ * @param {{ children: Array<JSX.Element | string> }} props
  */
 function SummaryList({ children }) {
 	// @ts-ignore
@@ -207,6 +215,7 @@ function Icon() {
 
 module.exports = {
 	h,
+	ResultsEntry,
 	BenchmarkSection,
 	Summary,
 	SummaryList,

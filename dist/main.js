@@ -2,7 +2,7 @@
 
 function _interopDefault (ex) { return (ex && (typeof ex === 'object') && 'default' in ex) ? ex['default'] : ex; }
 
-var github = require('./github.js');
+var util = require('./util.js');
 require('os');
 require('path');
 var fs = _interopDefault(require('fs'));
@@ -18,7 +18,7 @@ require('stream');
 require('zlib');
 var crypto = _interopDefault(require('crypto'));
 
-var node = github.createCommonjsModule(function (module, exports) {
+var node = util.createCommonjsModule(function (module, exports) {
 Object.defineProperty(exports, "__esModule", { value: true });
 /**
  * Node Class as base class for TextNode and HTMLElement.
@@ -32,7 +32,7 @@ var Node = /** @class */ (function () {
 exports.default = Node;
 });
 
-var type = github.createCommonjsModule(function (module, exports) {
+var type = util.createCommonjsModule(function (module, exports) {
 Object.defineProperty(exports, "__esModule", { value: true });
 var NodeType;
 (function (NodeType) {
@@ -43,8 +43,8 @@ var NodeType;
 exports.default = NodeType;
 });
 
-var comment = github.createCommonjsModule(function (module, exports) {
-var __extends = (github.commonjsGlobal && github.commonjsGlobal.__extends) || (function () {
+var comment = util.createCommonjsModule(function (module, exports) {
+var __extends = (util.commonjsGlobal && util.commonjsGlobal.__extends) || (function () {
     var extendStatics = function (d, b) {
         extendStatics = Object.setPrototypeOf ||
             ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
@@ -57,7 +57,7 @@ var __extends = (github.commonjsGlobal && github.commonjsGlobal.__extends) || (f
         d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
     };
 })();
-var __importDefault = (github.commonjsGlobal && github.commonjsGlobal.__importDefault) || function (mod) {
+var __importDefault = (util.commonjsGlobal && util.commonjsGlobal.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
@@ -94,7 +94,7 @@ var CommentNode = /** @class */ (function (_super) {
 exports.default = CommentNode;
 });
 
-var he = github.createCommonjsModule(function (module, exports) {
+var he = util.createCommonjsModule(function (module, exports) {
 (function(root) {
 
 	// Detect free variables `exports`.
@@ -106,7 +106,7 @@ var he = github.createCommonjsModule(function (module, exports) {
 
 	// Detect free variable `global`, from Node.js or Browserified code,
 	// and use it as `root`.
-	var freeGlobal = typeof github.commonjsGlobal == 'object' && github.commonjsGlobal;
+	var freeGlobal = typeof util.commonjsGlobal == 'object' && util.commonjsGlobal;
 	if (freeGlobal.global === freeGlobal || freeGlobal.window === freeGlobal) {
 		root = freeGlobal;
 	}
@@ -427,11 +427,11 @@ var he = github.createCommonjsModule(function (module, exports) {
 		root.he = he;
 	}
 
-}(github.commonjsGlobal));
+}(util.commonjsGlobal));
 });
 
-var text = github.createCommonjsModule(function (module, exports) {
-var __extends = (github.commonjsGlobal && github.commonjsGlobal.__extends) || (function () {
+var text = util.createCommonjsModule(function (module, exports) {
+var __extends = (util.commonjsGlobal && util.commonjsGlobal.__extends) || (function () {
     var extendStatics = function (d, b) {
         extendStatics = Object.setPrototypeOf ||
             ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
@@ -444,7 +444,7 @@ var __extends = (github.commonjsGlobal && github.commonjsGlobal.__extends) || (f
         d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
     };
 })();
-var __importDefault = (github.commonjsGlobal && github.commonjsGlobal.__importDefault) || function (mod) {
+var __importDefault = (util.commonjsGlobal && util.commonjsGlobal.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
@@ -496,7 +496,7 @@ var TextNode = /** @class */ (function (_super) {
 exports.default = TextNode;
 });
 
-var matcher = github.createCommonjsModule(function (module, exports) {
+var matcher = util.createCommonjsModule(function (module, exports) {
 Object.defineProperty(exports, "__esModule", { value: true });
 /**
  * Cache to store generated match functions
@@ -725,7 +725,7 @@ var Matcher = /** @class */ (function () {
 exports.default = Matcher;
 });
 
-var back = github.createCommonjsModule(function (module, exports) {
+var back = util.createCommonjsModule(function (module, exports) {
 Object.defineProperty(exports, "__esModule", { value: true });
 function arr_back(arr) {
     return arr[arr.length - 1];
@@ -733,8 +733,8 @@ function arr_back(arr) {
 exports.default = arr_back;
 });
 
-var html = github.createCommonjsModule(function (module, exports) {
-var __extends = (github.commonjsGlobal && github.commonjsGlobal.__extends) || (function () {
+var html = util.createCommonjsModule(function (module, exports) {
+var __extends = (util.commonjsGlobal && util.commonjsGlobal.__extends) || (function () {
     var extendStatics = function (d, b) {
         extendStatics = Object.setPrototypeOf ||
             ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
@@ -747,7 +747,7 @@ var __extends = (github.commonjsGlobal && github.commonjsGlobal.__extends) || (f
         d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
     };
 })();
-var __importDefault = (github.commonjsGlobal && github.commonjsGlobal.__importDefault) || function (mod) {
+var __importDefault = (util.commonjsGlobal && util.commonjsGlobal.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
@@ -1536,7 +1536,7 @@ function parse(data, options) {
 exports.parse = parse;
 });
 
-var dist = github.createCommonjsModule(function (module, exports) {
+var dist = util.createCommonjsModule(function (module, exports) {
 Object.defineProperty(exports, "__esModule", { value: true });
 
 exports.CommentNode = comment.default;
@@ -1627,7 +1627,7 @@ var prettyBytes = (number, options) => {
 	return prefix + numberString + ' ' + unit;
 };
 
-var uaParser = github.createCommonjsModule(function (module, exports) {
+var uaParser = util.createCommonjsModule(function (module, exports) {
 /*!
  * UAParser.js v0.7.21
  * Lightweight JavaScript-based User-Agent string parser
@@ -2522,7 +2522,7 @@ var uaParser = github.createCommonjsModule(function (module, exports) {
         };
     }
 
-})(typeof window === 'object' ? window : github.commonjsGlobal);
+})(typeof window === 'object' ? window : util.commonjsGlobal);
 });
 
 const { UAParser } = uaParser;
@@ -2761,7 +2761,7 @@ const {
 } = tachometerUtils;
 
 const getId = (id) => `tachometer-reporter-action--${id}`;
-const getBenchmarkSectionId = (id) => getId(`table-${id}`);
+const getBenchmarkSectionId = (id) => getId(`results-${id}`);
 const getSummaryId = (id) => getId(`summary-${id}`);
 
 /**
@@ -2810,27 +2810,19 @@ function h(tag, attrs, ...children) {
 }
 
 /**
- * @typedef BenchmarkSectionProps
+ * @typedef ResultsEntryProps
  * @property {string} reportId
  * @property {import('./global').BenchmarkResult[]} benchmarks
  * @property {import('./global').WorkflowRunData} workflowRun
  * @property {import('./global').CommitInfo} commitInfo
- * @property {boolean} open
  *
- * @param {BenchmarkSectionProps} props
+ * @param {ResultsEntryProps} props
  */
-function BenchmarkSection({
-	reportId,
-	benchmarks,
-	workflowRun,
-	commitInfo: commitInfo,
-	open,
-}) {
+function ResultsEntry({ reportId, benchmarks, workflowRun, commitInfo }) {
 	// Hard code what dimensions are rendered in the main table since GitHub comments
 	// have limited horizontal space
 
 	const labelFn = makeUniqueLabelFn$1(benchmarks);
-	const benchNames = Array.from(new Set(benchmarks.map((b) => b.name)));
 	const listDimensions = [browserDimension$1, sampleSizeDimension$1];
 
 	const sha = h('tt', null, commitInfo.sha.slice(0, 7));
@@ -2852,20 +2844,16 @@ function BenchmarkSection({
 	];
 
 	return (
-		h('div', { id: getBenchmarkSectionId(reportId),}
-, h('details', { open: open ? "open" : null,}
-, h('summary', null
-, h('strong', null, benchNames.join(", "))
-)
+		h('div', null
 , h('ul', null
 , listDimensions.map((dim) => {
-						const uniqueValues = new Set(benchmarks.map((b) => dim.format(b)));
-						return (
-							h('li', null
+					const uniqueValues = new Set(benchmarks.map((b) => dim.format(b)));
+					return (
+						h('li', null
 , dim.label, ": " , Array.from(uniqueValues).join(", ")
 )
-						);
-					})
+					);
+				})
 , h('li', null, "Commit: " , commitHtml)
 , h('li', null, "Built by: "
   , h('a', { href: workflowRun.html_url,}, workflowRun.run_name)
@@ -2875,22 +2863,42 @@ function BenchmarkSection({
 , h('thead', null
 , h('tr', null
 , tableDimensions.map((d) => (
-								h('th', null, d.label)
-							))
+							h('th', null, d.label)
+						))
 )
 )
 , h('tbody', null
 , benchmarks.map((b) => {
-							return (
-								h('tr', null
+						return (
+							h('tr', null
 , tableDimensions.map((d, i) => {
-										return h('td', { align: "center",}, d.format(b));
-									})
+									return h('td', { align: "center",}, d.format(b));
+								})
 )
-							);
-						})
+						);
+					})
 )
 )
+)
+	);
+}
+
+/**
+ * @typedef BenchmarkSectionProps
+ * @property {import('./global').Report} report
+ * @property {boolean} open
+ * @property {JSX.Element | string} children
+ *
+ * @param {BenchmarkSectionProps} props
+ */
+function BenchmarkSection({ report, open, children }) {
+	return (
+		h('div', { id: getBenchmarkSectionId(report.id),}
+, h('details', { open: open ? "open" : null,}
+, h('summary', null
+, h('strong', null, report.title)
+)
+, children
 )
 )
 	);
@@ -2921,7 +2929,7 @@ function Summary({ reportId, benchmarks, prBenchName, baseBenchName }) {
 }
 
 /**
- * @param {{ children: string[] }} props
+ * @param {{ children: Array<JSX.Element | string> }} props
  */
 function SummaryList({ children }) {
 	// @ts-ignore
@@ -2937,86 +2945,23 @@ function SummaryList({ children }) {
 
 var html$1 = {
 	h,
+	ResultsEntry,
 	BenchmarkSection,
 	Summary,
 	SummaryList,
 };
 
-/**
- * Create a PR comment, or update one if it already exists
- * @param {import('./global').GitHubActionClient} github,
- * @param {import('./global').GitHubActionContext} context
- * @param {(comment: import('./global').CommentData | null) => string} getCommentBody
- * @param {import('./global').Logger} logger
- */
-async function postOrUpdateComment(github, context, getCommentBody, logger) {
-	const footer = `\n\n<a href="https://github.com/andrewiggins/tachometer-reporter-action"><sub>tachometer-reporter-action</sub></a>`;
-	const commentInfo = {
-		...context.repo,
-		issue_number: context.issue.number,
-	};
-
-	logger.startGroup(`Updating PR comment`);
-
-	/** @type {import('./global').CommentData} */
-	let comment;
-	try {
-		logger.info(`Looking for existing comment...`);
-		const comments = (await github.issues.listComments(commentInfo)).data;
-		for (let i = comments.length; i--; ) {
-			const c = comments[i];
-			if (
-				c.user.type === "Bot" &&
-				/<sub>[\s\n]*tachometer-reporter-action/.test(c.body)
-			) {
-				comment = c;
-				logger.info(`Found comment! (id: ${c.id})`);
-				logger.debug(() => `Found comment: ${JSON.stringify(c, null, 2)}`);
-				break;
-			}
-		}
-	} catch (e) {
-		logger.info("Error checking for previous comments: " + e.message);
-	}
-
-	if (comment) {
-		try {
-			logger.info(`Updating comment (id: ${comment.id})...`);
-			await github.issues.updateComment({
-				...context.repo,
-				comment_id: comment.id,
-				body: getCommentBody(comment) + footer,
-			});
-		} catch (e) {
-			logger.info(`Error updating comment: ${e.message}`);
-			comment = null;
-		}
-	}
-
-	if (!comment) {
-		try {
-			logger.info(`Creating new comment...`);
-			await github.issues.createComment({
-				...commentInfo,
-				body: getCommentBody(null) + footer,
-			});
-		} catch (e) {
-			logger.info(`Error creating comment: ${e.message}`);
-		}
-	}
-
-	logger.endGroup();
-}
-
-var comments = {
-	postOrUpdateComment,
-};
-
 const { readFile } = fs.promises;
 
-const { h: h$1, BenchmarkSection: BenchmarkSection$1, Summary: Summary$1, SummaryList: SummaryList$1 } = html$1;
-const { postOrUpdateComment: postOrUpdateComment$1 } = comments;
-const { getWorkflowRun, getCommit } = github.github;
+const {
+	h: h$1,
+	BenchmarkSection: BenchmarkSection$1,
+	Summary: Summary$1,
+	SummaryList: SummaryList$1,
+	ResultsEntry: ResultsEntry$1,
+} = html$1;
+const { postOrUpdateComment } = util.comments;
+const { getWorkflowRun, getCommit } = util.github;
 
 /**
  * @param {import('./global').BenchmarkResult[]} benchmarks
@@ -3054,50 +2999,49 @@ function buildReport(commitInfo, workflowRun, inputs, tachResults) {
 	//    - replace `base-bench-name` with `branch@SHA`
 
 	const benchmarks = tachResults.benchmarks;
+	const title = Array.from(new Set(benchmarks.map((b) => b.name))).join(", ");
 	const reportId = inputs.reportId ? inputs.reportId : getReportId(benchmarks);
 
 	return {
 		id: reportId,
+		title,
 		body: (
-			h$1(BenchmarkSection$1, {
+			h$1(ResultsEntry$1, {
 				reportId: reportId,
 				benchmarks: benchmarks,
 				workflowRun: workflowRun,
-				open: inputs.defaultOpen,
 				commitInfo: commitInfo,}
 			)
-		).toString(),
+		),
 		results: benchmarks,
 		prBenchName: inputs.prBenchName,
 		baseBenchName: inputs.baseBenchName,
 		summary:
-			inputs.baseBenchName && inputs.prBenchName
-				? (
-						h$1(Summary$1, {
-							reportId: reportId,
-							benchmarks: benchmarks,
-							prBenchName: inputs.prBenchName,
-							baseBenchName: inputs.baseBenchName,}
-						)
-				  ).toString()
-				: null,
+			inputs.baseBenchName && inputs.prBenchName ? (
+				h$1(Summary$1, {
+					reportId: reportId,
+					benchmarks: benchmarks,
+					prBenchName: inputs.prBenchName,
+					baseBenchName: inputs.baseBenchName,}
+				)
+			) : null,
 	};
 }
 
 /**
- * @param {import('./global').GitHubActionContext} context
+ * @param {import('./global').Inputs} inputs
  * @param {import('./global').Report} report
  * @param {import('./global').CommentData | null} comment
  */
-function getCommentBody(context, report, comment) {
+function getCommentBody(inputs, report, comment) {
 	// TODO: Update comment body
 
 	/** @type {string[]} */
-	let body = ["## 📊 Tachometer Benchmark Results\n"];
+	let body = ["<h2>📊 Tachometer Benchmark Results</h2>\n"];
 
 	if (report.summary) {
 		body.push(
-			"### Summary",
+			"<h3>Summary</h3>\n",
 			// TODO: Should these be grouped by how they are summarized in case not
 			// all benchmarks compare the same?
 			`<sub>${report.prBenchName} vs ${report.baseBenchName}</sub>\n`,
@@ -3106,7 +3050,18 @@ function getCommentBody(context, report, comment) {
 		);
 	}
 
-	body.push("### Results\n", report.body);
+	// TODO: Consider modifying report to return a ResultEntry (just the <ul> and
+	// <table>) and generate the BenchmarkSection here. That way the "pre" action can
+	// just generate a fake report with a body and summary property that says something
+	// like "Running in <a>Main #13</a>..."
+	body.push("<h3>Results</h3>\n");
+	body.push(
+		(
+			h$1(BenchmarkSection$1, { report: report, open: inputs.defaultOpen,}
+, report.body
+)
+		).toString()
+	);
 
 	return body.join("\n");
 }
@@ -3161,11 +3116,11 @@ async function reportTachResults(
 
 	const report = buildReport(commitInfo, workflowRun, inputs, tachResults);
 
-	await postOrUpdateComment$1(
+	await postOrUpdateComment(
 		github,
 		context,
 		(comment) => {
-			const body = getCommentBody(context, report);
+			const body = getCommentBody(inputs, report);
 			logger.debug(() => "New Comment Body: " + body);
 			return body;
 		},
@@ -3181,6 +3136,7 @@ var src = {
 };
 
 const { reportTachResults: reportTachResults$1 } = src;
+const { getLogger, getInputs } = util.util;
 
 /**
  * Create a status check, and return a function that updates (completes) it.
@@ -3206,60 +3162,30 @@ async function createCheck(github, context) {
 	};
 }
 
-const actionLogger = {
-	warn(msg) {
-		github.core.warning(msg);
-	},
-	info(msg) {
-		github.core.info(msg);
-	},
-	debug(getMsg) {
-		github.core.debug(getMsg());
-	},
-	startGroup(name) {
-		github.core.startGroup(name);
-	},
-	endGroup() {
-		github.core.endGroup();
-	},
-};
-
 (async () => {
-	const token = github.core.getInput("github-token", { required: true });
-	const path = github.core.getInput("path", { required: true });
-	const reportId = github.core.getInput("report-id", { required: false });
-	const keepOldResults = github.core.getInput("keep-old-results", { required: false });
-	const defaultOpen = github.core.getInput("default-open", { required: false });
-	const prBenchName = github.core.getInput("pr-bench-name", { required: false });
-	const baseBenchName = github.core.getInput("base-bench-name", { required: false });
-	const useCheck = github.core.getInput("use-check", { required: true });
+	const token = util.core.getInput("github-token", { required: true });
+	const useCheck = util.core.getInput("use-check", { required: true });
 
-	const octokit = github.github$1.getOctokit(token);
+	const logger = getLogger();
+	const inputs = getInputs();
+	const octokit = util.github$1.getOctokit(token);
 
-	/** @type {import('../global').Inputs} */
-	const inputs = {
-		path,
-		reportId: reportId ? reportId : null,
-		keepOldResults: keepOldResults != "false",
-		defaultOpen: defaultOpen !== "false",
-		prBenchName: prBenchName ? prBenchName : null,
-		baseBenchName: baseBenchName ? baseBenchName : null,
-	};
-
-	let finish = (checkResult) =>
-		github.core.debug("Check Result: " + JSON.stringify(checkResult));
+	let finish;
 	if (useCheck == "true") {
-		finish = await createCheck(octokit, github.github$1.context);
+		finish = await createCheck(octokit, util.github$1.context);
+	} else {
+		finish = (checkResult) =>
+			util.core.debug("Check Result: " + JSON.stringify(checkResult));
 	}
 
 	try {
-		github.core.debug("Inputs: " + JSON.stringify(inputs, null, 2));
+		util.core.debug("Inputs: " + JSON.stringify(inputs, null, 2));
 
 		let results = await reportTachResults$1(
 			octokit,
-			github.github$1.context,
+			util.github$1.context,
 			inputs,
-			actionLogger
+			logger
 		);
 
 		await finish({
@@ -3270,7 +3196,7 @@ const actionLogger = {
 			},
 		});
 	} catch (e) {
-		github.core.setFailed(e.message);
+		util.core.setFailed(e.message);
 
 		await finish({
 			conclusion: "failure",

@@ -40,8 +40,9 @@ type BenchmarkResult = TachResults["benchmarks"][0];
 
 interface Report {
 	id: string;
-	summary: string | null;
-	body: string;
+	title: string;
+	summary: JSX.Element | string | null;
+	body: JSX.Element | string;
 	prBenchName: string | null;
 	baseBenchName: string | null;
 	results: BenchmarkResult[];

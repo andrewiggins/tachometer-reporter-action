@@ -1,6 +1,12 @@
 const { readFile } = require("fs").promises;
 const crypto = require("crypto");
-const { h, BenchmarkSection, Summary, SummaryList } = require("./html");
+const {
+	h,
+	BenchmarkSection,
+	Summary,
+	SummaryList,
+	ResultsEntry,
+} = require("./html");
 const { postOrUpdateComment } = require("./comments");
 const { getWorkflowRun, getCommit } = require("./utils/github");
 
@@ -40,50 +46,49 @@ function buildReport(commitInfo, workflowRun, inputs, tachResults) {
 	//    - replace `base-bench-name` with `branch@SHA`
 
 	const benchmarks = tachResults.benchmarks;
+	const title = Array.from(new Set(benchmarks.map((b) => b.name))).join(", ");
 	const reportId = inputs.reportId ? inputs.reportId : getReportId(benchmarks);
 
 	return {
 		id: reportId,
+		title,
 		body: (
-			<BenchmarkSection
+			<ResultsEntry
 				reportId={reportId}
 				benchmarks={benchmarks}
 				workflowRun={workflowRun}
-				open={inputs.defaultOpen}
 				commitInfo={commitInfo}
 			/>
-		).toString(),
+		),
 		results: benchmarks,
 		prBenchName: inputs.prBenchName,
 		baseBenchName: inputs.baseBenchName,
 		summary:
-			inputs.baseBenchName && inputs.prBenchName
-				? (
-						<Summary
-							reportId={reportId}
-							benchmarks={benchmarks}
-							prBenchName={inputs.prBenchName}
-							baseBenchName={inputs.baseBenchName}
-						/>
-				  ).toString()
-				: null,
+			inputs.baseBenchName && inputs.prBenchName ? (
+				<Summary
+					reportId={reportId}
+					benchmarks={benchmarks}
+					prBenchName={inputs.prBenchName}
+					baseBenchName={inputs.baseBenchName}
+				/>
+			) : null,
 	};
 }
 
 /**
- * @param {import('./global').GitHubActionContext} context
+ * @param {import('./global').Inputs} inputs
  * @param {import('./global').Report} report
  * @param {import('./global').CommentData | null} comment
  */
-function getCommentBody(context, report, comment) {
+function getCommentBody(inputs, report, comment) {
 	// TODO: Update comment body
 
 	/** @type {string[]} */
-	let body = ["## 📊 Tachometer Benchmark Results\n"];
+	let body = ["<h2>📊 Tachometer Benchmark Results</h2>\n"];
 
 	if (report.summary) {
 		body.push(
-			"### Summary",
+			"<h3>Summary</h3>\n",
 			// TODO: Should these be grouped by how they are summarized in case not
 			// all benchmarks compare the same?
 			`<sub>${report.prBenchName} vs ${report.baseBenchName}</sub>\n`,
@@ -92,7 +97,18 @@ function getCommentBody(context, report, comment) {
 		);
 	}
 
-	body.push("### Results\n", report.body);
+	// TODO: Consider modifying report to return a ResultEntry (just the <ul> and
+	// <table>) and generate the BenchmarkSection here. That way the "pre" action can
+	// just generate a fake report with a body and summary property that says something
+	// like "Running in <a>Main #13</a>..."
+	body.push("<h3>Results</h3>\n");
+	body.push(
+		(
+			<BenchmarkSection report={report} open={inputs.defaultOpen}>
+				{report.body}
+			</BenchmarkSection>
+		).toString()
+	);
 
 	return body.join("\n");
 }
@@ -151,7 +167,7 @@ async function reportTachResults(
 		github,
 		context,
 		(comment) => {
-			const body = getCommentBody(context, report, comment);
+			const body = getCommentBody(inputs, report, comment);
 			logger.debug(() => "New Comment Body: " + body);
 			return body;
 		},
