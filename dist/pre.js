@@ -14,9 +14,34 @@ require('assert');
 require('util');
 require('stream');
 require('zlib');
+require('crypto');
 
-const { getWorkflowRun } = util.github;
+const { getWorkflowRun } = util.github$1;
+const { getCommentBody } = util.src;
 const { getLogger, getInputs } = util.util;
+
+/**
+ * @param {import('../global').Inputs} inputs
+ * @param {import('../global').WorkflowRunData} workflowRun
+ * @returns {import('../global').Report}
+ */
+function buildInProgressReport(inputs, workflowRun) {
+	const text = (
+		h('div', null, "Running in "
+  , h('a', { href: workflowRun.html_url,}, workflowRun.run_name), "..."
+)
+	);
+
+	return {
+		id: inputs.reportId,
+		title: inputs.reportId,
+		body: text,
+		summary: text,
+		results: null,
+		baseBenchName: inputs.baseBenchName,
+		prBenchName: inputs.prBenchName,
+	};
+}
 
 (async function () {
 	// TODO: Render `Running...` status at start of job and setup general
@@ -33,12 +58,20 @@ const { getLogger, getInputs } = util.util;
 	logger.debug("Report ID: " + JSON.stringify(inputs.reportId));
 	// logger.debug("Context: " + JSON.stringify(github.context, undefined, 2));
 
-	const context = util.github$1.context;
-	const octokit = util.github$1.getOctokit(token);
+	if (!inputs.reportId) {
+		return logger.info(
+			'No reportId provided. Skipping updating comment with "Running..." status.'
+		);
+	}
+
+	const context = util.github.context;
+	const octokit = util.github.getOctokit(token);
 	const workflowRun = await getWorkflowRun(context, octokit);
+	const report = buildInProgressReport(inputs, workflowRun);
 
 	logger.debug("Run name: " + workflowRun.run_name);
 	logger.debug("Run URL : " + workflowRun.html_url);
+	logger.debug("Report  : " + JSON.stringify(report, null, 2));
 
 	// await postOrUpdateComment(
 	// 	octokit,
@@ -46,4 +79,7 @@ const { getLogger, getInputs } = util.util;
 	// 	(comment) => getCommentBody(inputs, comment),
 	// 	logger
 	// );
+
+	logger.debug("Updated comment body:");
+	logger.debug(getCommentBody(inputs, report, null));
 })();
