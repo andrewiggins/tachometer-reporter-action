@@ -16,6 +16,8 @@ const testResults = JSON.parse(readFileSync(testResultsPath, "utf8"));
 /** @type {() => import('../src/global').TachResults} */
 const copyResults = () => JSON.parse(JSON.stringify(testResults));
 
+const formatHtml = (html) => prettier.format(html, { parser: "html" });
+
 const prBenchName = "local-framework";
 const baseBenchName = "base-framework";
 const defaultInputs = Object.freeze({
@@ -45,7 +47,7 @@ const buildReportSuite = suite("buildReport");
 
 buildReportSuite("Body snapshot", async () => {
 	const report = buildReport(fakeWorkflowRun, defaultInputs, testResults);
-	const html = prettier.format(report.body, { parser: "html" });
+	const html = formatHtml(report.body);
 
 	const snapshotPath = testRoot("snapshots/test-results-body.html");
 	const snapshot = await readFile(snapshotPath, "utf-8");
@@ -57,7 +59,7 @@ buildReportSuite("Body snapshot", async () => {
 
 buildReportSuite("Summary snapshot", async () => {
 	const report = buildReport(fakeWorkflowRun, defaultInputs, testResults);
-	const html = prettier.format(report.summary, { parser: "html" });
+	const html = formatHtml(report.summary);
 
 	const snapshotPath = testRoot("snapshots/test-results-summary.html");
 	const snapshot = await readFile(snapshotPath, "utf-8");

@@ -53,19 +53,21 @@ function buildReport(workflowRun, inputs, tachResults) {
 				workflowRun={workflowRun}
 				open={inputs.defaultOpen}
 			/>
-		),
+		).toString(),
 		results: benchmarks,
 		prBenchName: inputs.prBenchName,
 		baseBenchName: inputs.baseBenchName,
 		summary:
-			inputs.baseBenchName && inputs.prBenchName ? (
-				<Summary
-					reportId={reportId}
-					benchmarks={benchmarks}
-					prBenchName={inputs.prBenchName}
-					baseBenchName={inputs.baseBenchName}
-				/>
-			) : null,
+			inputs.baseBenchName && inputs.prBenchName
+				? (
+						<Summary
+							reportId={reportId}
+							benchmarks={benchmarks}
+							prBenchName={inputs.prBenchName}
+							baseBenchName={inputs.baseBenchName}
+						/>
+				  ).toString()
+				: null,
 	};
 }
 
@@ -86,7 +88,7 @@ function getCommentBody(context, report, comment) {
 			// TODO: Should these be grouped by how they are summarized in case not
 			// all benchmarks compare the same?
 			`<sub>${report.prBenchName} vs ${report.baseBenchName}</sub>\n`,
-			<SummaryList>{[report.summary]}</SummaryList>,
+			(<SummaryList>{[report.summary]}</SummaryList>).toString(),
 			""
 		);
 	}
