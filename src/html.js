@@ -8,8 +8,6 @@ const {
 	runtimeConfidenceIntervalDimension,
 } = require("./tachometer-utils");
 
-const VOID_ELEMENTS = /^(area|base|br|col|embed|hr|img|input|link|meta|param|source|track|wbr)$/;
-
 const getId = (id) => `tachometer-reporter-action--${id}`;
 const getTableId = (id) => getId(`table-${id}`);
 const getSummaryId = (id) => getId(`summary-${id}`);
