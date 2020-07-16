@@ -191,6 +191,33 @@ function SummaryList({ children }) {
 	);
 }
 
+/**
+ * @param {{ title: string; reportId: string; workflowRun: import('./global').WorkflowRunData }} props
+ */
+function InProgressSummary({ title, reportId, workflowRun }) {
+	// TODO: Use current job URL from here instead of workflow run URL:
+	// https://api.github.com/repos/andrewiggins/tachometer-reporter-action/actions/runs/171962060/jobs
+	return (
+		<div id={getSummaryId(reportId)}>
+			{"\n\n"}
+			{`[${title}](#${getBenchmarkSectionId(reportId)}): `}
+			{"\n\n"}
+			Running in <a href={workflowRun.html_url}>{workflowRun.run_name}…</a>
+		</div>
+	);
+}
+
+/**
+ * @param {{ workflowRun: import('./global').WorkflowRunData }} props
+ */
+function InProgressResultEntry({ workflowRun }) {
+	return (
+		<div>
+			Running in <a href={workflowRun.html_url}>{workflowRun.run_name}…</a>
+		</div>
+	);
+}
+
 function Icon() {
 	// Argh... SVGs get stripped out of markdown so this doesn't work :(
 	return (
@@ -218,5 +245,7 @@ module.exports = {
 	ResultsEntry,
 	BenchmarkSection,
 	Summary,
+	InProgressResultEntry,
+	InProgressSummary,
 	SummaryList,
 };

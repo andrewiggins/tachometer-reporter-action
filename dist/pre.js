@@ -16,7 +16,7 @@ require('stream');
 require('zlib');
 require('crypto');
 
-const { h } = util.html;
+const { h, InProgressSummary, InProgressResultEntry } = util.html;
 const { getWorkflowRun } = util.github$1;
 const { getCommentBody } = util.src;
 const { getLogger, getInputs } = util.util;
@@ -27,17 +27,20 @@ const { getLogger, getInputs } = util.util;
  * @returns {import('../global').Report}
  */
 function buildInProgressReport(inputs, workflowRun) {
-	const text = (
-		h('div', null, "Running in "
-  , h('a', { href: workflowRun.html_url,}, workflowRun.run_name), "..."
-)
-	);
-
+	// TODO: Consider moving into index.js
+	const title = inputs.reportId;
 	return {
 		id: inputs.reportId,
-		title: inputs.reportId,
-		body: text,
-		summary: text,
+		title,
+		body: h(InProgressResultEntry, { workflowRun: workflowRun,} ),
+		summary:
+			inputs.baseBenchName && inputs.prBenchName ? (
+				h(InProgressSummary, {
+					title: title,
+					reportId: inputs.reportId,
+					workflowRun: workflowRun,}
+				)
+			) : null,
 		results: null,
 		baseBenchName: inputs.baseBenchName,
 		prBenchName: inputs.prBenchName,

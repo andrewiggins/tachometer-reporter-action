@@ -12,6 +12,8 @@ declare global {
 type GitHubActionClient = ReturnType<
 	typeof import("@actions/github").getOctokit
 >;
+
+// Sample context: https://github.com/andrewiggins/tachometer-reporter-action/runs/860022655?check_suite_focus=true
 type GitHubActionContext = typeof import("@actions/github").context;
 type CommentData = import("@octokit/types").IssuesGetCommentResponseData;
 type WorkflowRun = import("@octokit/types").ActionsGetWorkflowRunResponseData;

@@ -1,6 +1,6 @@
 const core = require("@actions/core");
 const github = require("@actions/github");
-const { h } = require("../html");
+const { h, InProgressSummary, InProgressResultEntry } = require("../html");
 const { getWorkflowRun } = require("../utils/github");
 const { postOrUpdateComment } = require("../comments");
 const { getCommentBody } = require("../index");
@@ -12,17 +12,20 @@ const { getLogger, getInputs } = require("./util");
  * @returns {import('../global').Report}
  */
 function buildInProgressReport(inputs, workflowRun) {
-	const text = (
-		<div>
-			Running in <a href={workflowRun.html_url}>{workflowRun.run_name}</a>...
-		</div>
-	);
-
+	// TODO: Consider moving into index.js
+	const title = inputs.reportId;
 	return {
 		id: inputs.reportId,
-		title: inputs.reportId,
-		body: text,
-		summary: text,
+		title,
+		body: <InProgressResultEntry workflowRun={workflowRun} />,
+		summary:
+			inputs.baseBenchName && inputs.prBenchName ? (
+				<InProgressSummary
+					title={title}
+					reportId={inputs.reportId}
+					workflowRun={workflowRun}
+				/>
+			) : null,
 		results: null,
 		baseBenchName: inputs.baseBenchName,
 		prBenchName: inputs.prBenchName,

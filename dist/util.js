@@ -8412,11 +8412,40 @@ function SummaryList({ children }) {
 	);
 }
 
+/**
+ * @param {{ title: string; reportId: string; workflowRun: import('./global').WorkflowRunData }} props
+ */
+function InProgressSummary({ title, reportId, workflowRun }) {
+	// TODO: Use current job URL from here instead of workflow run URL:
+	// https://api.github.com/repos/andrewiggins/tachometer-reporter-action/actions/runs/171962060/jobs
+	return (
+		h('div', { id: getSummaryId(reportId),}
+, "\n\n"
+, `[${title}](#${getBenchmarkSectionId(reportId)}): `
+, "\n\n", "Running in "
+  , h('a', { href: workflowRun.html_url,}, workflowRun.run_name, "…")
+)
+	);
+}
+
+/**
+ * @param {{ workflowRun: import('./global').WorkflowRunData }} props
+ */
+function InProgressResultEntry({ workflowRun }) {
+	return (
+		h('div', null, "Running in "
+  , h('a', { href: workflowRun.html_url,}, workflowRun.run_name, "…")
+)
+	);
+}
+
 var html$1 = {
 	h,
 	ResultsEntry,
 	BenchmarkSection,
 	Summary,
+	InProgressResultEntry,
+	InProgressSummary,
 	SummaryList,
 };
 
