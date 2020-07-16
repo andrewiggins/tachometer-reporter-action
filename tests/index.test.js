@@ -16,7 +16,8 @@ const testResults = JSON.parse(readFileSync(testResultsPath, "utf8"));
 /** @type {() => import('../src/global').TachResults} */
 const copyResults = () => JSON.parse(JSON.stringify(testResults));
 /** @type {(html: string) => string} */
-const formatHtml = (html) => prettier.format(html, { parser: "html" });
+const formatHtml = (html) =>
+	prettier.format(html, { parser: "html", useTabs: true });
 
 const prBenchName = "local-framework";
 const baseBenchName = "base-framework";
