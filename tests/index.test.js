@@ -19,6 +19,19 @@ const copyResults = () => JSON.parse(JSON.stringify(testResults));
 const formatHtml = (html) =>
 	prettier.format(html, { parser: "html", useTabs: true });
 
+const shouldAssertFixtures =
+	process.env.TACH_REPORTER_SKIP_SNAPSHOT_TESTS !== "true";
+
+if (!shouldAssertFixtures) {
+	console.log("Skipping asserting fixtures");
+}
+
+function assertFixture(actual, expected, message) {
+	if (shouldAssertFixtures) {
+		assert.fixture(actual, expected, message);
+	}
+}
+
 const prBenchName = "local-framework";
 const baseBenchName = "base-framework";
 const defaultInputs = Object.freeze({
@@ -142,7 +155,7 @@ buildReportSuite("Body snapshot", async () => {
 	// Uncomment to update snapshot
 	// await writeFile(snapshotPath, html, "utf8");
 
-	assert.fixture(html, snapshot, "Report body matches snapshot");
+	assertFixture(html, snapshot, "Report body matches snapshot");
 });
 
 buildReportSuite("Summary snapshot", async () => {
@@ -155,7 +168,7 @@ buildReportSuite("Summary snapshot", async () => {
 	// Uncomment to update snapshot
 	// await writeFile(snapshotPath, html, "utf8");
 
-	assert.fixture(html, snapshot, "Report summary matches snapshot");
+	assertFixture(html, snapshot, "Report summary matches snapshot");
 });
 
 buildReportSuite("Uses input.reportId", () => {
@@ -319,7 +332,7 @@ newCommentSuite("New comment snapshot", async () => {
 	// Uncomment to update snapshot
 	// await writeFile(snapshotPath, html, "utf8");
 
-	assert.fixture(html, snapshot, "Report body matches snapshot");
+	assertFixture(html, snapshot, "Report body matches snapshot");
 });
 
 newCommentSuite("Uses input.reportId", () => {
