@@ -45,6 +45,9 @@ function h(tag, attrs, ...children) {
 		children.map((c) => {
 			if (typeof c == "number" || typeof c == "string") {
 				return new TextNode(c.toString());
+			} else if (c instanceof HTMLElement) {
+				c.parentNode = element;
+				return c;
 			} else {
 				return c;
 			}
