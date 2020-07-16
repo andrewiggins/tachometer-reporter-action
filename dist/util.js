@@ -8718,6 +8718,9 @@ var src = {
 	reportTachResults,
 };
 
+/**
+ * @returns {import('../global').Logger}
+ */
 function getLogger() {
 	return {
 		warn(msg) {

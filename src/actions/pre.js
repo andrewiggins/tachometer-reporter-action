@@ -39,8 +39,8 @@ function buildInProgressReport(inputs, workflowRun) {
 	const logger = getLogger();
 	const inputs = getInputs();
 
-	logger.debug("Running pre tachometer-reporter-action...");
-	logger.debug("Report ID: " + JSON.stringify(inputs.reportId));
+	logger.debug(() => "Running pre tachometer-reporter-action...");
+	logger.debug(() => "Report ID: " + JSON.stringify(inputs.reportId));
 	// logger.debug("Context: " + JSON.stringify(github.context, undefined, 2));
 
 	if (!inputs.reportId) {
@@ -59,9 +59,11 @@ function buildInProgressReport(inputs, workflowRun) {
 		summary: report.summary.toString(),
 	};
 
-	logger.debug("Run name: " + workflowRun.run_name);
-	logger.debug("Run URL : " + workflowRun.html_url);
-	logger.debug("Report  : " + JSON.stringify(serializableReport, null, 2));
+	logger.debug(() => "Run name: " + workflowRun.run_name);
+	logger.debug(() => "Run URL : " + workflowRun.html_url);
+	logger.debug(
+		() => "Report  : " + JSON.stringify(serializableReport, null, 2)
+	);
 
 	// await postOrUpdateComment(
 	// 	octokit,
@@ -70,6 +72,6 @@ function buildInProgressReport(inputs, workflowRun) {
 	// 	logger
 	// );
 
-	logger.debug("Updated comment body:");
-	logger.debug(getCommentBody(inputs, report, null));
+	logger.debug(() => "Updated comment body:");
+	logger.debug(() => getCommentBody(inputs, report, null));
 })();
