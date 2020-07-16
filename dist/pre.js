@@ -68,10 +68,15 @@ function buildInProgressReport(inputs, workflowRun) {
 	const octokit = util.github.getOctokit(token);
 	const workflowRun = await getWorkflowRun(context, octokit);
 	const report = buildInProgressReport(inputs, workflowRun);
+	const serializableReport = {
+		...report,
+		body: report.body.toString(),
+		summary: report.summary.toString(),
+	};
 
 	logger.debug("Run name: " + workflowRun.run_name);
 	logger.debug("Run URL : " + workflowRun.html_url);
-	logger.debug("Report  : " + JSON.stringify(report, null, 2));
+	logger.debug("Report  : " + JSON.stringify(serializableReport, null, 2));
 
 	// await postOrUpdateComment(
 	// 	octokit,
