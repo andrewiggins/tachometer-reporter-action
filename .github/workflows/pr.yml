@@ -15,6 +15,8 @@ jobs:
           node-version: "14.x"
       - run: npm ci
       - run: npm test
+        env:
+          TACH_REPORTER_SKIP_SNAPSHOT_TESTS: "true"
       - name: Report Tachometer Result
         uses: andrewiggins/tachometer-reporter-action@pre-action
         with:
