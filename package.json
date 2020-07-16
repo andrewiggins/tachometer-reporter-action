@@ -43,7 +43,6 @@
     "@rollup/plugin-commonjs": "^13.0.0",
     "@rollup/plugin-node-resolve": "^8.1.0",
     "@rollup/plugin-sucrase": "^3.1.0",
-    "cheerio": "^1.0.0-rc.3",
     "husky": "^4.2.5",
     "lint-staged": "^10.2.11",
     "prettier": "^2.0.5",
@@ -55,6 +54,7 @@
     "watch": "^1.0.2"
   },
   "dependencies": {
+    "node-html-parser": "^1.2.20",
     "pretty-bytes": "^5.3.0",
     "ua-parser-js": "^0.7.21"
   }

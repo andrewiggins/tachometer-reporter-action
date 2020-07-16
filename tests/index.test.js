@@ -3,7 +3,7 @@ const { readFileSync } = require("fs");
 const { readFile, writeFile } = require("fs").promises;
 const { suite } = require("uvu");
 const assert = require("uvu/assert");
-const cheerio = require("cheerio");
+const { parse } = require("node-html-parser");
 const prettier = require("prettier");
 const { buildReport, getCommentBody } = require("../lib/index");
 
@@ -15,6 +15,8 @@ const testResults = JSON.parse(readFileSync(testResultsPath, "utf8"));
 
 /** @type {() => import('../src/global').TachResults} */
 const copyResults = () => JSON.parse(JSON.stringify(testResults));
+
+const formatHtml = (html) => prettier.format(html, { parser: "html" });
 
 const prBenchName = "local-framework";
 const baseBenchName = "base-framework";
@@ -45,7 +47,7 @@ const buildReportSuite = suite("buildReport");
 
 buildReportSuite("Body snapshot", async () => {
 	const report = buildReport(fakeWorkflowRun, defaultInputs, testResults);
-	const html = prettier.format(report.body, { parser: "html" });
+	const html = formatHtml(report.body);
 
 	const snapshotPath = testRoot("snapshots/test-results-body.html");
 	const snapshot = await readFile(snapshotPath, "utf-8");
@@ -57,7 +59,7 @@ buildReportSuite("Body snapshot", async () => {
 
 buildReportSuite("Summary snapshot", async () => {
 	const report = buildReport(fakeWorkflowRun, defaultInputs, testResults);
-	const html = prettier.format(report.summary, { parser: "html" });
+	const html = formatHtml(report.summary);
 
 	const snapshotPath = testRoot("snapshots/test-results-summary.html");
 	const snapshot = await readFile(snapshotPath, "utf-8");
@@ -152,7 +154,7 @@ buildReportSuite("Supports benchmarks with different names", () => {
 
 	results.benchmarks[0].name = otherBenchName;
 	const report = buildReport(fakeWorkflowRun, defaultInputs, results);
-	const bodyDoc = cheerio.load(report.body);
+	const bodyDoc = parse(report.body);
 
 	const allBenchNames = results.benchmarks.map((b) => b.name);
 	const expectedTitle = Array.from(new Set(allBenchNames)).join(", ");
@@ -161,18 +163,18 @@ buildReportSuite("Supports benchmarks with different names", () => {
 
 	// Check <summary> tag includes all names
 	assert.is(
-		bodyDoc("summary").text(),
+		bodyDoc.querySelector("summary").text,
 		expectedTitle,
 		"Title includes all bench names"
 	);
 
 	// Check row and columns include both bench name and version name
-	const rowLabels = Array.from(bodyDoc("tbody td:first-child")).map((td) =>
-		bodyDoc(td).text()
-	);
-	const columnLabels = Array.from(bodyDoc("thead th")).map((td) =>
-		bodyDoc(td).text()
-	);
+	const rowLabels = bodyDoc
+		.querySelectorAll("tbody tr")
+		.map((row) => row.childNodes[0].text);
+	const columnLabels = bodyDoc
+		.querySelectorAll("thead th")
+		.map((td) => td.text);
 
 	for (let i = 0; i < results.benchmarks.length; i++) {
 		const bench = results.benchmarks[i];
@@ -196,7 +198,7 @@ buildReportSuite("Supports benchmarks with different names", () => {
 	}
 
 	// TODO: Figure out what summary should do here.
-	// const summaryDoc = cheerio.load(report.summary);
+	// const summaryDoc = parse(report.summary);
 	// console.log(prettier.format(report.summary, { parser: "html" }));
 });
 
@@ -210,14 +212,12 @@ buildReportSuite("Lists all browsers used in details", () => {
 	};
 
 	const report = buildReport(fakeWorkflowRun, defaultInputs, results);
-	const bodyDoc = cheerio.load(report.body);
+	const bodyDoc = parse(report.body);
 
 	// console.log(prettier.format(report.body, { parser: "html" }));
 
 	// Check details list includes all browsers
-	const listItems = Array.from(bodyDoc("ul > li")).map((li) =>
-		bodyDoc(li).text()
-	);
+	const listItems = bodyDoc.querySelectorAll("ul li").map((li) => li.text);
 
 	results.benchmarks.forEach((bench) => {
 		assert.ok(
@@ -227,12 +227,12 @@ buildReportSuite("Lists all browsers used in details", () => {
 	});
 
 	// Check table rows and columns include browsers
-	const rowLabels = Array.from(bodyDoc("tbody td:first-child")).map((td) =>
-		bodyDoc(td).text()
-	);
-	const columnLabels = Array.from(bodyDoc("thead th")).map((td) =>
-		bodyDoc(td).text()
-	);
+	const rowLabels = bodyDoc
+		.querySelectorAll("tbody tr")
+		.map((row) => row.childNodes[0].text);
+	const columnLabels = bodyDoc
+		.querySelectorAll("thead th")
+		.map((td) => td.text);
 
 	for (let i = 0; i < results.benchmarks.length; i++) {
 		const bench = results.benchmarks[i];
@@ -259,7 +259,7 @@ buildReportSuite("Lists all browsers used in details", () => {
 	}
 
 	// TODO: Figure out summary should do here
-	// const summaryDoc = cheerio.load(report.summary);
+	// const summaryDoc = parse(report.summary);
 });
 
 buildReportSuite("Supports benchmarks with no version field", () => {

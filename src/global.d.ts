@@ -1,5 +1,8 @@
 declare global {
 	namespace JSX {
+		type CustomHTMLElement = import("node-html-parser").HTMLElement;
+
+		interface Element extends CustomHTMLElement {}
 		interface ElementChildrenAttribute {
 			children: any;
 		}
