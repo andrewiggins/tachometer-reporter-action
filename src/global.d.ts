@@ -48,6 +48,11 @@ interface Report {
 	results: BenchmarkResult[];
 }
 
+interface SerializedReport extends Report {
+	summary: string;
+	body: string;
+}
+
 interface Logger {
 	warn(msg: string): void;
 	info(msg: string): void;

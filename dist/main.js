@@ -3167,7 +3167,7 @@ const defaultInputs = {
  * @param {import('./global').GitHubActionContext} context
  * @param {import('./global').Inputs} inputs
  * @param {import('./global').Logger} [logger]
- * @returns {Promise<import('./global').Report>}
+ * @returns {Promise<import('./global').SerializedReport>}
  */
 async function reportTachResults(
 	github,
@@ -3196,7 +3196,12 @@ async function reportTachResults(
 		},
 		logger
 	);
-	return report;
+
+	return {
+		...report,
+		body: report.body.toString(),
+		summary: report.summary.toString(),
+	};
 }
 
 var src = {
