@@ -2761,7 +2761,7 @@ const {
 } = tachometerUtils;
 
 const getId = (id) => `tachometer-reporter-action--${id}`;
-const getTableId = (id) => getId(`table-${id}`);
+const getBenchmarkSectionId = (id) => getId(`table-${id}`);
 const getSummaryId = (id) => getId(`summary-${id}`);
 
 /**
@@ -2807,16 +2807,16 @@ function h(tag, attrs, ...children) {
 }
 
 /**
- * @typedef TableProps
+ * @typedef BenchmarkSectionProps
  * @property {string} reportId
  * @property {import('./global').BenchmarkResult[]} benchmarks
  * @property {import('./global').WorkflowRunData} workflowRun
  * @property {import('./global').CommitInfo} commitInfo
  * @property {boolean} open
  *
- * @param {TableProps} props
+ * @param {BenchmarkSectionProps} props
  */
-function Table({
+function BenchmarkSection({
 	reportId,
 	benchmarks,
 	workflowRun,
@@ -2849,7 +2849,7 @@ function Table({
 	];
 
 	return (
-		h('div', { id: getTableId(reportId),}
+		h('div', { id: getBenchmarkSectionId(reportId),}
 , h('details', { open: open ? "open" : null,}
 , h('summary', null
 , h('strong', null, benchNames.join(", "))
@@ -2910,7 +2910,7 @@ function Summary({ reportId, benchmarks, prBenchName, baseBenchName }) {
 	return (
 		h('div', { id: getSummaryId(reportId),}
 , "\n\n"
-, `[${localResults.name}](#${getTableId(reportId)}): `
+, `[${localResults.name}](#${getBenchmarkSectionId(reportId)}): `
 , `${diff.label} *${diff.relative} (${diff.absolute})*`
 , "\n\n"
 )
@@ -2934,7 +2934,7 @@ function SummaryList({ children }) {
 
 var html$1 = {
 	h,
-	Table,
+	BenchmarkSection,
 	Summary,
 	SummaryList,
 };
@@ -3011,7 +3011,7 @@ var comments = {
 
 const { readFile } = fs.promises;
 
-const { h: h$1, Table: Table$1, Summary: Summary$1, SummaryList: SummaryList$1 } = html$1;
+const { h: h$1, BenchmarkSection: BenchmarkSection$1, Summary: Summary$1, SummaryList: SummaryList$1 } = html$1;
 const { postOrUpdateComment: postOrUpdateComment$1 } = comments;
 const { getWorkflowRun, getCommit } = github.github;
 
@@ -3056,7 +3056,7 @@ function buildReport(commitInfo, workflowRun, inputs, tachResults) {
 	return {
 		id: reportId,
 		body: (
-			h$1(Table$1, {
+			h$1(BenchmarkSection$1, {
 				reportId: reportId,
 				benchmarks: benchmarks,
 				workflowRun: workflowRun,

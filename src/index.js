@@ -1,6 +1,6 @@
 const { readFile } = require("fs").promises;
 const crypto = require("crypto");
-const { h, Table, Summary, SummaryList } = require("./html");
+const { h, BenchmarkSection, Summary, SummaryList } = require("./html");
 const { postOrUpdateComment } = require("./comments");
 const { getWorkflowRun, getCommit } = require("./utils/github");
 
@@ -45,7 +45,7 @@ function buildReport(commitInfo, workflowRun, inputs, tachResults) {
 	return {
 		id: reportId,
 		body: (
-			<Table
+			<BenchmarkSection
 				reportId={reportId}
 				benchmarks={benchmarks}
 				workflowRun={workflowRun}

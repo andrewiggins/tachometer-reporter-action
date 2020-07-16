@@ -9,7 +9,7 @@ const {
 } = require("./tachometer-utils");
 
 const getId = (id) => `tachometer-reporter-action--${id}`;
-const getTableId = (id) => getId(`table-${id}`);
+const getBenchmarkSectionId = (id) => getId(`table-${id}`);
 const getSummaryId = (id) => getId(`summary-${id}`);
 
 /**
@@ -55,16 +55,16 @@ function h(tag, attrs, ...children) {
 }
 
 /**
- * @typedef TableProps
+ * @typedef BenchmarkSectionProps
  * @property {string} reportId
  * @property {import('./global').BenchmarkResult[]} benchmarks
  * @property {import('./global').WorkflowRunData} workflowRun
  * @property {import('./global').CommitInfo} commitInfo
  * @property {boolean} open
  *
- * @param {TableProps} props
+ * @param {BenchmarkSectionProps} props
  */
-function Table({
+function BenchmarkSection({
 	reportId,
 	benchmarks,
 	workflowRun,
@@ -97,7 +97,7 @@ function Table({
 	];
 
 	return (
-		<div id={getTableId(reportId)}>
+		<div id={getBenchmarkSectionId(reportId)}>
 			<details open={open ? "open" : null}>
 				<summary>
 					<strong>{benchNames.join(", ")}</strong>
@@ -158,7 +158,7 @@ function Summary({ reportId, benchmarks, prBenchName, baseBenchName }) {
 	return (
 		<div id={getSummaryId(reportId)}>
 			{"\n\n"}
-			{`[${localResults.name}](#${getTableId(reportId)}): `}
+			{`[${localResults.name}](#${getBenchmarkSectionId(reportId)}): `}
 			{`${diff.label} *${diff.relative} (${diff.absolute})*`}
 			{"\n\n"}
 		</div>
@@ -204,7 +204,7 @@ function Icon() {
 
 module.exports = {
 	h,
-	Table,
+	BenchmarkSection,
 	Summary,
 	SummaryList,
 };
