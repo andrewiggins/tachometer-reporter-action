@@ -2761,8 +2761,12 @@ const {
 } = tachometerUtils;
 
 const getId = (id) => `tachometer-reporter-action--${id}`;
-const getTableId = (id) => getId(`table-${id}`);
+const getBenchmarkResultsId = (id) => getId(`results-${id}`);
+const getLatestResultsEntryId = (id) => getId(`results-${id}-latest-entry`);
 const getSummaryId = (id) => getId(`summary-${id}`);
+
+const resultsContainerId = getId("results");
+const summaryListId = getId("summaries");
 
 /**
  * @typedef {(props: any) => import('node-html-parser').HTMLElement} Component
@@ -2807,27 +2811,18 @@ function h(tag, attrs, ...children) {
 }
 
 /**
- * @typedef TableProps
- * @property {string} reportId
+ * @typedef ResultEntryProps
  * @property {import('./global').BenchmarkResult[]} benchmarks
  * @property {import('./global').WorkflowRunData} workflowRun
  * @property {import('./global').CommitInfo} commitInfo
- * @property {boolean} open
  *
- * @param {TableProps} props
+ * @param {ResultEntryProps} props
  */
-function Table({
-	reportId,
-	benchmarks,
-	workflowRun,
-	commitInfo: commitInfo,
-	open,
-}) {
+function ResultEntry({ benchmarks, workflowRun, commitInfo }) {
 	// Hard code what dimensions are rendered in the main table since GitHub comments
 	// have limited horizontal space
 
 	const labelFn = makeUniqueLabelFn$1(benchmarks);
-	const benchNames = Array.from(new Set(benchmarks.map((b) => b.name)));
 	const listDimensions = [browserDimension$1, sampleSizeDimension$1];
 
 	const sha = h('tt', null, commitInfo.sha.slice(0, 7));
@@ -2849,20 +2844,16 @@ function Table({
 	];
 
 	return (
-		h('div', { id: getTableId(reportId),}
-, h('details', { open: open ? "open" : null,}
-, h('summary', null
-, h('strong', null, benchNames.join(", "))
-)
+		h('div', null
 , h('ul', null
 , listDimensions.map((dim) => {
-						const uniqueValues = new Set(benchmarks.map((b) => dim.format(b)));
-						return (
-							h('li', null
+					const uniqueValues = new Set(benchmarks.map((b) => dim.format(b)));
+					return (
+						h('li', null
 , dim.label, ": " , Array.from(uniqueValues).join(", ")
 )
-						);
-					})
+					);
+				})
 , h('li', null, "Commit: " , commitHtml)
 , h('li', null, "Built by: "
   , h('a', { href: workflowRun.html_url,}, workflowRun.run_name)
@@ -2872,23 +2863,80 @@ function Table({
 , h('thead', null
 , h('tr', null
 , tableDimensions.map((d) => (
-								h('th', null, d.label)
-							))
+							h('th', null, d.label)
+						))
 )
 )
 , h('tbody', null
 , benchmarks.map((b) => {
-							return (
-								h('tr', null
+						return (
+							h('tr', null
 , tableDimensions.map((d, i) => {
-										return h('td', { align: "center",}, d.format(b));
-									})
+									return h('td', { align: "center",}, d.format(b));
+								})
 )
-							);
-						})
+						);
+					})
 )
 )
 )
+	);
+}
+
+/**
+ * @typedef BenchmarkResultsProps
+ * @property {string} reportId
+ * @property {string} reportName
+ * @property {string} latestEntry
+ * @property {string} previousEntries
+ * @property {boolean} open
+ *
+ * @param {BenchmarkResultsProps} props
+ */
+function BenchmarkResults({
+	reportId,
+	reportName,
+	latestEntry,
+	previousEntries,
+	open,
+}) {
+	return (
+		h('div', { id: getBenchmarkResultsId(reportId),}
+, h('details', { open: open ? "open" : null,}
+, h('summary', null
+, h('strong', null, reportName)
+)
+, h('div', { id: getLatestResultsEntryId(reportId),}, latestEntry)
+, previousEntries && (
+					h(PreviousResults, {
+						reportId: reportId,
+						previousEntries: previousEntries,}
+					)
+				)
+)
+)
+	);
+}
+
+function PreviousResults({ reportId, previousEntries }) {
+	return (
+		h('div', null
+, h('details', null
+, h('summary', null, "Previous results" )
+, h('div', { id: "",}, previousEntries)
+)
+)
+	);
+}
+
+/**
+ * @param {{ children: string[] }} props
+ */
+function ResultsSection({ children }) {
+	return (
+		h('div', { id: resultsContainerId,}
+, h('h3', null, "Results")
+, children
 )
 	);
 }
@@ -2910,7 +2958,7 @@ function Summary({ reportId, benchmarks, prBenchName, baseBenchName }) {
 	return (
 		h('div', { id: getSummaryId(reportId),}
 , "\n\n"
-, `[${localResults.name}](#${getTableId(reportId)}): `
+, `[${localResults.name}](#${getBenchmarkResultsId(reportId)}): `
 , `${diff.label} *${diff.relative} (${diff.absolute})*`
 , "\n\n"
 )
@@ -2920,11 +2968,11 @@ function Summary({ reportId, benchmarks, prBenchName, baseBenchName }) {
 /**
  * @param {{ children: string[] }} props
  */
-function SummaryList({ children }) {
+function SummarySection({ children }) {
 	// @ts-ignore
 	children = children.flat(Infinity);
 	return (
-		h('ul', { id: getId("summaries"),}
+		h('ul', { id: summaryListId,}
 , children.map((child) => (
 				h('li', null, child)
 			))
@@ -2934,9 +2982,18 @@ function SummaryList({ children }) {
 
 var html$1 = {
 	h,
-	Table,
+
+	resultsContainerId,
+	summaryListId,
+	getBenchmarkResultsId,
+	getLatestResultsEntryId,
+	getSummaryId,
+
+	ResultEntry,
+	BenchmarkResults,
+	ResultsSection,
 	Summary,
-	SummaryList,
+	SummarySection,
 };
 
 /**
@@ -3011,7 +3068,20 @@ var comments = {
 
 const { readFile } = fs.promises;
 
-const { h: h$1, Table: Table$1, Summary: Summary$1, SummaryList: SummaryList$1 } = html$1;
+const { parse } = dist;
+const {
+	h: h$1,
+	BenchmarkResults: BenchmarkResults$1,
+	ResultEntry: ResultEntry$1,
+	Summary: Summary$1,
+	SummarySection: SummarySection$1,
+	getBenchmarkResultsId: getBenchmarkResultsId$1,
+	getLatestResultsEntryId: getLatestResultsEntryId$1,
+	getSummaryId: getSummaryId$1,
+	ResultsSection: ResultsSection$1,
+	resultsContainerId: resultsContainerId$1,
+	summaryListId: summaryListId$1,
+} = html$1;
 const { postOrUpdateComment: postOrUpdateComment$1 } = comments;
 const { getWorkflowRun, getCommit } = github.github;
 
@@ -3055,18 +3125,14 @@ function buildReport(commitInfo, workflowRun, inputs, tachResults) {
 
 	return {
 		id: reportId,
+		label: Array.from(new Set(benchmarks.map((b) => b.name))).join(", "),
 		body: (
-			h$1(Table$1, {
-				reportId: reportId,
+			h$1(ResultEntry$1, {
 				benchmarks: benchmarks,
 				workflowRun: workflowRun,
-				open: inputs.defaultOpen,
 				commitInfo: commitInfo,}
 			)
 		).toString(),
-		results: benchmarks,
-		prBenchName: inputs.prBenchName,
-		baseBenchName: inputs.baseBenchName,
 		summary:
 			inputs.baseBenchName && inputs.prBenchName
 				? (
@@ -3078,34 +3144,47 @@ function buildReport(commitInfo, workflowRun, inputs, tachResults) {
 						)
 				  ).toString()
 				: null,
+		results: benchmarks,
+		prBenchName: inputs.prBenchName,
+		baseBenchName: inputs.baseBenchName,
 	};
 }
 
 /**
- * @param {import('./global').GitHubActionContext} context
+ * @param {import('./global').Inputs} inputs
  * @param {import('./global').Report} report
  * @param {import('./global').CommentData | null} comment
  */
-function getCommentBody(context, report, comment) {
-	// TODO: Update comment body
+function getCommentBody(inputs, report, comment) {
+	// If no previous comment exists, just generate the entire comment
+	if (comment == null) {
+		/** @type {string[]} */
+		let body = ["## 📊 Tachometer Benchmark Results\n"];
 
-	/** @type {string[]} */
-	let body = ["## 📊 Tachometer Benchmark Results\n"];
+		if (report.summary) {
+			body.push(
+				"### Summary",
+				// TODO: Should these be grouped by how they are summarized in case not
+				// all benchmarks compare the same?
+				`<sub>${report.prBenchName} vs ${report.baseBenchName}</sub>\n`,
+				SummarySection$1({ children: [report.summary] }).toString(),
+				""
+			);
+		}
 
-	if (report.summary) {
-		body.push(
-			"### Summary",
-			// TODO: Should these be grouped by how they are summarized in case not
-			// all benchmarks compare the same?
-			`<sub>${report.prBenchName} vs ${report.baseBenchName}</sub>\n`,
-			(h$1(SummaryList$1, null, [report.summary])).toString(),
-			""
-		);
+		body.push(ResultsSection$1({ children: [report.body] }).toString());
+
+		return body.join("\n");
 	}
 
-	body.push("### Results\n", report.body);
+	// TODO: Update existing comment
+	const html = parse(comment.body);
+	const results = html.querySelector(`#${resultsContainerId$1}`);
 
-	return body.join("\n");
+	const existingBody = results.querySelector(`#${report.bodyId}`);
+	if (existingBody) {
+		if (inputs.keepOldResults) ;
+	}
 }
 
 /** @type {import('./global').Logger} */
@@ -3162,7 +3241,7 @@ async function reportTachResults(
 		github,
 		context,
 		(comment) => {
-			const body = getCommentBody(context, report);
+			const body = getCommentBody(inputs, report, comment);
 			logger.debug(() => "New Comment Body: " + body);
 			return body;
 		},

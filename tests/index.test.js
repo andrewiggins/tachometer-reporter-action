@@ -338,7 +338,7 @@ newCommentSuite("Generates full comment if comment null", () => {
 
 	assert.ok(body.includes("Tachometer Benchmark Results"), "Includes title");
 	assert.ok(body.includes("### Summary"), "Includes summary title");
-	assert.ok(body.includes("### Results"), "Includes results title");
+	assert.ok(body.includes("<h3>Results</h3>"), "Includes results title");
 	assert.ok(body.includes(report.summary), "Includes report.summary");
 	assert.ok(body.includes(report.body), "Includes report.body");
 });

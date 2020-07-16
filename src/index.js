@@ -1,6 +1,19 @@
 const { readFile } = require("fs").promises;
 const crypto = require("crypto");
-const { h, Table, Summary, SummaryList } = require("./html");
+const { parse } = require("node-html-parser");
+const {
+	h,
+	BenchmarkResults,
+	ResultEntry,
+	Summary,
+	SummarySection,
+	getBenchmarkResultsId,
+	getLatestResultsEntryId,
+	getSummaryId,
+	ResultsSection,
+	resultsContainerId,
+	summaryListId,
+} = require("./html");
 const { postOrUpdateComment } = require("./comments");
 const { getWorkflowRun, getCommit } = require("./utils/github");
 
@@ -44,18 +57,14 @@ function buildReport(commitInfo, workflowRun, inputs, tachResults) {
 
 	return {
 		id: reportId,
+		label: Array.from(new Set(benchmarks.map((b) => b.name))).join(", "),
 		body: (
-			<Table
-				reportId={reportId}
+			<ResultEntry
 				benchmarks={benchmarks}
 				workflowRun={workflowRun}
-				open={inputs.defaultOpen}
 				commitInfo={commitInfo}
 			/>
 		).toString(),
-		results: benchmarks,
-		prBenchName: inputs.prBenchName,
-		baseBenchName: inputs.baseBenchName,
 		summary:
 			inputs.baseBenchName && inputs.prBenchName
 				? (
@@ -67,34 +76,51 @@ function buildReport(commitInfo, workflowRun, inputs, tachResults) {
 						/>
 				  ).toString()
 				: null,
+		results: benchmarks,
+		prBenchName: inputs.prBenchName,
+		baseBenchName: inputs.baseBenchName,
 	};
 }
 
 /**
- * @param {import('./global').GitHubActionContext} context
+ * @param {import('./global').Inputs} inputs
  * @param {import('./global').Report} report
  * @param {import('./global').CommentData | null} comment
  */
-function getCommentBody(context, report, comment) {
-	// TODO: Update comment body
+function getCommentBody(inputs, report, comment) {
+	// If no previous comment exists, just generate the entire comment
+	if (comment == null) {
+		/** @type {string[]} */
+		let body = ["## 📊 Tachometer Benchmark Results\n"];
 
-	/** @type {string[]} */
-	let body = ["## 📊 Tachometer Benchmark Results\n"];
+		if (report.summary) {
+			body.push(
+				"### Summary",
+				// TODO: Should these be grouped by how they are summarized in case not
+				// all benchmarks compare the same?
+				`<sub>${report.prBenchName} vs ${report.baseBenchName}</sub>\n`,
+				SummarySection({ children: [report.summary] }).toString(),
+				""
+			);
+		}
 
-	if (report.summary) {
-		body.push(
-			"### Summary",
-			// TODO: Should these be grouped by how they are summarized in case not
-			// all benchmarks compare the same?
-			`<sub>${report.prBenchName} vs ${report.baseBenchName}</sub>\n`,
-			(<SummaryList>{[report.summary]}</SummaryList>).toString(),
-			""
-		);
+		body.push(ResultsSection({ children: [report.body] }).toString());
+
+		return body.join("\n");
 	}
 
-	body.push("### Results\n", report.body);
+	// TODO: Update existing comment
+	const html = parse(comment.body);
+	const results = html.querySelector(`#${resultsContainerId}`);
 
-	return body.join("\n");
+	const existingBody = results.querySelector(`#${report.bodyId}`);
+	if (existingBody) {
+		if (inputs.keepOldResults) {
+			// TODO: rerender body with old results as string
+		} else {
+			// TODO: rerender body without old results
+		}
+	}
 }
 
 /** @type {import('./global').Logger} */
@@ -151,7 +177,7 @@ async function reportTachResults(
 		github,
 		context,
 		(comment) => {
-			const body = getCommentBody(context, report, comment);
+			const body = getCommentBody(inputs, report, comment);
 			logger.debug(() => "New Comment Body: " + body);
 			return body;
 		},

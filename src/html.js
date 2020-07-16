@@ -9,8 +9,12 @@ const {
 } = require("./tachometer-utils");
 
 const getId = (id) => `tachometer-reporter-action--${id}`;
-const getTableId = (id) => getId(`table-${id}`);
+const getBenchmarkResultsId = (id) => getId(`results-${id}`);
+const getLatestResultsEntryId = (id) => getId(`results-${id}-latest-entry`);
 const getSummaryId = (id) => getId(`summary-${id}`);
+
+const resultsContainerId = getId("results");
+const summaryListId = getId("summaries");
 
 /**
  * @typedef {(props: any) => import('node-html-parser').HTMLElement} Component
@@ -55,27 +59,18 @@ function h(tag, attrs, ...children) {
 }
 
 /**
- * @typedef TableProps
- * @property {string} reportId
+ * @typedef ResultEntryProps
  * @property {import('./global').BenchmarkResult[]} benchmarks
  * @property {import('./global').WorkflowRunData} workflowRun
  * @property {import('./global').CommitInfo} commitInfo
- * @property {boolean} open
  *
- * @param {TableProps} props
+ * @param {ResultEntryProps} props
  */
-function Table({
-	reportId,
-	benchmarks,
-	workflowRun,
-	commitInfo: commitInfo,
-	open,
-}) {
+function ResultEntry({ benchmarks, workflowRun, commitInfo }) {
 	// Hard code what dimensions are rendered in the main table since GitHub comments
 	// have limited horizontal space
 
 	const labelFn = makeUniqueLabelFn(benchmarks);
-	const benchNames = Array.from(new Set(benchmarks.map((b) => b.name)));
 	const listDimensions = [browserDimension, sampleSizeDimension];
 
 	const sha = <tt>{commitInfo.sha.slice(0, 7)}</tt>;
@@ -97,46 +92,99 @@ function Table({
 	];
 
 	return (
-		<div id={getTableId(reportId)}>
-			<details open={open ? "open" : null}>
-				<summary>
-					<strong>{benchNames.join(", ")}</strong>
-				</summary>
-				<ul>
-					{listDimensions.map((dim) => {
-						const uniqueValues = new Set(benchmarks.map((b) => dim.format(b)));
+		<div>
+			<ul>
+				{listDimensions.map((dim) => {
+					const uniqueValues = new Set(benchmarks.map((b) => dim.format(b)));
+					return (
+						<li>
+							{dim.label}: {Array.from(uniqueValues).join(", ")}
+						</li>
+					);
+				})}
+				<li>Commit: {commitHtml}</li>
+				<li>
+					Built by: <a href={workflowRun.html_url}>{workflowRun.run_name}</a>
+				</li>
+			</ul>
+			<table>
+				<thead>
+					<tr>
+						{tableDimensions.map((d) => (
+							<th>{d.label}</th>
+						))}
+					</tr>
+				</thead>
+				<tbody>
+					{benchmarks.map((b) => {
 						return (
-							<li>
-								{dim.label}: {Array.from(uniqueValues).join(", ")}
-							</li>
+							<tr>
+								{tableDimensions.map((d, i) => {
+									return <td align="center">{d.format(b)}</td>;
+								})}
+							</tr>
 						);
 					})}
-					<li>Commit: {commitHtml}</li>
-					<li>
-						Built by: <a href={workflowRun.html_url}>{workflowRun.run_name}</a>
-					</li>
-				</ul>
-				<table>
-					<thead>
-						<tr>
-							{tableDimensions.map((d) => (
-								<th>{d.label}</th>
-							))}
-						</tr>
-					</thead>
-					<tbody>
-						{benchmarks.map((b) => {
-							return (
-								<tr>
-									{tableDimensions.map((d, i) => {
-										return <td align="center">{d.format(b)}</td>;
-									})}
-								</tr>
-							);
-						})}
-					</tbody>
-				</table>
+				</tbody>
+			</table>
+		</div>
+	);
+}
+
+/**
+ * @typedef BenchmarkResultsProps
+ * @property {string} reportId
+ * @property {string} reportName
+ * @property {string} latestEntry
+ * @property {string} previousEntries
+ * @property {boolean} open
+ *
+ * @param {BenchmarkResultsProps} props
+ */
+function BenchmarkResults({
+	reportId,
+	reportName,
+	latestEntry,
+	previousEntries,
+	open,
+}) {
+	return (
+		<div id={getBenchmarkResultsId(reportId)}>
+			<details open={open ? "open" : null}>
+				<summary>
+					<strong>{reportName}</strong>
+				</summary>
+				<div id={getLatestResultsEntryId(reportId)}>{latestEntry}</div>
+				{previousEntries && (
+					<PreviousResults
+						reportId={reportId}
+						previousEntries={previousEntries}
+					/>
+				)}
 			</details>
+		</div>
+	);
+}
+
+function PreviousResults({ reportId, previousEntries }) {
+	return (
+		<div>
+			<details>
+				<summary>Previous results</summary>
+				<div id="">{previousEntries}</div>
+			</details>
+		</div>
+	);
+}
+
+/**
+ * @param {{ children: string[] }} props
+ */
+function ResultsSection({ children }) {
+	return (
+		<div id={resultsContainerId}>
+			<h3>Results</h3>
+			{children}
 		</div>
 	);
 }
@@ -158,7 +206,7 @@ function Summary({ reportId, benchmarks, prBenchName, baseBenchName }) {
 	return (
 		<div id={getSummaryId(reportId)}>
 			{"\n\n"}
-			{`[${localResults.name}](#${getTableId(reportId)}): `}
+			{`[${localResults.name}](#${getBenchmarkResultsId(reportId)}): `}
 			{`${diff.label} *${diff.relative} (${diff.absolute})*`}
 			{"\n\n"}
 		</div>
@@ -168,11 +216,11 @@ function Summary({ reportId, benchmarks, prBenchName, baseBenchName }) {
 /**
  * @param {{ children: string[] }} props
  */
-function SummaryList({ children }) {
+function SummarySection({ children }) {
 	// @ts-ignore
 	children = children.flat(Infinity);
 	return (
-		<ul id={getId("summaries")}>
+		<ul id={summaryListId}>
 			{children.map((child) => (
 				<li>{child}</li>
 			))}
@@ -204,7 +252,16 @@ function Icon() {
 
 module.exports = {
 	h,
-	Table,
+
+	resultsContainerId,
+	summaryListId,
+	getBenchmarkResultsId,
+	getLatestResultsEntryId,
+	getSummaryId,
+
+	ResultEntry,
+	BenchmarkResults,
+	ResultsSection,
 	Summary,
-	SummaryList,
+	SummarySection,
 };
