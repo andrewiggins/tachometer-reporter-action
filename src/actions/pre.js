@@ -1,5 +1,6 @@
 const core = require("@actions/core");
 const github = require("@actions/github");
+const { h } = require("../html");
 const { getWorkflowRun } = require("../utils/github");
 const { postOrUpdateComment } = require("../comments");
 const { getCommentBody } = require("../index");

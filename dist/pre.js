@@ -16,6 +16,7 @@ require('stream');
 require('zlib');
 require('crypto');
 
+const { h } = util.html;
 const { getWorkflowRun } = util.github$1;
 const { getCommentBody } = util.src;
 const { getLogger, getInputs } = util.util;
@@ -76,7 +77,9 @@ function buildInProgressReport(inputs, workflowRun) {
 
 	logger.debug(() => "Run name: " + workflowRun.run_name);
 	logger.debug(() => "Run URL : " + workflowRun.html_url);
-	logger.debug(() => "Report  : " + JSON.stringify(serializableReport, null, 2));
+	logger.debug(
+		() => "Report  : " + JSON.stringify(serializableReport, null, 2)
+	);
 
 	// await postOrUpdateComment(
 	// 	octokit,

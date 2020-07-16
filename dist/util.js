@@ -8773,5 +8773,6 @@ var util = {
 exports.core = core;
 exports.github = github;
 exports.github$1 = github$1;
+exports.html = html$1;
 exports.src = src;
 exports.util = util;
