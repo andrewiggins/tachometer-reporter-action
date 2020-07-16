@@ -1,6 +1,7 @@
 const core = require("@actions/core");
 const github = require("@actions/github");
 const { reportTachResults } = require("../index");
+const { getLogger, getInputs } = require("./util");
 
 /**
  * Create a status check, and return a function that updates (completes) it.
@@ -26,50 +27,20 @@ async function createCheck(github, context) {
 	};
 }
 
-const actionLogger = {
-	warn(msg) {
-		core.warning(msg);
-	},
-	info(msg) {
-		core.info(msg);
-	},
-	debug(getMsg) {
-		core.debug(getMsg());
-	},
-	startGroup(name) {
-		core.startGroup(name);
-	},
-	endGroup() {
-		core.endGroup();
-	},
-};
-
 (async () => {
 	const token = core.getInput("github-token", { required: true });
-	const path = core.getInput("path", { required: true });
-	const reportId = core.getInput("report-id", { required: false });
-	const keepOldResults = core.getInput("keep-old-results", { required: false });
-	const defaultOpen = core.getInput("default-open", { required: false });
-	const prBenchName = core.getInput("pr-bench-name", { required: false });
-	const baseBenchName = core.getInput("base-bench-name", { required: false });
 	const useCheck = core.getInput("use-check", { required: true });
 
+	const logger = getLogger();
+	const inputs = getInputs();
 	const octokit = github.getOctokit(token);
 
-	/** @type {import('../global').Inputs} */
-	const inputs = {
-		path,
-		reportId: reportId ? reportId : null,
-		keepOldResults: keepOldResults != "false",
-		defaultOpen: defaultOpen !== "false",
-		prBenchName: prBenchName ? prBenchName : null,
-		baseBenchName: baseBenchName ? baseBenchName : null,
-	};
-
-	let finish = (checkResult) =>
-		core.debug("Check Result: " + JSON.stringify(checkResult));
+	let finish;
 	if (useCheck == "true") {
 		finish = await createCheck(octokit, github.context);
+	} else {
+		finish = (checkResult) =>
+			core.debug("Check Result: " + JSON.stringify(checkResult));
 	}
 
 	try {
@@ -79,7 +50,7 @@ const actionLogger = {
 			octokit,
 			github.context,
 			inputs,
-			actionLogger
+			logger
 		);
 
 		await finish({

@@ -16,16 +16,7 @@ require('stream');
 require('zlib');
 
 const { getWorkflowRun } = util.github;
-const { postOrUpdateComment } = util.comments;
 const { getLogger, getInputs } = util.util;
-
-/**
- * @param {import('../global').Inputs} inputs
- * @param {import('../global').CommentData} comment
- */
-function getCommentBody(inputs, comment) {
-	return comment.body;
-}
 
 (async function () {
 	// TODO: Render `Running...` status at start of job and setup general
@@ -49,10 +40,10 @@ function getCommentBody(inputs, comment) {
 	logger.debug("Run name: " + workflowRun.run_name);
 	logger.debug("Run URL : " + workflowRun.html_url);
 
-	await postOrUpdateComment(
-		octokit,
-		context,
-		(comment) => getCommentBody(inputs, comment),
-		logger
-	);
+	// await postOrUpdateComment(
+	// 	octokit,
+	// 	context,
+	// 	(comment) => getCommentBody(inputs, comment),
+	// 	logger
+	// );
 })();
