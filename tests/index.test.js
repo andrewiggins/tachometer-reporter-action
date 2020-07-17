@@ -43,12 +43,12 @@ const defaultInputs = Object.freeze({
 	keepOldResults: false,
 });
 
-/** @type {import('../src/global').WorkflowRunData} */
+/** @type {import('../src/global').WorkflowRunInfo} */
 // @ts-ignore
 const fakeWorkflowRun = {
-	run_name: "Pull Request Test #50",
-	html_url:
-		"https://github.com/andrewiggins/tachometer-reporter-action/actions/runs/166208365",
+	workflowRunName: "Pull Request Test #50",
+	jobHtmlUrl:
+		"https://github.com/andrewiggins/tachometer-reporter-action/runs/862224869?check_suite_focus=true",
 };
 
 /** @type {import('../src/global').CommitInfo} */
@@ -100,9 +100,10 @@ const getSummaryId = (id) =>
 /**
  * @typedef BuildReportParams
  * @property {import('../src/global').CommitInfo} [commit]
- * @property {import('../src/global').WorkflowRunData} [workflow]
+ * @property {import('../src/global').WorkflowRunInfo} [workflow]
  * @property {Partial<import('../src/global').Inputs>} [inputs]
  * @property {import('../src/global').TachResults} [results]
+ * @property {boolean} [isRunning]
  * @param {BuildReportParams} params
  */
 function invokeBuildReport({
@@ -110,13 +111,14 @@ function invokeBuildReport({
 	workflow = fakeWorkflowRun,
 	inputs = null,
 	results = testResults,
+	isRunning = false,
 } = {}) {
 	const fullInputs = {
 		...defaultInputs,
 		...inputs,
 	};
 
-	return buildReport(commit, workflow, fullInputs, results);
+	return buildReport(commit, workflow, fullInputs, results, isRunning);
 }
 
 /**
@@ -320,9 +322,36 @@ buildReportSuite("Supports benchmarks with no version field", () => {
 	// Check table column labels
 });
 
+buildReportSuite(
+	"Throws an error if inputs.reportId not provided without results",
+	() => {
+		assert.throws(
+			() => invokeBuildReport({ isRunning: true, results: null }),
+			/Could not determine ID for report/i
+		);
+	}
+);
+
 const newCommentSuite = suite("getCommentBody (new)");
 
-newCommentSuite("New comment snapshot", async () => {
+newCommentSuite("New comment snapshot in running state", async () => {
+	const inputs = { reportId: "test-results" };
+	const body = invokeGetCommentBody({
+		inputs,
+		report: invokeBuildReport({ inputs, isRunning: true, results: null }),
+	});
+	const html = formatHtml(body.toString());
+
+	const snapshotPath = testRoot("snapshots/new-comment-running.html");
+	const snapshot = await readFile(snapshotPath, "utf-8");
+
+	// Uncomment to update snapshot
+	// await writeFile(snapshotPath, html, "utf8");
+
+	assertFixture(html, snapshot, "Report body matches snapshot");
+});
+
+newCommentSuite("New comment snapshot with results", async () => {
 	const body = invokeGetCommentBody();
 	const html = formatHtml(body.toString());
 
@@ -453,7 +482,7 @@ newCommentSuite("Supports benchmarks with different names", () => {
 // 	}
 // );
 // updateCommentSuite(
-// 	"Updates existing comment that contains matching ID with keep old option and no old content",
+// 	"Updates existing comment that contains matching ID with keep old option and with old content",
 // 	() => {
 // 		// Move old table into existing old results <details> section
 // 	}
@@ -461,6 +490,18 @@ newCommentSuite("Supports benchmarks with different names", () => {
 // updateCommentSuite(
 // 	"Does not add summary to existing summary section if summary is null",
 // 	() => {}
+// );
+// updateCommentSuite(
+// 	"Updates existing comment with running status",
+// 	() => {
+// 		// Add new table in appropriate section
+// 	}
+// );
+// updateCommentSuite(
+// 	"Remove running status from existing comment when results come in",
+// 	() => {
+// 		// Add new table in appropriate section
+// 	}
 // );
 
 buildReportSuite.run();

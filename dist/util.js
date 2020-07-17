@@ -8229,6 +8229,8 @@ const {
 	runtimeConfidenceIntervalDimension: runtimeConfidenceIntervalDimension$1,
 } = tachometerUtils;
 
+const statusClass = "status";
+
 const getId = (id) => `tachometer-reporter-action--${id}`;
 const getBenchmarkSectionId = (id) => getId(`results-${id}`);
 const getSummaryId = (id) => getId(`summary-${id}`);
@@ -8263,7 +8265,7 @@ function h(tag, attrs, ...children) {
 
 	const element = new HTMLElement(tag, { id, class: className }, attrStr);
 	element.set_content(
-		children.map((c) => {
+		children.filter(Boolean).map((c) => {
 			if (typeof c == "number" || typeof c == "string") {
 				return new TextNode(c.toString());
 			} else if (c instanceof HTMLElement) {
@@ -8282,7 +8284,7 @@ function h(tag, attrs, ...children) {
  * @typedef ResultsEntryProps
  * @property {string} reportId
  * @property {import('./global').BenchmarkResult[]} benchmarks
- * @property {import('./global').WorkflowRunData} workflowRun
+ * @property {import('./global').WorkflowRunInfo} workflowRun
  * @property {import('./global').CommitInfo} commitInfo
  *
  * @param {ResultsEntryProps} props
@@ -8290,6 +8292,14 @@ function h(tag, attrs, ...children) {
 function ResultsEntry({ reportId, benchmarks, workflowRun, commitInfo }) {
 	// Hard code what dimensions are rendered in the main table since GitHub comments
 	// have limited horizontal space
+
+	if (!Array.isArray(benchmarks)) {
+		return (
+			h('div', null
+, h(SummaryStatus, { workflowRun: workflowRun, icon: false,} )
+)
+		);
+	}
 
 	const labelFn = makeUniqueLabelFn$1(benchmarks);
 	const listDimensions = [browserDimension$1, sampleSizeDimension$1];
@@ -8324,8 +8334,9 @@ function ResultsEntry({ reportId, benchmarks, workflowRun, commitInfo }) {
 					);
 				})
 , h('li', null, "Commit: " , commitHtml)
-, h('li', null, "Built by: "
-  , h('a', { href: workflowRun.html_url,}, workflowRun.run_name)
+, h('li', null, "Built by:"
+ , " "
+, h('a', { href: workflowRun.jobHtmlUrl,}, workflowRun.workflowRunName)
 )
 )
 , h('table', null
@@ -8365,6 +8376,10 @@ function BenchmarkSection({ report, open, children }) {
 		h('div', { id: getBenchmarkSectionId(report.id),}
 , h('details', { open: open ? "open" : null,}
 , h('summary', null
+, report.isRunning ? (
+						h(SummaryStatus, { workflowRun: report.workflowRun, icon: true,} )
+					) : null
+, report.isRunning ? " " : null
 , h('strong', null, report.title)
 )
 , children
@@ -8374,25 +8389,66 @@ function BenchmarkSection({ report, open, children }) {
 }
 
 /**
+ * @param {{ workflowRun: import('./global').WorkflowRunInfo; icon: boolean; }} props
+ */
+function SummaryStatus({ workflowRun, icon }) {
+	const label = `Currently running in ${workflowRun.workflowRunName}…`;
+	return (
+		h('a', {
+			href: workflowRun.jobHtmlUrl,
+			title: icon ? label : null,
+			'aria-label': icon ? label : null,}
+		
+, icon ? "⏱ " : label
+)
+	);
+}
+
+/**
  * @typedef SummaryProps
  * @property {string} reportId
+ * @property {string} title
  * @property {import('./global').BenchmarkResult[]} benchmarks
  * @property {string} prBenchName
  * @property {string} baseBenchName
+ * @property {import('./global').WorkflowRunInfo | null} workflowRun
+ * @property {boolean} isRunning
  *
  * @param {SummaryProps} props
  */
-function Summary({ reportId, benchmarks, prBenchName, baseBenchName }) {
-	const baseIndex = benchmarks.findIndex((b) => b.version == baseBenchName);
-	const localResults = benchmarks.find((b) => b.version == prBenchName);
-	const diff = formatDifference$1(localResults.differences[baseIndex]);
+function Summary({
+	reportId,
+	title,
+	benchmarks,
+	prBenchName,
+	baseBenchName,
+	workflowRun,
+	isRunning,
+}) {
+	/** @type {ReturnType<typeof formatDifference>} */
+	let diff;
+	if (Array.isArray(benchmarks) && benchmarks.length) {
+		const baseIndex = benchmarks.findIndex((b) => b.version == baseBenchName);
+		const localResults = benchmarks.find((b) => b.version == prBenchName);
+		diff = formatDifference$1(localResults.differences[baseIndex]);
+	}
+
+	let status = isRunning ? (
+		h(SummaryStatus, { workflowRun: workflowRun, icon: true,} )
+	) : null;
 
 	return (
 		h('div', { id: getSummaryId(reportId),}
-, "\n\n"
-, `[${localResults.name}](#${getBenchmarkSectionId(reportId)}): `
-, `${diff.label} *${diff.relative} (${diff.absolute})*`
-, "\n\n"
+, h('span', { class: statusClass,}, status)
+, title
+, diff && (
+				h('span', null, ": "
+ , diff.label, " "
+, h('em', null
+, diff.relative, " (" , diff.absolute, ")"
+)
+)
+			)
 )
 	);
 }
@@ -8412,40 +8468,14 @@ function SummaryList({ children }) {
 	);
 }
 
-/**
- * @param {{ title: string; reportId: string; workflowRun: import('./global').WorkflowRunData }} props
- */
-function InProgressSummary({ title, reportId, workflowRun }) {
-	// TODO: Use current job URL from here instead of workflow run URL:
-	// https://api.github.com/repos/andrewiggins/tachometer-reporter-action/actions/runs/171962060/jobs
-	return (
-		h('div', { id: getSummaryId(reportId),}
-, "\n\n"
-, `[${title}](#${getBenchmarkSectionId(reportId)}): `
-, "\n\n", "Running in "
-  , h('a', { href: workflowRun.html_url,}, workflowRun.run_name, "…")
-)
-	);
-}
-
-/**
- * @param {{ workflowRun: import('./global').WorkflowRunData }} props
- */
-function InProgressResultEntry({ workflowRun }) {
-	return (
-		h('div', null, "Running in "
-  , h('a', { href: workflowRun.html_url,}, workflowRun.run_name, "…")
-)
-	);
-}
-
 var html$1 = {
 	h,
+	getSummaryId,
+	getBenchmarkSectionId,
+	statusClass,
 	ResultsEntry,
 	BenchmarkSection,
 	Summary,
-	InProgressResultEntry,
-	InProgressSummary,
 	SummaryList,
 };
 
@@ -8522,18 +8552,56 @@ var comments = {
 /**
  * @param {import('../global').GitHubActionContext} context
  * @param {import('../global').GitHubActionClient} github
- * @returns {Promise<import('../global').WorkflowRunData>}
+ * @param {import('../global').Logger} logger
+ * @returns {Promise<import('../global').WorkflowRunInfo>}
  */
-async function getWorkflowRun(context, github) {
-	const workflowRun = await github.actions.getWorkflowRun({
-		...context.repo,
-		run_id: context.runId,
-	});
+async function getWorkflowRunInfo(context, github, logger) {
+	const workflowRunName = `${context.workflow} #${context.runNumber}`;
+
+	/** @type {import('../global').WorkflowRunJob} */
+	let matchingJob;
+
+	// https://docs.github.com/en/rest/reference/actions#list-jobs-for-a-workflow-run
+	/** @type {Record<string, string | number>} */
+	const params = { ...context.repo, run_id: context.runId };
+
+	const endpoint = github.actions.listJobsForWorkflowRun.endpoint(params);
+
+	/** @type {import('../global').WorkflowRunJobsAsyncIterator} */
+	const iterator = github.paginate.iterator(endpoint);
+	paging: for await (const page of iterator) {
+		if (page.status > 299) {
+			throw new Error(
+				`Non-success error code returned for workflow runs: ${page.status}`
+			);
+		}
+
+		for (let job of page.data) {
+			if (job.name == context.job) {
+				matchingJob = job;
+				break paging;
+			}
+		}
+	}
+
+	if (matchingJob == null) {
+		logger.warn(
+			`Could not find job matching the name ${context.job} for workflow run ${context.runId}.`
+		);
+		const run = await github.actions.getWorkflowRun({
+			...context.repo,
+			run_id: context.runId,
+		});
+
+		return {
+			workflowRunName,
+			jobHtmlUrl: run.data.html_url,
+		};
+	}
 
 	return {
-		...workflowRun.data,
-		workflow_name: context.workflow,
-		run_name: `${context.workflow} #${context.runNumber}`,
+		workflowRunName,
+		jobHtmlUrl: matchingJob.html_url,
 	};
 }
 
@@ -8554,11 +8622,11 @@ async function getCommit(context, github) {
 }
 
 var github$1 = {
-	getWorkflowRun,
+	getWorkflowRunInfo,
 	getCommit,
 };
 
-const { readFile } = fs.promises;
+function _optionalChain(ops) { let lastAccessLHS = undefined; let value = ops[0]; let i = 1; while (i < ops.length) { const op = ops[i]; const fn = ops[i + 1]; i += 2; if ((op === 'optionalAccess' || op === 'optionalCall') && value == null) { return undefined; } if (op === 'access' || op === 'optionalAccess') { lastAccessLHS = value; value = fn(value); } else if (op === 'call' || op === 'optionalCall') { value = fn((...args) => value.call(lastAccessLHS, ...args)); lastAccessLHS = undefined; } } return value; }const { readFile } = fs.promises;
 
 const {
 	h: h$1,
@@ -8568,7 +8636,7 @@ const {
 	ResultsEntry: ResultsEntry$1,
 } = html$1;
 const { postOrUpdateComment: postOrUpdateComment$1 } = comments;
-const { getWorkflowRun: getWorkflowRun$1, getCommit: getCommit$1 } = github$1;
+const { getWorkflowRunInfo: getWorkflowRunInfo$1, getCommit: getCommit$1 } = github$1;
 
 /**
  * @param {import('./global').BenchmarkResult[]} benchmarks
@@ -8593,25 +8661,49 @@ function getReportId(benchmarks) {
 
 /**
  * @param {import("./global").CommitInfo} commitInfo
- * @param {import('./global').WorkflowRunData} workflowRun
+ * @param {import('./global').WorkflowRunInfo} workflowRun
  * @param {Pick<import('./global').Inputs, 'prBenchName' | 'baseBenchName' | 'defaultOpen' | 'reportId'>} inputs
  * @param {import('./global').TachResults} tachResults
+ * @param {boolean} [isRunning]
  * @returns {import('./global').Report}
  */
-function buildReport(commitInfo, workflowRun, inputs, tachResults) {
+function buildReport(
+	commitInfo,
+	workflowRun,
+	inputs,
+	tachResults,
+	isRunning = false
+) {
 	// TODO: Consider improving names (likely needs to happen in runner repo)
 	//    - "before" and "this PR"
 	//    - Allow different names for local runs and CI runs
 	//    - Allowing aliases
 	//    - replace `base-bench-name` with `branch@SHA`
 
-	const benchmarks = tachResults.benchmarks;
-	const title = Array.from(new Set(benchmarks.map((b) => b.name))).join(", ");
-	const reportId = inputs.reportId ? inputs.reportId : getReportId(benchmarks);
+	const benchmarks = _optionalChain([tachResults, 'optionalAccess', _ => _.benchmarks]);
+
+	let reportId;
+	let title;
+	if (inputs.reportId) {
+		reportId = inputs.reportId;
+		title = inputs.reportId;
+	} else if (benchmarks) {
+		reportId = getReportId(benchmarks);
+		title = Array.from(new Set(benchmarks.map((b) => b.name))).join(", ");
+	} else {
+		throw new Error(
+			"Could not determine ID for report. 'report-id' option was not provided and there are no benchmark results"
+		);
+	}
 
 	return {
 		id: reportId,
 		title,
+		prBenchName: inputs.prBenchName,
+		baseBenchName: inputs.baseBenchName,
+		workflowRun,
+		isRunning,
+		// results: benchmarks,
 		body: (
 			h$1(ResultsEntry$1, {
 				reportId: reportId,
@@ -8620,16 +8712,16 @@ function buildReport(commitInfo, workflowRun, inputs, tachResults) {
 				commitInfo: commitInfo,}
 			)
 		),
-		results: benchmarks,
-		prBenchName: inputs.prBenchName,
-		baseBenchName: inputs.baseBenchName,
 		summary:
 			inputs.baseBenchName && inputs.prBenchName ? (
 				h$1(Summary$1, {
 					reportId: reportId,
+					title: title,
 					benchmarks: benchmarks,
 					prBenchName: inputs.prBenchName,
-					baseBenchName: inputs.baseBenchName,}
+					baseBenchName: inputs.baseBenchName,
+					workflowRun: workflowRun,
+					isRunning: isRunning,}
 				)
 			) : null,
 	};
@@ -8703,6 +8795,7 @@ const defaultInputs = {
  * @param {import('./global').GitHubActionClient} github
  * @param {import('./global').GitHubActionContext} context
  * @param {import('./global').Inputs} inputs
+ * @param {boolean} isRunning
  * @param {import('./global').Logger} [logger]
  * @returns {Promise<import('./global').SerializedReport>}
  */
@@ -8710,25 +8803,34 @@ async function reportTachResults(
 	github,
 	context,
 	inputs,
+	isRunning,
 	logger = defaultLogger
 ) {
 	inputs = { ...defaultInputs, ...inputs };
 
-	/** @type {[ any, import('./global').WorkflowRunData, import('./global').CommitInfo ]} */
+	/** @type {[ import('./global').TachResults, import('./global').WorkflowRunInfo, import('./global').CommitInfo ]} */
 	const [tachResults, workflowRun, commitInfo] = await Promise.all([
 		readFile(inputs.path, "utf8").then((contents) => JSON.parse(contents)),
-		getWorkflowRun$1(context, github),
+		getWorkflowRunInfo$1(context, github, logger),
 		getCommit$1(context, github),
 	]);
 
-	const report = buildReport(commitInfo, workflowRun, inputs, tachResults);
+	const report = buildReport(
+		commitInfo,
+		workflowRun,
+		inputs,
+		tachResults,
+		isRunning
+	);
 
 	await postOrUpdateComment$1(
 		github,
 		context,
 		(comment) => {
 			const body = getCommentBody(inputs, report);
-			logger.debug(() => "New Comment Body: " + body);
+			logger.debug(
+				() => `${comment ? "Updated" : "New"} Comment Body: ${body}`
+			);
 			return body;
 		},
 		logger
@@ -8801,7 +8903,5 @@ var util = {
 
 exports.core = core;
 exports.github = github;
-exports.github$1 = github$1;
-exports.html = html$1;
 exports.src = src;
 exports.util = util;

@@ -16,36 +16,8 @@ require('stream');
 require('zlib');
 require('crypto');
 
-const { h, InProgressSummary, InProgressResultEntry } = util.html;
-const { getWorkflowRun } = util.github$1;
-const { getCommentBody } = util.src;
+const { reportTachResults } = util.src;
 const { getLogger, getInputs } = util.util;
-
-/**
- * @param {import('../global').Inputs} inputs
- * @param {import('../global').WorkflowRunData} workflowRun
- * @returns {import('../global').Report}
- */
-function buildInProgressReport(inputs, workflowRun) {
-	// TODO: Consider moving into index.js
-	const title = inputs.reportId;
-	return {
-		id: inputs.reportId,
-		title,
-		body: h(InProgressResultEntry, { workflowRun: workflowRun,} ),
-		summary:
-			inputs.baseBenchName && inputs.prBenchName ? (
-				h(InProgressSummary, {
-					title: title,
-					reportId: inputs.reportId,
-					workflowRun: workflowRun,}
-				)
-			) : null,
-		results: null,
-		baseBenchName: inputs.baseBenchName,
-		prBenchName: inputs.prBenchName,
-	};
-}
 
 (async function () {
 	// TODO: Render `Running...` status at start of job and setup general
@@ -70,27 +42,15 @@ function buildInProgressReport(inputs, workflowRun) {
 
 	const context = util.github.context;
 	const octokit = util.github.getOctokit(token);
-	const workflowRun = await getWorkflowRun(context, octokit);
-	const report = buildInProgressReport(inputs, workflowRun);
-	const serializableReport = {
-		...report,
-		body: report.body.toString(),
-		summary: report.summary.toString(),
-	};
 
-	logger.debug(() => "Run name: " + workflowRun.run_name);
-	logger.debug(() => "Run URL : " + workflowRun.html_url);
-	logger.debug(
-		() => "Report  : " + JSON.stringify(serializableReport, null, 2)
+	// TODO: Update comment body so as not to erase existing results while running
+	const report = await reportTachResults(
+		octokit,
+		context,
+		inputs,
+		true,
+		logger
 	);
 
-	// await postOrUpdateComment(
-	// 	octokit,
-	// 	context,
-	// 	(comment) => getCommentBody(inputs, comment),
-	// 	logger
-	// );
-
-	logger.debug(() => "Updated comment body:");
-	logger.debug(() => getCommentBody(inputs, report, null));
+	logger.debug(() => "Report: " + JSON.stringify(report, null, 2));
 })();

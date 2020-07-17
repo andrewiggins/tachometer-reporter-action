@@ -46,10 +46,11 @@ async function createCheck(github, context) {
 	try {
 		core.debug("Inputs: " + JSON.stringify(inputs, null, 2));
 
-		let results = await reportTachResults(
+		let report = await reportTachResults(
 			octokit,
 			github.context,
 			inputs,
+			false, // A this point, the benchmarks have finished
 			logger
 		);
 
@@ -57,7 +58,7 @@ async function createCheck(github, context) {
 			conclusion: "success",
 			output: {
 				title: `Tachometer Benchmark Results`,
-				summary: results.summary,
+				summary: report.summary,
 			},
 		});
 	} catch (e) {
