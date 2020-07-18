@@ -209,9 +209,9 @@ async function reportTachRunning(
 
 	return {
 		...report,
-		status: report.status.toString(),
-		body: report.body.toString(),
-		summary: report.summary.toString(),
+		status: report.status?.toString(),
+		body: report.body?.toString(),
+		summary: report.summary?.toString(),
 	};
 }
 
@@ -260,9 +260,9 @@ async function reportTachResults(
 
 	return {
 		...report,
-		status: report.status.toString(),
-		body: report.body.toString(),
-		summary: report.summary.toString(),
+		status: report.status?.toString(),
+		body: report.body?.toString(),
+		summary: report.summary?.toString(),
 	};
 }
 

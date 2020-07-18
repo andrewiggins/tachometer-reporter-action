@@ -8862,9 +8862,9 @@ async function reportTachRunning(
 
 	return {
 		...report,
-		status: report.status.toString(),
-		body: report.body.toString(),
-		summary: report.summary.toString(),
+		status: _optionalChain([report, 'access', _2 => _2.status, 'optionalAccess', _3 => _3.toString, 'call', _4 => _4()]),
+		body: _optionalChain([report, 'access', _5 => _5.body, 'optionalAccess', _6 => _6.toString, 'call', _7 => _7()]),
+		summary: _optionalChain([report, 'access', _8 => _8.summary, 'optionalAccess', _9 => _9.toString, 'call', _10 => _10()]),
 	};
 }
 
@@ -8913,9 +8913,9 @@ async function reportTachResults(
 
 	return {
 		...report,
-		status: report.status.toString(),
-		body: report.body.toString(),
-		summary: report.summary.toString(),
+		status: _optionalChain([report, 'access', _11 => _11.status, 'optionalAccess', _12 => _12.toString, 'call', _13 => _13()]),
+		body: _optionalChain([report, 'access', _14 => _14.body, 'optionalAccess', _15 => _15.toString, 'call', _16 => _16()]),
+		summary: _optionalChain([report, 'access', _17 => _17.summary, 'optionalAccess', _18 => _18.toString, 'call', _19 => _19()]),
 	};
 }
 
