@@ -8,6 +8,8 @@ const {
 	runtimeConfidenceIntervalDimension,
 } = require("./tachometer-utils");
 
+const statusClass = "status";
+
 const getId = (id) => `tachometer-reporter-action--${id}`;
 const getBenchmarkSectionId = (id) => getId(`results-${id}`);
 const getSummaryId = (id) => getId(`summary-${id}`);
@@ -42,7 +44,7 @@ function h(tag, attrs, ...children) {
 
 	const element = new HTMLElement(tag, { id, class: className }, attrStr);
 	element.set_content(
-		children.map((c) => {
+		children.filter(Boolean).map((c) => {
 			if (typeof c == "number" || typeof c == "string") {
 				return new TextNode(c.toString());
 			} else if (c instanceof HTMLElement) {
@@ -61,7 +63,7 @@ function h(tag, attrs, ...children) {
  * @typedef ResultsEntryProps
  * @property {string} reportId
  * @property {import('./global').BenchmarkResult[]} benchmarks
- * @property {import('./global').WorkflowRunData} workflowRun
+ * @property {import('./global').WorkflowRunInfo} workflowRun
  * @property {import('./global').CommitInfo} commitInfo
  *
  * @param {ResultsEntryProps} props
@@ -69,6 +71,14 @@ function h(tag, attrs, ...children) {
 function ResultsEntry({ reportId, benchmarks, workflowRun, commitInfo }) {
 	// Hard code what dimensions are rendered in the main table since GitHub comments
 	// have limited horizontal space
+
+	if (!Array.isArray(benchmarks)) {
+		return (
+			<div>
+				<SummaryStatus workflowRun={workflowRun} icon={false} />
+			</div>
+		);
+	}
 
 	const labelFn = makeUniqueLabelFn(benchmarks);
 	const listDimensions = [browserDimension, sampleSizeDimension];
@@ -104,7 +114,8 @@ function ResultsEntry({ reportId, benchmarks, workflowRun, commitInfo }) {
 				})}
 				<li>Commit: {commitHtml}</li>
 				<li>
-					Built by: <a href={workflowRun.html_url}>{workflowRun.run_name}</a>
+					Built by:{" "}
+					<a href={workflowRun.jobHtmlUrl}>{workflowRun.workflowRunName}</a>
 				</li>
 			</ul>
 			<table>
@@ -144,6 +155,11 @@ function BenchmarkSection({ report, open, children }) {
 		<div id={getBenchmarkSectionId(report.id)}>
 			<details open={open ? "open" : null}>
 				<summary>
+					<span class={statusClass}>
+						{report.isRunning ? (
+							<SummaryStatus workflowRun={report.workflowRun} icon={true} />
+						) : null}
+					</span>
 					<strong>{report.title}</strong>
 				</summary>
 				{children}
@@ -153,25 +169,66 @@ function BenchmarkSection({ report, open, children }) {
 }
 
 /**
+ * @param {{ workflowRun: import('./global').WorkflowRunInfo; icon: boolean; }} props
+ */
+function SummaryStatus({ workflowRun, icon }) {
+	const label = `Currently running in ${workflowRun.workflowRunName}…`;
+	return (
+		<a
+			href={workflowRun.jobHtmlUrl}
+			title={icon ? label : null}
+			aria-label={icon ? label : null}
+		>
+			{icon ? "⏱ " : label}
+		</a>
+	);
+}
+
+/**
  * @typedef SummaryProps
  * @property {string} reportId
+ * @property {string} title
  * @property {import('./global').BenchmarkResult[]} benchmarks
  * @property {string} prBenchName
  * @property {string} baseBenchName
+ * @property {import('./global').WorkflowRunInfo | null} workflowRun
+ * @property {boolean} isRunning
  *
  * @param {SummaryProps} props
  */
-function Summary({ reportId, benchmarks, prBenchName, baseBenchName }) {
-	const baseIndex = benchmarks.findIndex((b) => b.version == baseBenchName);
-	const localResults = benchmarks.find((b) => b.version == prBenchName);
-	const diff = formatDifference(localResults.differences[baseIndex]);
+function Summary({
+	reportId,
+	title,
+	benchmarks,
+	prBenchName,
+	baseBenchName,
+	workflowRun,
+	isRunning,
+}) {
+	/** @type {ReturnType<typeof formatDifference>} */
+	let diff;
+	if (Array.isArray(benchmarks) && benchmarks.length) {
+		const baseIndex = benchmarks.findIndex((b) => b.version == baseBenchName);
+		const localResults = benchmarks.find((b) => b.version == prBenchName);
+		diff = formatDifference(localResults.differences[baseIndex]);
+	}
+
+	let status = isRunning ? (
+		<SummaryStatus workflowRun={workflowRun} icon={true} />
+	) : null;
 
 	return (
 		<div id={getSummaryId(reportId)}>
-			{"\n\n"}
-			{`[${localResults.name}](#${getBenchmarkSectionId(reportId)}): `}
-			{`${diff.label} *${diff.relative} (${diff.absolute})*`}
-			{"\n\n"}
+			<span class={statusClass}>{status}</span>
+			{title}
+			{diff && (
+				<span>
+					: {diff.label}{" "}
+					<em>
+						{diff.relative} ({diff.absolute})
+					</em>
+				</span>
+			)}
 		</div>
 	);
 }
@@ -188,6 +245,30 @@ function SummaryList({ children }) {
 				<li>{child}</li>
 			))}
 		</ul>
+	);
+}
+
+/**
+ * @param {{ inputs: import('./global').Inputs; report: import('./global').Report; }} props
+ */
+function NewCommentBody({ inputs, report }) {
+	return (
+		<div>
+			<h2>📊 Tachometer Benchmark Results</h2>
+			{report.summary && [
+				<h3>Summary</h3>,
+				<p>
+					<sub>
+						{report.prBenchName} vs {report.baseBenchName}
+					</sub>
+				</p>,
+				<SummaryList>{[report.summary]}</SummaryList>,
+			]}
+			<h3>Results</h3>
+			<BenchmarkSection report={report} open={inputs.defaultOpen}>
+				{report.body}
+			</BenchmarkSection>
+		</div>
 	);
 }
 
@@ -215,8 +296,13 @@ function Icon() {
 
 module.exports = {
 	h,
+	getSummaryId,
+	getBenchmarkSectionId,
+	statusClass,
+	SummaryStatus,
 	ResultsEntry,
 	BenchmarkSection,
 	Summary,
 	SummaryList,
+	NewCommentBody,
 };

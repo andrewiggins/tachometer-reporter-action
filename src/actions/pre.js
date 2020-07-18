@@ -1,7 +1,6 @@
 const core = require("@actions/core");
 const github = require("@actions/github");
-const { getWorkflowRun } = require("../utils/github");
-const { postOrUpdateComment } = require("../comments");
+const { reportTachRunning } = require("../index");
 const { getLogger, getInputs } = require("./util");
 
 (async function () {
@@ -15,21 +14,21 @@ const { getLogger, getInputs } = require("./util");
 	const logger = getLogger();
 	const inputs = getInputs();
 
-	logger.debug("Running pre tachometer-reporter-action...");
-	logger.debug("Report ID: " + JSON.stringify(inputs.reportId));
+	logger.debug(() => "Running pre tachometer-reporter-action...");
+	logger.debug(() => "Report ID: " + JSON.stringify(inputs.reportId));
 	// logger.debug("Context: " + JSON.stringify(github.context, undefined, 2));
+
+	if (!inputs.reportId) {
+		return logger.info(
+			'No reportId provided. Skipping updating comment with "Running..." status.'
+		);
+	}
 
 	const context = github.context;
 	const octokit = github.getOctokit(token);
-	const workflowRun = await getWorkflowRun(context, octokit);
 
-	logger.debug("Run name: " + workflowRun.run_name);
-	logger.debug("Run URL : " + workflowRun.html_url);
+	// TODO: Update comment body so as not to erase existing results while running
+	const report = await reportTachRunning(octokit, context, inputs, logger);
 
-	// await postOrUpdateComment(
-	// 	octokit,
-	// 	context,
-	// 	(comment) => getCommentBody(inputs, comment),
-	// 	logger
-	// );
+	logger.debug(() => "Report: " + JSON.stringify(report, null, 2));
 })();

@@ -12,18 +12,32 @@ declare global {
 type GitHubActionClient = ReturnType<
 	typeof import("@actions/github").getOctokit
 >;
+
+// Sample context: https://github.com/andrewiggins/tachometer-reporter-action/runs/860022655?check_suite_focus=true
 type GitHubActionContext = typeof import("@actions/github").context;
 type CommentData = import("@octokit/types").IssuesGetCommentResponseData;
-type WorkflowRun = import("@octokit/types").ActionsGetWorkflowRunResponseData;
+
+type OctokitResponse<T> = import("@octokit/types").OctokitResponse<T>;
+type WorkflowRunJob = import("@octokit/types").ActionsGetJobForWorkflowRunResponseData;
+type WorkflowRunJobsAsyncIterator = AsyncIterableIterator<
+	OctokitResponse<WorkflowRunJob[]>
+>;
+
+// type WorkflowRun = import("@octokit/types").ActionsGetWorkflowRunResponseData;
 type Commit = import("@octokit/types").GitGetCommitResponseData;
 
 interface CommitInfo extends Commit {
 	html_url: string;
 }
 
-interface WorkflowRunData extends WorkflowRun {
-	workflow_name: string;
-	run_name: string;
+// interface WorkflowRunData extends WorkflowRun {
+// 	workflow_name: string;
+// 	run_name: string;
+// }
+
+interface WorkflowRunInfo {
+	workflowRunName: string;
+	jobHtmlUrl: string;
 }
 
 interface Inputs {
@@ -41,14 +55,18 @@ type BenchmarkResult = TachResults["benchmarks"][0];
 interface Report {
 	id: string;
 	title: string;
-	summary: JSX.Element | string | null;
-	body: JSX.Element | string;
 	prBenchName: string | null;
 	baseBenchName: string | null;
-	results: BenchmarkResult[];
+	workflowRun: WorkflowRunInfo | null;
+	isRunning: boolean;
+	// results: BenchmarkResult[];
+	status: JSX.Element | string | null;
+	summary: JSX.Element | string | null;
+	body: JSX.Element | string;
 }
 
 interface SerializedReport extends Report {
+	status: string;
 	summary: string;
 	body: string;
 }

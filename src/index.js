@@ -1,14 +1,17 @@
 const { readFile } = require("fs").promises;
 const crypto = require("crypto");
+const { parse } = require("node-html-parser");
 const {
 	h,
-	BenchmarkSection,
 	Summary,
-	SummaryList,
+	SummaryStatus,
 	ResultsEntry,
+	getSummaryId,
+	getBenchmarkSectionId,
+	NewCommentBody,
 } = require("./html");
 const { postOrUpdateComment } = require("./comments");
-const { getWorkflowRun, getCommit } = require("./utils/github");
+const { getWorkflowRunInfo, getCommit } = require("./utils/github");
 
 /**
  * @param {import('./global').BenchmarkResult[]} benchmarks
@@ -33,25 +36,52 @@ function getReportId(benchmarks) {
 
 /**
  * @param {import("./global").CommitInfo} commitInfo
- * @param {import('./global').WorkflowRunData} workflowRun
+ * @param {import('./global').WorkflowRunInfo} workflowRun
  * @param {Pick<import('./global').Inputs, 'prBenchName' | 'baseBenchName' | 'defaultOpen' | 'reportId'>} inputs
  * @param {import('./global').TachResults} tachResults
+ * @param {boolean} [isRunning]
  * @returns {import('./global').Report}
  */
-function buildReport(commitInfo, workflowRun, inputs, tachResults) {
+function buildReport(
+	commitInfo,
+	workflowRun,
+	inputs,
+	tachResults,
+	isRunning = false
+) {
 	// TODO: Consider improving names (likely needs to happen in runner repo)
 	//    - "before" and "this PR"
 	//    - Allow different names for local runs and CI runs
 	//    - Allowing aliases
 	//    - replace `base-bench-name` with `branch@SHA`
 
-	const benchmarks = tachResults.benchmarks;
-	const title = Array.from(new Set(benchmarks.map((b) => b.name))).join(", ");
-	const reportId = inputs.reportId ? inputs.reportId : getReportId(benchmarks);
+	const benchmarks = tachResults?.benchmarks;
+
+	let reportId;
+	let title;
+	if (inputs.reportId) {
+		reportId = inputs.reportId;
+		title = inputs.reportId;
+	} else if (benchmarks) {
+		reportId = getReportId(benchmarks);
+		title = Array.from(new Set(benchmarks.map((b) => b.name))).join(", ");
+	} else {
+		throw new Error(
+			"Could not determine ID for report. 'report-id' option was not provided and there are no benchmark results"
+		);
+	}
 
 	return {
 		id: reportId,
 		title,
+		prBenchName: inputs.prBenchName,
+		baseBenchName: inputs.baseBenchName,
+		workflowRun,
+		isRunning,
+		// results: benchmarks,
+		status: isRunning ? (
+			<SummaryStatus workflowRun={workflowRun} icon={true} />
+		) : null,
 		body: (
 			<ResultsEntry
 				reportId={reportId}
@@ -60,16 +90,16 @@ function buildReport(commitInfo, workflowRun, inputs, tachResults) {
 				commitInfo={commitInfo}
 			/>
 		),
-		results: benchmarks,
-		prBenchName: inputs.prBenchName,
-		baseBenchName: inputs.baseBenchName,
 		summary:
 			inputs.baseBenchName && inputs.prBenchName ? (
 				<Summary
 					reportId={reportId}
+					title={title}
 					benchmarks={benchmarks}
 					prBenchName={inputs.prBenchName}
 					baseBenchName={inputs.baseBenchName}
+					workflowRun={workflowRun}
+					isRunning={isRunning}
 				/>
 			) : null,
 	};
@@ -78,39 +108,43 @@ function buildReport(commitInfo, workflowRun, inputs, tachResults) {
 /**
  * @param {import('./global').Inputs} inputs
  * @param {import('./global').Report} report
- * @param {import('./global').CommentData | null} comment
+ * @param {string} commentBody
+ * @param {import('./global').Logger} logger
+ * @returns {string}
  */
-function getCommentBody(inputs, report, comment) {
-	// TODO: Update comment body
+function getCommentBody(inputs, report, commentBody, logger) {
+	/** @type {JSX.Element} */
+	let result;
 
-	/** @type {string[]} */
-	let body = ["<h2>📊 Tachometer Benchmark Results</h2>\n"];
+	if (!commentBody) {
+		result = <NewCommentBody report={report} inputs={inputs} />;
+	} else if (report.isRunning) {
+		// If report is running, just update the status fields
+		const commentHtml = parse(commentBody);
 
-	if (report.summary) {
-		body.push(
-			"<h3>Summary</h3>\n",
-			// TODO: Should these be grouped by how they are summarized in case not
-			// all benchmarks compare the same?
-			`<sub>${report.prBenchName} vs ${report.baseBenchName}</sub>\n`,
-			(<SummaryList>{[report.summary]}</SummaryList>).toString(),
-			""
-		);
+		const summaryId = getSummaryId(report.id);
+		const summaryStatus = commentHtml.querySelector(`#${summaryId} .status`);
+
+		const bodyId = getBenchmarkSectionId(report.id);
+		const bodyStatus = commentHtml.querySelector(`#${bodyId} .status`);
+
+		if (bodyStatus && summaryStatus) {
+			summaryStatus.set_content(report.status);
+			bodyStatus.set_content(report.status);
+		}
+
+		// If bodyStatus or summaryStatus doesn't exist, leave comment unmodified
+		result = commentHtml;
 	}
 
-	// TODO: Consider modifying report to return a ResultEntry (just the <ul> and
-	// <table>) and generate the BenchmarkSection here. That way the "pre" action can
-	// just generate a fake report with a body and summary property that says something
-	// like "Running in <a>Main #13</a>..."
-	body.push("<h3>Results</h3>\n");
-	body.push(
-		(
-			<BenchmarkSection report={report} open={inputs.defaultOpen}>
-				{report.body}
-			</BenchmarkSection>
-		).toString()
-	);
+	if (!result) {
+		// If something failed above, just generate a new comment
 
-	return body.join("\n");
+		// TODO: Update comment body with new results to support multiple benchmarks
+		result = <NewCommentBody report={report} inputs={inputs} />;
+	}
+
+	return result.toString();
 }
 
 /** @type {import('./global').Logger} */
@@ -146,6 +180,48 @@ const defaultInputs = {
  * @param {import('./global').Logger} [logger]
  * @returns {Promise<import('./global').SerializedReport>}
  */
+async function reportTachRunning(
+	github,
+	context,
+	inputs,
+	logger = defaultLogger
+) {
+	/** @type {[ import('./global').WorkflowRunInfo, import('./global').CommitInfo ]} */
+	const [workflowRun, commitInfo] = await Promise.all([
+		getWorkflowRunInfo(context, github, logger),
+		getCommit(context, github),
+	]);
+
+	const report = buildReport(commitInfo, workflowRun, inputs, null, true);
+
+	await postOrUpdateComment(
+		github,
+		context,
+		(comment) => {
+			const body = getCommentBody(inputs, report, comment.body, logger);
+			logger.debug(
+				() => `${comment ? "Updated" : "New"} Comment Body: ${body}`
+			);
+			return body;
+		},
+		logger
+	);
+
+	return {
+		...report,
+		status: report.status?.toString(),
+		body: report.body?.toString(),
+		summary: report.summary?.toString(),
+	};
+}
+
+/**
+ * @param {import('./global').GitHubActionClient} github
+ * @param {import('./global').GitHubActionContext} context
+ * @param {import('./global').Inputs} inputs
+ * @param {import('./global').Logger} [logger]
+ * @returns {Promise<import('./global').SerializedReport>}
+ */
 async function reportTachResults(
 	github,
 	context,
@@ -154,21 +230,29 @@ async function reportTachResults(
 ) {
 	inputs = { ...defaultInputs, ...inputs };
 
-	/** @type {[ any, import('./global').WorkflowRunData, import('./global').CommitInfo ]} */
+	/** @type {[ import('./global').TachResults, import('./global').WorkflowRunInfo, import('./global').CommitInfo ]} */
 	const [tachResults, workflowRun, commitInfo] = await Promise.all([
 		readFile(inputs.path, "utf8").then((contents) => JSON.parse(contents)),
-		getWorkflowRun(context, github),
+		getWorkflowRunInfo(context, github, logger),
 		getCommit(context, github),
 	]);
 
-	const report = buildReport(commitInfo, workflowRun, inputs, tachResults);
+	const report = buildReport(
+		commitInfo,
+		workflowRun,
+		inputs,
+		tachResults,
+		false
+	);
 
 	await postOrUpdateComment(
 		github,
 		context,
 		(comment) => {
-			const body = getCommentBody(inputs, report, comment);
-			logger.debug(() => "New Comment Body: " + body);
+			const body = getCommentBody(inputs, report, comment.body, logger);
+			logger.debug(
+				() => `${comment ? "Updated" : "New"} Comment Body: ${body}`
+			);
 			return body;
 		},
 		logger
@@ -176,13 +260,15 @@ async function reportTachResults(
 
 	return {
 		...report,
-		body: report.body.toString(),
-		summary: report.summary.toString(),
+		status: report.status?.toString(),
+		body: report.body?.toString(),
+		summary: report.summary?.toString(),
 	};
 }
 
 module.exports = {
 	buildReport,
 	getCommentBody,
+	reportTachRunning,
 	reportTachResults,
 };
