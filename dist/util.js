@@ -8545,10 +8545,15 @@ async function postOrUpdateComment(github, context, getCommentBody, logger) {
 	if (comment) {
 		try {
 			logger.info(`Updating comment (id: ${comment.id})...`);
+			let updatedBody = getCommentBody(comment);
+			if (!updatedBody.includes(footer)) {
+				updatedBody = updatedBody + footer;
+			}
+
 			await github.issues.updateComment({
 				...context.repo,
 				comment_id: comment.id,
-				body: getCommentBody(comment) + footer,
+				body: updatedBody,
 			});
 		} catch (e) {
 			logger.info(`Error updating comment: ${e.message}`);
