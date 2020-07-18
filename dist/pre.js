@@ -16,7 +16,7 @@ require('stream');
 require('zlib');
 require('crypto');
 
-const { reportTachResults } = util.src;
+const { reportTachRunning } = util.src;
 const { getLogger, getInputs } = util.util;
 
 (async function () {
@@ -44,13 +44,7 @@ const { getLogger, getInputs } = util.util;
 	const octokit = util.github.getOctokit(token);
 
 	// TODO: Update comment body so as not to erase existing results while running
-	const report = await reportTachResults(
-		octokit,
-		context,
-		inputs,
-		true,
-		logger
-	);
+	const report = await reportTachRunning(octokit, context, inputs, logger);
 
 	logger.debug(() => "Report: " + JSON.stringify(report, null, 2));
 })();

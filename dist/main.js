@@ -66,7 +66,6 @@ async function createCheck(github, context) {
 			octokit,
 			util.github.context,
 			inputs,
-			false, // A this point, the benchmarks have finished
 			logger
 		);
 

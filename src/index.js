@@ -167,7 +167,47 @@ const defaultInputs = {
  * @param {import('./global').GitHubActionClient} github
  * @param {import('./global').GitHubActionContext} context
  * @param {import('./global').Inputs} inputs
- * @param {boolean} isRunning
+ * @param {import('./global').Logger} [logger]
+ * @returns {Promise<import('./global').SerializedReport>}
+ */
+async function reportTachRunning(
+	github,
+	context,
+	inputs,
+	logger = defaultLogger
+) {
+	/** @type {[ import('./global').WorkflowRunInfo, import('./global').CommitInfo ]} */
+	const [workflowRun, commitInfo] = await Promise.all([
+		getWorkflowRunInfo(context, github, logger),
+		getCommit(context, github),
+	]);
+
+	const report = buildReport(commitInfo, workflowRun, inputs, null, true);
+
+	await postOrUpdateComment(
+		github,
+		context,
+		(comment) => {
+			const body = getCommentBody(inputs, report, comment);
+			logger.debug(
+				() => `${comment ? "Updated" : "New"} Comment Body: ${body}`
+			);
+			return body;
+		},
+		logger
+	);
+
+	return {
+		...report,
+		body: report.body.toString(),
+		summary: report.summary.toString(),
+	};
+}
+
+/**
+ * @param {import('./global').GitHubActionClient} github
+ * @param {import('./global').GitHubActionContext} context
+ * @param {import('./global').Inputs} inputs
  * @param {import('./global').Logger} [logger]
  * @returns {Promise<import('./global').SerializedReport>}
  */
@@ -175,7 +215,6 @@ async function reportTachResults(
 	github,
 	context,
 	inputs,
-	isRunning,
 	logger = defaultLogger
 ) {
 	inputs = { ...defaultInputs, ...inputs };
@@ -192,7 +231,7 @@ async function reportTachResults(
 		workflowRun,
 		inputs,
 		tachResults,
-		isRunning
+		false
 	);
 
 	await postOrUpdateComment(
@@ -218,5 +257,6 @@ async function reportTachResults(
 module.exports = {
 	buildReport,
 	getCommentBody,
+	reportTachRunning,
 	reportTachResults,
 };

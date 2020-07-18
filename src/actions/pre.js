@@ -1,6 +1,6 @@
 const core = require("@actions/core");
 const github = require("@actions/github");
-const { reportTachResults } = require("../index");
+const { reportTachRunning } = require("../index");
 const { getLogger, getInputs } = require("./util");
 
 (async function () {
@@ -28,13 +28,7 @@ const { getLogger, getInputs } = require("./util");
 	const octokit = github.getOctokit(token);
 
 	// TODO: Update comment body so as not to erase existing results while running
-	const report = await reportTachResults(
-		octokit,
-		context,
-		inputs,
-		true,
-		logger
-	);
+	const report = await reportTachRunning(octokit, context, inputs, logger);
 
 	logger.debug(() => "Report: " + JSON.stringify(report, null, 2));
 })();
