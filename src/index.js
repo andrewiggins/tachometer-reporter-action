@@ -1,11 +1,14 @@
 const { readFile } = require("fs").promises;
 const crypto = require("crypto");
+const { parse } = require("node-html-parser");
 const {
 	h,
-	BenchmarkSection,
 	Summary,
-	SummaryList,
+	SummaryStatus,
 	ResultsEntry,
+	getSummaryId,
+	getBenchmarkSectionId,
+	NewCommentBody,
 } = require("./html");
 const { postOrUpdateComment } = require("./comments");
 const { getWorkflowRunInfo, getCommit } = require("./utils/github");
@@ -76,6 +79,9 @@ function buildReport(
 		workflowRun,
 		isRunning,
 		// results: benchmarks,
+		status: isRunning ? (
+			<SummaryStatus workflowRun={workflowRun} icon={true} />
+		) : null,
 		body: (
 			<ResultsEntry
 				reportId={reportId}
@@ -102,39 +108,43 @@ function buildReport(
 /**
  * @param {import('./global').Inputs} inputs
  * @param {import('./global').Report} report
- * @param {import('./global').CommentData | null} comment
+ * @param {string} commentBody
+ * @param {import('./global').Logger} logger
+ * @returns {string}
  */
-function getCommentBody(inputs, report, comment) {
-	// TODO: Update comment body
+function getCommentBody(inputs, report, commentBody, logger) {
+	/** @type {JSX.Element} */
+	let result;
 
-	/** @type {string[]} */
-	let body = ["<h2>📊 Tachometer Benchmark Results</h2>\n"];
+	if (!commentBody) {
+		result = <NewCommentBody report={report} inputs={inputs} />;
+	} else if (report.isRunning) {
+		// If report is running, just update the status fields
+		const commentHtml = parse(commentBody);
 
-	if (report.summary) {
-		body.push(
-			"<h3>Summary</h3>\n",
-			// TODO: Should these be grouped by how they are summarized in case not
-			// all benchmarks compare the same?
-			`<sub>${report.prBenchName} vs ${report.baseBenchName}</sub>\n`,
-			(<SummaryList>{[report.summary]}</SummaryList>).toString(),
-			""
-		);
+		const summaryId = getSummaryId(report.id);
+		const summaryStatus = commentHtml.querySelector(`#${summaryId} .status`);
+
+		const bodyId = getBenchmarkSectionId(report.id);
+		const bodyStatus = commentHtml.querySelector(`#${bodyId} .status`);
+
+		if (bodyStatus && summaryStatus) {
+			summaryStatus.set_content(report.status);
+			bodyStatus.set_content(report.status);
+		}
+
+		// If bodyStatus or summaryStatus doesn't exist, leave comment unmodified
+		result = commentHtml;
 	}
 
-	// TODO: Consider modifying report to return a ResultEntry (just the <ul> and
-	// <table>) and generate the BenchmarkSection here. That way the "pre" action can
-	// just generate a fake report with a body and summary property that says something
-	// like "Running in <a>Main #13</a>..."
-	body.push("<h3>Results</h3>\n");
-	body.push(
-		(
-			<BenchmarkSection report={report} open={inputs.defaultOpen}>
-				{report.body}
-			</BenchmarkSection>
-		).toString()
-	);
+	if (!result) {
+		// If something failed above, just generate a new comment
 
-	return body.join("\n");
+		// TODO: Update comment body with new results to support multiple benchmarks
+		result = <NewCommentBody report={report} inputs={inputs} />;
+	}
+
+	return result.toString();
 }
 
 /** @type {import('./global').Logger} */
@@ -188,7 +198,7 @@ async function reportTachRunning(
 		github,
 		context,
 		(comment) => {
-			const body = getCommentBody(inputs, report, comment);
+			const body = getCommentBody(inputs, report, comment.body, logger);
 			logger.debug(
 				() => `${comment ? "Updated" : "New"} Comment Body: ${body}`
 			);
@@ -199,6 +209,7 @@ async function reportTachRunning(
 
 	return {
 		...report,
+		status: report.status.toString(),
 		body: report.body.toString(),
 		summary: report.summary.toString(),
 	};
@@ -238,7 +249,7 @@ async function reportTachResults(
 		github,
 		context,
 		(comment) => {
-			const body = getCommentBody(inputs, report, comment);
+			const body = getCommentBody(inputs, report, comment.body, logger);
 			logger.debug(
 				() => `${comment ? "Updated" : "New"} Comment Body: ${body}`
 			);
@@ -249,6 +260,7 @@ async function reportTachResults(
 
 	return {
 		...report,
+		status: report.status.toString(),
 		body: report.body.toString(),
 		summary: report.summary.toString(),
 	};

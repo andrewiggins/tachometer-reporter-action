@@ -43,6 +43,15 @@ const defaultInputs = Object.freeze({
 	keepOldResults: false,
 });
 
+/** @type {import('../src/global').Logger} */
+const testLogger = {
+	debug() {},
+	info() {},
+	warn() {},
+	startGroup() {},
+	endGroup() {},
+};
+
 /** @type {import('../src/global').WorkflowRunInfo} */
 // @ts-ignore
 const fakeWorkflowRun = {
@@ -125,13 +134,13 @@ function invokeBuildReport({
  * @typedef GetCommentBodyParams
  * @property {Partial<import('../src/global').Inputs>} [inputs]
  * @property {import('../src/global').Report} [report]
- * @property {import('../src/global').CommentData} [comment]
+ * @property {string} [commentBody]
  * @param {GetCommentBodyParams} params
  */
 function invokeGetCommentBody({
 	inputs = null,
 	report = null,
-	comment = null,
+	commentBody = null,
 } = {}) {
 	const fullInputs = {
 		...defaultInputs,
@@ -142,7 +151,7 @@ function invokeGetCommentBody({
 		report = invokeBuildReport({ inputs: fullInputs });
 	}
 
-	return getCommentBody(fullInputs, report, comment);
+	return getCommentBody(fullInputs, report, commentBody, testLogger);
 }
 
 const buildReportSuite = suite("buildReport");
@@ -461,7 +470,114 @@ newCommentSuite("Supports benchmarks with different names", () => {
 	assert.is(actualTitle, expectedTitle, "Title includes all bench names");
 });
 
-// const updateCommentSuite = suite("getCommentBody (update)");
+const updateCommentSuite = suite("getCommentBody (update)");
+const testReportId = "report-id";
+
+updateCommentSuite("Updates existing comment with running status", async () => {
+	const commentBodyPath = testRoot(
+		"snapshots/test-results-existing-comment.html"
+	);
+	const commentBody = await readFile(commentBodyPath, "utf-8");
+	const report = invokeBuildReport({
+		inputs: { reportId: testReportId },
+		results: null,
+		isRunning: true,
+	});
+
+	const bodyHtml = parse(invokeGetCommentBody({ report, commentBody }));
+
+	const summaryId = getSummaryId(testReportId);
+	const summaryStatus = bodyHtml.querySelector(`#${summaryId} .status a`);
+	const summaryData = bodyHtml.querySelector(`#${summaryId} em`);
+
+	const resultId = getBenchmarkSectionId(testReportId);
+	const resultStatus = bodyHtml.querySelector(`#${resultId} .status a`);
+	const resultData = bodyHtml.querySelector(`#${resultId} table`);
+
+	assert.ok(summaryStatus, "Summary status link exists");
+	assert.ok(resultStatus, "Result status link exists");
+	assert.ok(summaryStatus.text.includes("⏱"), "Summary status link has text");
+	assert.ok(resultStatus.text.includes("⏱"), "Result status link has text");
+	assert.ok(summaryData, "Summary data is still present");
+	assert.ok(resultData, "Result data is still present");
+
+	// Uncomment to update fixture
+	// await writeFile(
+	// 	testRoot("snapshots/test-results-existing-running.html"),
+	// 	formatHtml(bodyHtml.toString()),
+	// 	"utf-8"
+	// );
+});
+
+updateCommentSuite(
+	"Remove running status from existing comment when results come in",
+	async () => {
+		const commentBodyPath = testRoot(
+			"snapshots/test-results-existing-running.html"
+		);
+		const commentBody = await readFile(commentBodyPath, "utf-8");
+		const report = invokeBuildReport({
+			inputs: { reportId: testReportId },
+		});
+
+		const bodyHtml = parse(invokeGetCommentBody({ report, commentBody }));
+
+		const summaryId = getSummaryId(testReportId);
+		const summaryStatus = bodyHtml.querySelector(`#${summaryId} .status a`);
+		const summaryData = bodyHtml.querySelector(`#${summaryId} em`);
+
+		const resultId = getBenchmarkSectionId(testReportId);
+		const resultStatus = bodyHtml.querySelector(`#${resultId} .status a`);
+		const resultData = bodyHtml.querySelector(`#${resultId} table`);
+
+		// console.log(formatHtml(bodyHtml.toString()));
+
+		assert.not.ok(summaryStatus, "Summary status link does not exist");
+		assert.not.ok(resultStatus, "Result status link does not exist");
+		assert.ok(summaryData, "Summary data is still present");
+		assert.ok(resultData, "Result data is still present");
+	}
+);
+
+updateCommentSuite(
+	"Leave comment unmodified if can't find status elements",
+	async () => {
+		const newId = "new-id";
+		const commentBodyPath = testRoot(
+			"snapshots/test-results-existing-comment.html"
+		);
+		const commentBody = await readFile(commentBodyPath, "utf-8");
+		const report = invokeBuildReport({
+			inputs: { reportId: newId },
+			results: null,
+			isRunning: true,
+		});
+
+		const bodyHtml = parse(invokeGetCommentBody({ report, commentBody }));
+
+		const summaryStatus = bodyHtml.querySelector(
+			`#${getSummaryId(newId)} .status a`
+		);
+		const resultStatus = bodyHtml.querySelector(
+			`#${getBenchmarkSectionId(newId)} .status a`
+		);
+
+		const summaryData = bodyHtml.querySelector(
+			`#${getSummaryId(testReportId)} em`
+		);
+		const resultData = bodyHtml.querySelector(
+			`#${getBenchmarkSectionId(testReportId)} table`
+		);
+
+		// console.log(formatHtml(bodyHtml.toString()));
+
+		assert.not.ok(summaryStatus, "Summary status link does not exist");
+		assert.not.ok(resultStatus, "Result status link does not exist");
+		assert.ok(summaryData, "Summary data is still present");
+		assert.ok(resultData, "Result data is still present");
+	}
+);
+
 // updateCommentSuite(
 // 	"Updates existing comment that doesn't contain matching ID",
 // 	() => {
@@ -491,18 +607,7 @@ newCommentSuite("Supports benchmarks with different names", () => {
 // 	"Does not add summary to existing summary section if summary is null",
 // 	() => {}
 // );
-// updateCommentSuite(
-// 	"Updates existing comment with running status",
-// 	() => {
-// 		// Add new table in appropriate section
-// 	}
-// );
-// updateCommentSuite(
-// 	"Remove running status from existing comment when results come in",
-// 	() => {
-// 		// Add new table in appropriate section
-// 	}
-// );
 
 buildReportSuite.run();
 newCommentSuite.run();
+updateCommentSuite.run();

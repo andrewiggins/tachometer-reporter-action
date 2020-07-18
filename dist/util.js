@@ -8376,10 +8376,11 @@ function BenchmarkSection({ report, open, children }) {
 		h('div', { id: getBenchmarkSectionId(report.id),}
 , h('details', { open: open ? "open" : null,}
 , h('summary', null
+, h('span', { class: statusClass,}
 , report.isRunning ? (
-						h(SummaryStatus, { workflowRun: report.workflowRun, icon: true,} )
-					) : null
-, report.isRunning ? " " : null
+							h(SummaryStatus, { workflowRun: report.workflowRun, icon: true,} )
+						) : null
+)
 , h('strong', null, report.title)
 )
 , children
@@ -8468,15 +8469,39 @@ function SummaryList({ children }) {
 	);
 }
 
+/**
+ * @param {{ inputs: import('./global').Inputs; report: import('./global').Report; }} props
+ */
+function NewCommentBody({ inputs, report }) {
+	return (
+		h('div', null
+, h('h2', null, "📊 Tachometer Benchmark Results"   )
+, report.summary && [
+				h('h3', null, "Summary"),
+				h('sub', null
+, report.prBenchName, " vs "  , report.baseBenchName
+),
+				h(SummaryList, null, [report.summary]),
+			]
+, h('h3', null, "Results")
+, h(BenchmarkSection, { report: report, open: inputs.defaultOpen,}
+, report.body
+)
+)
+	);
+}
+
 var html$1 = {
 	h,
 	getSummaryId,
 	getBenchmarkSectionId,
 	statusClass,
+	SummaryStatus,
 	ResultsEntry,
 	BenchmarkSection,
 	Summary,
 	SummaryList,
+	NewCommentBody,
 };
 
 /**
@@ -8628,12 +8653,15 @@ var github$1 = {
 
 function _optionalChain(ops) { let lastAccessLHS = undefined; let value = ops[0]; let i = 1; while (i < ops.length) { const op = ops[i]; const fn = ops[i + 1]; i += 2; if ((op === 'optionalAccess' || op === 'optionalCall') && value == null) { return undefined; } if (op === 'access' || op === 'optionalAccess') { lastAccessLHS = value; value = fn(value); } else if (op === 'call' || op === 'optionalCall') { value = fn((...args) => value.call(lastAccessLHS, ...args)); lastAccessLHS = undefined; } } return value; }const { readFile } = fs.promises;
 
+const { parse: parse$1 } = dist;
 const {
 	h: h$1,
-	BenchmarkSection: BenchmarkSection$1,
 	Summary: Summary$1,
-	SummaryList: SummaryList$1,
+	SummaryStatus: SummaryStatus$1,
 	ResultsEntry: ResultsEntry$1,
+	getSummaryId: getSummaryId$1,
+	getBenchmarkSectionId: getBenchmarkSectionId$1,
+	NewCommentBody: NewCommentBody$1,
 } = html$1;
 const { postOrUpdateComment: postOrUpdateComment$1 } = comments;
 const { getWorkflowRunInfo: getWorkflowRunInfo$1, getCommit: getCommit$1 } = github$1;
@@ -8704,6 +8732,9 @@ function buildReport(
 		workflowRun,
 		isRunning,
 		// results: benchmarks,
+		status: isRunning ? (
+			h$1(SummaryStatus$1, { workflowRun: workflowRun, icon: true,} )
+		) : null,
 		body: (
 			h$1(ResultsEntry$1, {
 				reportId: reportId,
@@ -8730,39 +8761,43 @@ function buildReport(
 /**
  * @param {import('./global').Inputs} inputs
  * @param {import('./global').Report} report
- * @param {import('./global').CommentData | null} comment
+ * @param {string} commentBody
+ * @param {import('./global').Logger} logger
+ * @returns {string}
  */
-function getCommentBody(inputs, report, comment) {
-	// TODO: Update comment body
+function getCommentBody(inputs, report, commentBody, logger) {
+	/** @type {JSX.Element} */
+	let result;
 
-	/** @type {string[]} */
-	let body = ["<h2>📊 Tachometer Benchmark Results</h2>\n"];
+	if (!commentBody) {
+		result = h$1(NewCommentBody$1, { report: report, inputs: inputs,} );
+	} else if (report.isRunning) {
+		// If report is running, just update the status fields
+		const commentHtml = parse$1(commentBody);
 
-	if (report.summary) {
-		body.push(
-			"<h3>Summary</h3>\n",
-			// TODO: Should these be grouped by how they are summarized in case not
-			// all benchmarks compare the same?
-			`<sub>${report.prBenchName} vs ${report.baseBenchName}</sub>\n`,
-			(h$1(SummaryList$1, null, [report.summary])).toString(),
-			""
-		);
+		const summaryId = getSummaryId$1(report.id);
+		const summaryStatus = commentHtml.querySelector(`#${summaryId} .status`);
+
+		const bodyId = getBenchmarkSectionId$1(report.id);
+		const bodyStatus = commentHtml.querySelector(`#${bodyId} .status`);
+
+		if (bodyStatus && summaryStatus) {
+			summaryStatus.set_content(report.status);
+			bodyStatus.set_content(report.status);
+		}
+
+		// If bodyStatus or summaryStatus doesn't exist, leave comment unmodified
+		result = commentHtml;
 	}
 
-	// TODO: Consider modifying report to return a ResultEntry (just the <ul> and
-	// <table>) and generate the BenchmarkSection here. That way the "pre" action can
-	// just generate a fake report with a body and summary property that says something
-	// like "Running in <a>Main #13</a>..."
-	body.push("<h3>Results</h3>\n");
-	body.push(
-		(
-			h$1(BenchmarkSection$1, { report: report, open: inputs.defaultOpen,}
-, report.body
-)
-		).toString()
-	);
+	if (!result) {
+		// If something failed above, just generate a new comment
 
-	return body.join("\n");
+		// TODO: Update comment body with new results to support multiple benchmarks
+		result = h$1(NewCommentBody$1, { report: report, inputs: inputs,} );
+	}
+
+	return result.toString();
 }
 
 /** @type {import('./global').Logger} */
@@ -8816,7 +8851,7 @@ async function reportTachRunning(
 		github,
 		context,
 		(comment) => {
-			const body = getCommentBody(inputs, report);
+			const body = getCommentBody(inputs, report, comment.body);
 			logger.debug(
 				() => `${comment ? "Updated" : "New"} Comment Body: ${body}`
 			);
@@ -8827,6 +8862,7 @@ async function reportTachRunning(
 
 	return {
 		...report,
+		status: report.status.toString(),
 		body: report.body.toString(),
 		summary: report.summary.toString(),
 	};
@@ -8866,7 +8902,7 @@ async function reportTachResults(
 		github,
 		context,
 		(comment) => {
-			const body = getCommentBody(inputs, report);
+			const body = getCommentBody(inputs, report, comment.body);
 			logger.debug(
 				() => `${comment ? "Updated" : "New"} Comment Body: ${body}`
 			);
@@ -8877,6 +8913,7 @@ async function reportTachResults(
 
 	return {
 		...report,
+		status: report.status.toString(),
 		body: report.body.toString(),
 		summary: report.summary.toString(),
 	};

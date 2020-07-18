@@ -155,10 +155,11 @@ function BenchmarkSection({ report, open, children }) {
 		<div id={getBenchmarkSectionId(report.id)}>
 			<details open={open ? "open" : null}>
 				<summary>
-					{report.isRunning ? (
-						<SummaryStatus workflowRun={report.workflowRun} icon={true} />
-					) : null}
-					{report.isRunning ? " " : null}
+					<span class={statusClass}>
+						{report.isRunning ? (
+							<SummaryStatus workflowRun={report.workflowRun} icon={true} />
+						) : null}
+					</span>
 					<strong>{report.title}</strong>
 				</summary>
 				{children}
@@ -247,6 +248,28 @@ function SummaryList({ children }) {
 	);
 }
 
+/**
+ * @param {{ inputs: import('./global').Inputs; report: import('./global').Report; }} props
+ */
+function NewCommentBody({ inputs, report }) {
+	return (
+		<div>
+			<h2>📊 Tachometer Benchmark Results</h2>
+			{report.summary && [
+				<h3>Summary</h3>,
+				<sub>
+					{report.prBenchName} vs {report.baseBenchName}
+				</sub>,
+				<SummaryList>{[report.summary]}</SummaryList>,
+			]}
+			<h3>Results</h3>
+			<BenchmarkSection report={report} open={inputs.defaultOpen}>
+				{report.body}
+			</BenchmarkSection>
+		</div>
+	);
+}
+
 function Icon() {
 	// Argh... SVGs get stripped out of markdown so this doesn't work :(
 	return (
@@ -274,8 +297,10 @@ module.exports = {
 	getSummaryId,
 	getBenchmarkSectionId,
 	statusClass,
+	SummaryStatus,
 	ResultsEntry,
 	BenchmarkSection,
 	Summary,
 	SummaryList,
+	NewCommentBody,
 };
