@@ -160,26 +160,26 @@ buildReportSuite("Body snapshot", async () => {
 	const report = invokeBuildReport();
 	const html = formatHtml(report.body.toString());
 
-	const snapshotPath = testRoot("snapshots/test-results-body.html");
-	const snapshot = await readFile(snapshotPath, "utf-8");
+	const fixturePath = testRoot("fixtures/test-results-body.html");
+	const fixture = await readFile(fixturePath, "utf-8");
 
-	// Uncomment to update snapshot
-	// await writeFile(snapshotPath, html, "utf8");
+	// Uncomment to update fixture
+	// await writeFile(fixturePath, html, "utf8");
 
-	assertFixture(html, snapshot, "Report body matches snapshot");
+	assertFixture(html, fixture, "Report body matches fixture");
 });
 
 buildReportSuite("Summary snapshot", async () => {
 	const report = invokeBuildReport();
 	const html = formatHtml(report.summary.toString());
 
-	const snapshotPath = testRoot("snapshots/test-results-summary.html");
-	const snapshot = await readFile(snapshotPath, "utf-8");
+	const fixturePath = testRoot("fixtures/test-results-summary.html");
+	const fixture = await readFile(fixturePath, "utf-8");
 
-	// Uncomment to update snapshot
-	// await writeFile(snapshotPath, html, "utf8");
+	// Uncomment to update fixture
+	// await writeFile(fixturePath, html, "utf8");
 
-	assertFixture(html, snapshot, "Report summary matches snapshot");
+	assertFixture(html, fixture, "Report summary matches fixture");
 });
 
 buildReportSuite("Uses input.reportId", () => {
@@ -351,26 +351,26 @@ newCommentSuite("New comment snapshot in running state", async () => {
 	});
 	const html = formatHtml(body.toString());
 
-	const snapshotPath = testRoot("snapshots/new-comment-running.html");
-	const snapshot = await readFile(snapshotPath, "utf-8");
+	const fixturePath = testRoot("fixtures/new-comment-running.html");
+	const fixture = await readFile(fixturePath, "utf-8");
 
-	// Uncomment to update snapshot
-	// await writeFile(snapshotPath, html, "utf8");
+	// Uncomment to update fixture
+	// await writeFile(fixturePath, html, "utf8");
 
-	assertFixture(html, snapshot, "Report body matches snapshot");
+	assertFixture(html, fixture, "Report body matches fixture");
 });
 
 newCommentSuite("New comment snapshot with results", async () => {
 	const body = invokeGetCommentBody();
 	const html = formatHtml(body.toString());
 
-	const snapshotPath = testRoot("snapshots/test-results-new-comment.html");
-	const snapshot = await readFile(snapshotPath, "utf-8");
+	const fixturePath = testRoot("fixtures/test-results-new-comment.html");
+	const fixture = await readFile(fixturePath, "utf-8");
 
-	// Uncomment to update snapshot
-	// await writeFile(snapshotPath, html, "utf8");
+	// Uncomment to update fixture
+	// await writeFile(fixturePath, html, "utf8");
 
-	assertFixture(html, snapshot, "Report body matches snapshot");
+	assertFixture(html, fixture, "Report body matches fixture");
 });
 
 newCommentSuite("Uses input.reportId", () => {
@@ -475,7 +475,7 @@ const testReportId = "report-id";
 
 updateCommentSuite("Updates existing comment with running status", async () => {
 	const commentBodyPath = testRoot(
-		"snapshots/test-results-existing-comment.html"
+		"fixtures/test-results-existing-comment.html"
 	);
 	const commentBody = await readFile(commentBodyPath, "utf-8");
 	const report = invokeBuildReport({
@@ -503,7 +503,7 @@ updateCommentSuite("Updates existing comment with running status", async () => {
 
 	// Uncomment to update fixture
 	// await writeFile(
-	// 	testRoot("snapshots/test-results-existing-running.html"),
+	// 	testRoot("fixtures/test-results-existing-running.html"),
 	// 	formatHtml(bodyHtml.toString()),
 	// 	"utf-8"
 	// );
@@ -513,7 +513,7 @@ updateCommentSuite(
 	"Remove running status from existing comment when results come in",
 	async () => {
 		const commentBodyPath = testRoot(
-			"snapshots/test-results-existing-running.html"
+			"fixtures/test-results-existing-running.html"
 		);
 		const commentBody = await readFile(commentBodyPath, "utf-8");
 		const report = invokeBuildReport({
@@ -544,7 +544,7 @@ updateCommentSuite(
 	async () => {
 		const newId = "new-id";
 		const commentBodyPath = testRoot(
-			"snapshots/test-results-existing-comment.html"
+			"fixtures/test-results-existing-comment.html"
 		);
 		const commentBody = await readFile(commentBodyPath, "utf-8");
 		const report = invokeBuildReport({
