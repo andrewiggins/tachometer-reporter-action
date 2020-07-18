@@ -8481,6 +8481,7 @@ function NewCommentBody({ inputs, report }) {
 				h('sub', null
 , report.prBenchName, " vs "  , report.baseBenchName
 ),
+				h('br', null ),
 				h(SummaryList, null, [report.summary]),
 			]
 , h('h3', null, "Results")

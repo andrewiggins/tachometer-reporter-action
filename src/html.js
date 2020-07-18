@@ -260,6 +260,7 @@ function NewCommentBody({ inputs, report }) {
 				<sub>
 					{report.prBenchName} vs {report.baseBenchName}
 				</sub>,
+				<br />,
 				<SummaryList>{[report.summary]}</SummaryList>,
 			]}
 			<h3>Results</h3>
