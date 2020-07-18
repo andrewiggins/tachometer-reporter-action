@@ -257,10 +257,11 @@ function NewCommentBody({ inputs, report }) {
 			<h2>📊 Tachometer Benchmark Results</h2>
 			{report.summary && [
 				<h3>Summary</h3>,
-				<sub>
-					{report.prBenchName} vs {report.baseBenchName}
-				</sub>,
-				<br />,
+				<p>
+					<sub>
+						{report.prBenchName} vs {report.baseBenchName}
+					</sub>
+				</p>,
 				<SummaryList>{[report.summary]}</SummaryList>,
 			]}
 			<h3>Results</h3>

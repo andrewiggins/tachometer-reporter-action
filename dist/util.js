@@ -8478,10 +8478,11 @@ function NewCommentBody({ inputs, report }) {
 , h('h2', null, "📊 Tachometer Benchmark Results"   )
 , report.summary && [
 				h('h3', null, "Summary"),
-				h('sub', null
+				h('p', null
+, h('sub', null
 , report.prBenchName, " vs "  , report.baseBenchName
+)
 ),
-				h('br', null ),
 				h(SummaryList, null, [report.summary]),
 			]
 , h('h3', null, "Results")
