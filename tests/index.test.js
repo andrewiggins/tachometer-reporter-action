@@ -105,6 +105,7 @@ const getBenchmarkSectionId = (id) =>
 	`tachometer-reporter-action--results-${id ? id : ""}`;
 const getSummaryId = (id) =>
 	`tachometer-reporter-action--summary-${id ? id : ""}`;
+const getSummaryListId = () => `tachometer-reporter-action--summaries`;
 
 /**
  * @typedef BuildReportParams
@@ -196,25 +197,70 @@ buildReportSuite("Generates reportId if not given", () => {
 	assert.is(report.id, expectedId, "report.id matches expectation");
 });
 
-buildReportSuite("No summary if base version is null", () => {
+buildReportSuite("Summaries on benchmark correctly", () => {
+	const singleResult = copyResults().benchmarks[0];
+	const results = { benchmarks: [singleResult] };
+
+	const report = invokeBuildReport({ results });
+
+	const summaryText = report.summary.toString();
+	assert.ok(
+		summaryText.includes("32.09ms - 38.19ms"),
+		"Generates interval for single result"
+	);
+});
+
+buildReportSuite("Default summary if base version is null", () => {
 	const report = invokeBuildReport({ inputs: { baseBenchName: null } });
 	assert.not.ok(report.baseBenchName, "report.baseBenchName is null");
-	assert.not.ok(report.summary, "report.summary is null");
+	assert.ok(report.summary, "report.summary is not null");
+
+	const summaryText = report.summary.toString();
+	assert.ok(
+		summaryText.includes("local-framework vs fast-framework"),
+		"Uses default values for pr bench and base bench"
+	);
+	assert.ok(
+		summaryText.includes("Customize summary"),
+		"Includes link to docs to customize summary"
+	);
 });
 
-buildReportSuite("No summary if local version is null", () => {
-	const report = invokeBuildReport({ inputs: { prBenchName: null } });
+buildReportSuite("Default summary if local version is null", () => {
+	const report = invokeBuildReport({
+		inputs: { baseBenchName: "fast-framework", prBenchName: null },
+	});
 	assert.not.ok(report.prBenchName, "report.prBenchName is null");
-	assert.not.ok(report.summary, "report.summary is null");
+	assert.ok(report.summary, "report.summary is not null");
+
+	const summaryText = report.summary.toString();
+	assert.ok(
+		summaryText.includes("base-framework vs fast-framework"),
+		"Uses default values for pr bench and base bench"
+	);
+	assert.ok(
+		summaryText.includes("Customize summary"),
+		"Includes link to docs to customize summary"
+	);
 });
 
-buildReportSuite("No summary if base and local version are null", () => {
+buildReportSuite("Default summary if base and local version are null", () => {
 	const report = invokeBuildReport({
 		inputs: { prBenchName: null, baseBenchName: null },
 	});
 	assert.not.ok(report.prBenchName, "report.prBenchName is null");
 	assert.not.ok(report.baseBenchName, "report.baseBenchName is null");
-	assert.not.ok(report.summary, "report.summary is null");
+	assert.ok(report.summary, "report.summary is not null");
+
+	const summaryText = report.summary.toString();
+	assert.ok(
+		summaryText.includes("base-framework vs fast-framework"),
+		"Uses default values for pr bench and base bench"
+	);
+	assert.ok(
+		summaryText.includes("Customize summary"),
+		"Includes link to docs to customize summary"
+	);
 });
 
 buildReportSuite("Supports benchmarks with different names", () => {
@@ -319,7 +365,10 @@ buildReportSuite("Lists all browsers used in details", () => {
 		);
 	}
 
-	// TODO: Figure out summary should do here
+	// TODO: Figure out summary should do here. Summary should probably just
+	// ignore browser field and just match the first bench with the given name or
+	// version.
+
 	// const summaryDoc = parse(report.summary);
 });
 
@@ -436,17 +485,6 @@ newCommentSuite("Generates full comment if comment null", () => {
 		"Includes report.summary"
 	);
 	assert.ok(body.includes(report.body.toString()), "Includes report.body");
-});
-
-newCommentSuite("Generates full comment with no summary", () => {
-	const report = invokeBuildReport();
-	report.summary = null;
-
-	const body = invokeGetCommentBody({ report });
-	assert.not.ok(
-		body.includes("<h3>Summary</h3>"),
-		"Does not include summary section"
-	);
 });
 
 newCommentSuite("Supports benchmarks with different names", () => {

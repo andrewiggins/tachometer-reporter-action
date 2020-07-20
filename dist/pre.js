@@ -28,7 +28,7 @@ const { getLogger, getInputs } = util.util;
 	const token = util.core.getInput("github-token", { required: true });
 
 	const logger = getLogger();
-	const inputs = getInputs();
+	const inputs = getInputs(logger);
 
 	logger.debug(() => "Running pre tachometer-reporter-action...");
 	logger.debug(() => "Report ID: " + JSON.stringify(inputs.reportId));

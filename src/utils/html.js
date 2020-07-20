@@ -12,6 +12,7 @@ const statusClass = "status";
 
 const getId = (id) => `tachometer-reporter-action--${id}`;
 const getBenchmarkSectionId = (id) => getId(`results-${id}`);
+const getSummaryListId = () => getId("summaries");
 const getSummaryId = (id) => getId(`summary-${id}`);
 
 /**
@@ -205,15 +206,51 @@ function Summary({
 	workflowRun,
 	isRunning,
 }) {
-	/** @type {ReturnType<typeof formatDifference>} */
-	let diff;
-	if (Array.isArray(benchmarks) && benchmarks.length) {
-		const baseIndex = benchmarks.findIndex((b) => b.version == baseBenchName);
-		const localResults = benchmarks.find((b) => b.version == prBenchName);
-		diff = formatDifference(localResults.differences[baseIndex]);
+	const benchLength = Array.isArray(benchmarks) ? benchmarks.length : -1;
+	let usesDefaults = false;
+	let showDiff = false;
+
+	/** @type {JSX.Element} */
+	let summaryBody;
+
+	if (benchLength === 1) {
+		const text = runtimeConfidenceIntervalDimension.format(benchmarks[0]);
+		summaryBody = <span>: {text}</span>;
+	} else if (benchLength > 1) {
+		// Show message with instructions how to customize summary if default values used
+		usesDefaults = !prBenchName || !baseBenchName;
+
+		let baseIndex;
+		if (baseBenchName) {
+			baseIndex = benchmarks.findIndex((b) => b.version == baseBenchName);
+		} else {
+			baseIndex = 0;
+			baseBenchName = benchmarks[0]?.version ?? benchmarks[0].name;
+		}
+
+		let localResults;
+		if (prBenchName) {
+			localResults = benchmarks.find((b) => b.version == prBenchName);
+		} else {
+			let localIndex = (baseIndex + 1) % benchLength;
+			localResults = benchmarks[localIndex];
+			prBenchName = localResults?.version ?? localResults.name;
+		}
+
+		const diff = formatDifference(localResults.differences[baseIndex]);
+
+		showDiff = true;
+		summaryBody = (
+			<span>
+				: {diff.label}{" "}
+				<em>
+					{diff.relative} ({diff.absolute})
+				</em>
+			</span>
+		);
 	}
 
-	let status = isRunning ? (
+	const status = isRunning ? (
 		<SummaryStatus workflowRun={workflowRun} icon={true} />
 	) : null;
 
@@ -221,14 +258,22 @@ function Summary({
 		<div id={getSummaryId(reportId)}>
 			<span class={statusClass}>{status}</span>
 			{title}
-			{diff && (
-				<span>
-					: {diff.label}{" "}
-					<em>
-						{diff.relative} ({diff.absolute})
-					</em>
-				</span>
-			)}
+			{summaryBody}
+			{showDiff && [
+				<br />,
+				<sup>
+					{prBenchName} vs {baseBenchName}
+					{usesDefaults && [
+						" ",
+						<a
+							href="https://github.com/andrewiggins/tachometer-reporter-action/blob/master/README.md#summary"
+							target="_blank"
+						>
+							Customize summary
+						</a>,
+					]}
+				</sup>,
+			]}
 		</div>
 	);
 }
@@ -240,17 +285,10 @@ function NewCommentBody({ inputs, report }) {
 	return (
 		<div>
 			<h2>📊 Tachometer Benchmark Results</h2>
-			{report.summary && [
-				<h3>Summary</h3>,
-				<p>
-					<sub>
-						{report.prBenchName} vs {report.baseBenchName}
-					</sub>
-				</p>,
-				<ul id={getId("summaries")}>
-					<li>{report.summary}</li>
-				</ul>,
-			]}
+			<h3>Summary</h3>
+			<ul id={getSummaryListId()}>
+				<li>{report.summary}</li>
+			</ul>
 			<h3>Results</h3>
 			<div id={getId("results")}>
 				<BenchmarkSection report={report} open={inputs.defaultOpen}>
@@ -286,6 +324,7 @@ function Icon() {
 module.exports = {
 	h,
 	getSummaryId,
+	getSummaryListId,
 	getBenchmarkSectionId,
 	statusClass,
 	SummaryStatus,

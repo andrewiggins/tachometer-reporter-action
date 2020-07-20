@@ -8219,7 +8219,7 @@ var tachometer = {
 	runtimeConfidenceIntervalDimension,
 };
 
-const { HTMLElement, TextNode } = dist;
+function _nullishCoalesce(lhs, rhsFn) { if (lhs != null) { return lhs; } else { return rhsFn(); } } function _optionalChain(ops) { let lastAccessLHS = undefined; let value = ops[0]; let i = 1; while (i < ops.length) { const op = ops[i]; const fn = ops[i + 1]; i += 2; if ((op === 'optionalAccess' || op === 'optionalCall') && value == null) { return undefined; } if (op === 'access' || op === 'optionalAccess') { lastAccessLHS = value; value = fn(value); } else if (op === 'call' || op === 'optionalCall') { value = fn((...args) => value.call(lastAccessLHS, ...args)); lastAccessLHS = undefined; } } return value; }const { HTMLElement, TextNode } = dist;
 const {
 	formatDifference: formatDifference$1,
 	makeUniqueLabelFn: makeUniqueLabelFn$1,
@@ -8233,6 +8233,7 @@ const statusClass = "status";
 
 const getId = (id) => `tachometer-reporter-action--${id}`;
 const getBenchmarkSectionId = (id) => getId(`results-${id}`);
+const getSummaryListId = () => getId("summaries");
 const getSummaryId = (id) => getId(`summary-${id}`);
 
 /**
@@ -8426,15 +8427,51 @@ function Summary({
 	workflowRun,
 	isRunning,
 }) {
-	/** @type {ReturnType<typeof formatDifference>} */
-	let diff;
-	if (Array.isArray(benchmarks) && benchmarks.length) {
-		const baseIndex = benchmarks.findIndex((b) => b.version == baseBenchName);
-		const localResults = benchmarks.find((b) => b.version == prBenchName);
-		diff = formatDifference$1(localResults.differences[baseIndex]);
+	const benchLength = Array.isArray(benchmarks) ? benchmarks.length : -1;
+	let usesDefaults = false;
+	let showDiff = false;
+
+	/** @type {JSX.Element} */
+	let summaryBody;
+
+	if (benchLength === 1) {
+		const text = runtimeConfidenceIntervalDimension$1.format(benchmarks[0]);
+		summaryBody = h('span', null, ": " , text);
+	} else if (benchLength > 1) {
+		// Show message with instructions how to customize summary if default values used
+		usesDefaults = !prBenchName || !baseBenchName;
+
+		let baseIndex;
+		if (baseBenchName) {
+			baseIndex = benchmarks.findIndex((b) => b.version == baseBenchName);
+		} else {
+			baseIndex = 0;
+			baseBenchName = _nullishCoalesce(_optionalChain([benchmarks, 'access', _ => _[0], 'optionalAccess', _2 => _2.version]), () => ( benchmarks[0].name));
+		}
+
+		let localResults;
+		if (prBenchName) {
+			localResults = benchmarks.find((b) => b.version == prBenchName);
+		} else {
+			let localIndex = (baseIndex + 1) % benchLength;
+			localResults = benchmarks[localIndex];
+			prBenchName = _nullishCoalesce(_optionalChain([localResults, 'optionalAccess', _3 => _3.version]), () => ( localResults.name));
+		}
+
+		const diff = formatDifference$1(localResults.differences[baseIndex]);
+
+		showDiff = true;
+		summaryBody = (
+			h('span', null, ": "
+ , diff.label, " "
+, h('em', null
+, diff.relative, " (" , diff.absolute, ")"
+)
+)
+		);
 	}
 
-	let status = isRunning ? (
+	const status = isRunning ? (
 		h(SummaryStatus, { workflowRun: workflowRun, icon: true,} )
 	) : null;
 
@@ -8442,14 +8479,22 @@ function Summary({
 		h('div', { id: getSummaryId(reportId),}
 , h('span', { class: statusClass,}, status)
 , title
-, diff && (
-				h('span', null, ": "
- , diff.label, " "
-, h('em', null
-, diff.relative, " (" , diff.absolute, ")"
-)
-)
-			)
+, summaryBody
+, showDiff && [
+				h('br', null ),
+				h('sup', null
+, prBenchName, " vs "  , baseBenchName
+, usesDefaults && [
+						" ",
+						h('a', {
+							href: "https://github.com/andrewiggins/tachometer-reporter-action/blob/master/README.md#summary",
+							target: "_blank",}
+						, "Customize summary"
+
+),
+					]
+),
+			]
 )
 	);
 }
@@ -8461,17 +8506,10 @@ function NewCommentBody({ inputs, report }) {
 	return (
 		h('div', null
 , h('h2', null, "📊 Tachometer Benchmark Results"   )
-, report.summary && [
-				h('h3', null, "Summary"),
-				h('p', null
-, h('sub', null
-, report.prBenchName, " vs "  , report.baseBenchName
-)
-),
-				h('ul', { id: getId("summaries"),}
+, h('h3', null, "Summary")
+, h('ul', { id: getSummaryListId(),}
 , h('li', null, report.summary)
-),
-			]
+)
 , h('h3', null, "Results")
 , h('div', { id: getId("results"),}
 , h(BenchmarkSection, { report: report, open: inputs.defaultOpen,}
@@ -8485,6 +8523,7 @@ function NewCommentBody({ inputs, report }) {
 var html$1 = {
 	h,
 	getSummaryId,
+	getSummaryListId,
 	getBenchmarkSectionId,
 	statusClass,
 	SummaryStatus,
@@ -8792,7 +8831,7 @@ var comments = {
 	postOrUpdateComment,
 };
 
-function _optionalChain(ops) { let lastAccessLHS = undefined; let value = ops[0]; let i = 1; while (i < ops.length) { const op = ops[i]; const fn = ops[i + 1]; i += 2; if ((op === 'optionalAccess' || op === 'optionalCall') && value == null) { return undefined; } if (op === 'access' || op === 'optionalAccess') { lastAccessLHS = value; value = fn(value); } else if (op === 'call' || op === 'optionalCall') { value = fn((...args) => value.call(lastAccessLHS, ...args)); lastAccessLHS = undefined; } } return value; }const { readFile } = fs.promises;
+function _optionalChain$1(ops) { let lastAccessLHS = undefined; let value = ops[0]; let i = 1; while (i < ops.length) { const op = ops[i]; const fn = ops[i + 1]; i += 2; if ((op === 'optionalAccess' || op === 'optionalCall') && value == null) { return undefined; } if (op === 'access' || op === 'optionalAccess') { lastAccessLHS = value; value = fn(value); } else if (op === 'call' || op === 'optionalCall') { value = fn((...args) => value.call(lastAccessLHS, ...args)); lastAccessLHS = undefined; } } return value; }const { readFile } = fs.promises;
 
 const { parse: parse$1 } = dist;
 const {
@@ -8849,7 +8888,7 @@ function buildReport(
 	//    - Allowing aliases
 	//    - replace `base-bench-name` with `branch@SHA`
 
-	const benchmarks = _optionalChain([tachResults, 'optionalAccess', _ => _.benchmarks]);
+	const benchmarks = _optionalChain$1([tachResults, 'optionalAccess', _ => _.benchmarks]);
 
 	let reportId;
 	let title;
@@ -8884,18 +8923,17 @@ function buildReport(
 				commitInfo: commitInfo,}
 			)
 		),
-		summary:
-			inputs.baseBenchName && inputs.prBenchName ? (
-				h$1(Summary$1, {
-					reportId: reportId,
-					title: title,
-					benchmarks: benchmarks,
-					prBenchName: inputs.prBenchName,
-					baseBenchName: inputs.baseBenchName,
-					workflowRun: workflowRun,
-					isRunning: isRunning,}
-				)
-			) : null,
+		summary: (
+			h$1(Summary$1, {
+				reportId: reportId,
+				title: title,
+				benchmarks: benchmarks,
+				prBenchName: inputs.prBenchName,
+				baseBenchName: inputs.baseBenchName,
+				workflowRun: workflowRun,
+				isRunning: isRunning,}
+			)
+		),
 	};
 }
 
@@ -8992,7 +9030,7 @@ async function reportTachRunning(
 		github,
 		createCommentContext$1(context, workflowRun),
 		(comment) => {
-			const body = getCommentBody(inputs, report, _optionalChain([comment, 'optionalAccess', _2 => _2.body]));
+			const body = getCommentBody(inputs, report, _optionalChain$1([comment, 'optionalAccess', _2 => _2.body]));
 			logger.debug(
 				() => `${comment ? "Updated" : "New"} Comment Body: ${body}`
 			);
@@ -9003,9 +9041,9 @@ async function reportTachRunning(
 
 	return {
 		...report,
-		status: _optionalChain([report, 'access', _3 => _3.status, 'optionalAccess', _4 => _4.toString, 'call', _5 => _5()]),
-		body: _optionalChain([report, 'access', _6 => _6.body, 'optionalAccess', _7 => _7.toString, 'call', _8 => _8()]),
-		summary: _optionalChain([report, 'access', _9 => _9.summary, 'optionalAccess', _10 => _10.toString, 'call', _11 => _11()]),
+		status: _optionalChain$1([report, 'access', _3 => _3.status, 'optionalAccess', _4 => _4.toString, 'call', _5 => _5()]),
+		body: _optionalChain$1([report, 'access', _6 => _6.body, 'optionalAccess', _7 => _7.toString, 'call', _8 => _8()]),
+		summary: _optionalChain$1([report, 'access', _9 => _9.summary, 'optionalAccess', _10 => _10.toString, 'call', _11 => _11()]),
 	};
 }
 
@@ -9043,7 +9081,7 @@ async function reportTachResults(
 		github,
 		createCommentContext$1(context, workflowRun),
 		(comment) => {
-			const body = getCommentBody(inputs, report, _optionalChain([comment, 'optionalAccess', _12 => _12.body]));
+			const body = getCommentBody(inputs, report, _optionalChain$1([comment, 'optionalAccess', _12 => _12.body]));
 			logger.debug(
 				() => `${comment ? "Updated" : "New"} Comment Body: ${body}`
 			);
@@ -9054,9 +9092,9 @@ async function reportTachResults(
 
 	return {
 		...report,
-		status: _optionalChain([report, 'access', _13 => _13.status, 'optionalAccess', _14 => _14.toString, 'call', _15 => _15()]),
-		body: _optionalChain([report, 'access', _16 => _16.body, 'optionalAccess', _17 => _17.toString, 'call', _18 => _18()]),
-		summary: _optionalChain([report, 'access', _19 => _19.summary, 'optionalAccess', _20 => _20.toString, 'call', _21 => _21()]),
+		status: _optionalChain$1([report, 'access', _13 => _13.status, 'optionalAccess', _14 => _14.toString, 'call', _15 => _15()]),
+		body: _optionalChain$1([report, 'access', _16 => _16.body, 'optionalAccess', _17 => _17.toString, 'call', _18 => _18()]),
+		summary: _optionalChain$1([report, 'access', _19 => _19.summary, 'optionalAccess', _20 => _20.toString, 'call', _21 => _21()]),
 	};
 }
 
@@ -9091,9 +9129,10 @@ function getLogger() {
 }
 
 /**
+ * @param {import('../global').Logger} logger
  * @returns {import('../global').Inputs}
  */
-function getInputs() {
+function getInputs(logger) {
 	const path = core.getInput("path", { required: true });
 	const reportId = core.getInput("report-id", { required: false });
 	const keepOldResults = core.getInput("keep-old-results", { required: false });
@@ -9110,6 +9149,18 @@ function getInputs() {
 		prBenchName: prBenchName ? prBenchName : null,
 		baseBenchName: baseBenchName ? baseBenchName : null,
 	};
+
+	if (inputs.prBenchName != null && inputs.baseBenchName == null) {
+		logger.warn(
+			`"pr-bench-name input provided without base-bench-name input. Please provide both.`
+		);
+		inputs.prBenchName = null;
+	} else if (inputs.prBenchName == null && inputs.baseBenchName != null) {
+		logger.warn(
+			`"base-bench-name input provided without pr-bench-name input. Please provide both.`
+		);
+		inputs.baseBenchName = null;
+	}
 
 	return inputs;
 }

@@ -90,18 +90,17 @@ function buildReport(
 				commitInfo={commitInfo}
 			/>
 		),
-		summary:
-			inputs.baseBenchName && inputs.prBenchName ? (
-				<Summary
-					reportId={reportId}
-					title={title}
-					benchmarks={benchmarks}
-					prBenchName={inputs.prBenchName}
-					baseBenchName={inputs.baseBenchName}
-					workflowRun={workflowRun}
-					isRunning={isRunning}
-				/>
-			) : null,
+		summary: (
+			<Summary
+				reportId={reportId}
+				title={title}
+				benchmarks={benchmarks}
+				prBenchName={inputs.prBenchName}
+				baseBenchName={inputs.baseBenchName}
+				workflowRun={workflowRun}
+				isRunning={isRunning}
+			/>
+		),
 	};
 }
 
