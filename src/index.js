@@ -198,7 +198,7 @@ async function reportTachRunning(
 		github,
 		context,
 		(comment) => {
-			const body = getCommentBody(inputs, report, comment.body, logger);
+			const body = getCommentBody(inputs, report, comment?.body, logger);
 			logger.debug(
 				() => `${comment ? "Updated" : "New"} Comment Body: ${body}`
 			);
@@ -249,7 +249,7 @@ async function reportTachResults(
 		github,
 		context,
 		(comment) => {
-			const body = getCommentBody(inputs, report, comment.body, logger);
+			const body = getCommentBody(inputs, report, comment?.body, logger);
 			logger.debug(
 				() => `${comment ? "Updated" : "New"} Comment Body: ${body}`
 			);

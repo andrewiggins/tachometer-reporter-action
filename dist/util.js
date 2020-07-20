@@ -8542,6 +8542,7 @@ async function readComment(github, commentInfo, matches, logger) {
 		}
 	} catch (e) {
 		logger.warn("Error trying to read comments: " + e.message);
+		logger.debug(() => e.toString());
 	}
 
 	return comment;
@@ -8605,6 +8606,7 @@ async function postOrUpdateComment(github, context, getCommentBody, logger) {
 			await writeComment(github, commentInfo, comment.id, updatedBody, logger);
 		} catch (e) {
 			logger.info(`Error updating comment: ${e.message}`);
+			logger.debug(() => e.toString());
 			comment = null;
 		}
 	}
@@ -8618,6 +8620,7 @@ async function postOrUpdateComment(github, context, getCommentBody, logger) {
 			});
 		} catch (e) {
 			logger.info(`Error creating comment: ${e.message}`);
+			logger.debug(() => e.toString());
 		}
 	}
 
@@ -8915,7 +8918,7 @@ async function reportTachRunning(
 		github,
 		context,
 		(comment) => {
-			const body = getCommentBody(inputs, report, comment.body);
+			const body = getCommentBody(inputs, report, _optionalChain([comment, 'optionalAccess', _2 => _2.body]));
 			logger.debug(
 				() => `${comment ? "Updated" : "New"} Comment Body: ${body}`
 			);
@@ -8926,9 +8929,9 @@ async function reportTachRunning(
 
 	return {
 		...report,
-		status: _optionalChain([report, 'access', _2 => _2.status, 'optionalAccess', _3 => _3.toString, 'call', _4 => _4()]),
-		body: _optionalChain([report, 'access', _5 => _5.body, 'optionalAccess', _6 => _6.toString, 'call', _7 => _7()]),
-		summary: _optionalChain([report, 'access', _8 => _8.summary, 'optionalAccess', _9 => _9.toString, 'call', _10 => _10()]),
+		status: _optionalChain([report, 'access', _3 => _3.status, 'optionalAccess', _4 => _4.toString, 'call', _5 => _5()]),
+		body: _optionalChain([report, 'access', _6 => _6.body, 'optionalAccess', _7 => _7.toString, 'call', _8 => _8()]),
+		summary: _optionalChain([report, 'access', _9 => _9.summary, 'optionalAccess', _10 => _10.toString, 'call', _11 => _11()]),
 	};
 }
 
@@ -8966,7 +8969,7 @@ async function reportTachResults(
 		github,
 		context,
 		(comment) => {
-			const body = getCommentBody(inputs, report, comment.body);
+			const body = getCommentBody(inputs, report, _optionalChain([comment, 'optionalAccess', _12 => _12.body]));
 			logger.debug(
 				() => `${comment ? "Updated" : "New"} Comment Body: ${body}`
 			);
@@ -8977,9 +8980,9 @@ async function reportTachResults(
 
 	return {
 		...report,
-		status: _optionalChain([report, 'access', _11 => _11.status, 'optionalAccess', _12 => _12.toString, 'call', _13 => _13()]),
-		body: _optionalChain([report, 'access', _14 => _14.body, 'optionalAccess', _15 => _15.toString, 'call', _16 => _16()]),
-		summary: _optionalChain([report, 'access', _17 => _17.summary, 'optionalAccess', _18 => _18.toString, 'call', _19 => _19()]),
+		status: _optionalChain([report, 'access', _13 => _13.status, 'optionalAccess', _14 => _14.toString, 'call', _15 => _15()]),
+		body: _optionalChain([report, 'access', _16 => _16.body, 'optionalAccess', _17 => _17.toString, 'call', _18 => _18()]),
+		summary: _optionalChain([report, 'access', _19 => _19.summary, 'optionalAccess', _20 => _20.toString, 'call', _21 => _21()]),
 	};
 }
 

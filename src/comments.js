@@ -76,6 +76,7 @@ async function readComment(github, commentInfo, matches, logger) {
 		}
 	} catch (e) {
 		logger.warn("Error trying to read comments: " + e.message);
+		logger.debug(() => e.toString());
 	}
 
 	return comment;
@@ -139,6 +140,7 @@ async function postOrUpdateComment(github, context, getCommentBody, logger) {
 			await writeComment(github, commentInfo, comment.id, updatedBody, logger);
 		} catch (e) {
 			logger.info(`Error updating comment: ${e.message}`);
+			logger.debug(() => e.toString());
 			comment = null;
 		}
 	}
@@ -152,6 +154,7 @@ async function postOrUpdateComment(github, context, getCommentBody, logger) {
 			});
 		} catch (e) {
 			logger.info(`Error creating comment: ${e.message}`);
+			logger.debug(() => e.toString());
 		}
 	}
 
