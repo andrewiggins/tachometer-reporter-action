@@ -2,7 +2,12 @@ const { readFile } = require("fs").promises;
 const { suite } = require("uvu");
 const assert = require("uvu/assert");
 const { parse, HTMLElement } = require("node-html-parser");
-const { testRoot, formatHtml, copyResults, assertFixture } = require("./utils");
+const {
+	testRoot,
+	formatHtml,
+	copyTestResults,
+	assertFixture,
+} = require("./utils");
 const { invokeBuildReport } = require("./invokeBuildReport");
 
 const buildReportSuite = suite("buildReport");
@@ -48,7 +53,7 @@ buildReportSuite("Generates reportId if not given", () => {
 });
 
 buildReportSuite("Summarizes one benchmark correctly", () => {
-	const singleResult = copyResults().benchmarks[0];
+	const singleResult = copyTestResults().benchmarks[0];
 	const results = { benchmarks: [singleResult] };
 
 	const report = invokeBuildReport({ results });
@@ -160,7 +165,7 @@ buildReportSuite(
 );
 
 buildReportSuite("Supports benchmarks with different names", () => {
-	const results = copyResults();
+	const results = copyTestResults();
 	const otherBenchName = "other-bench";
 
 	results.benchmarks[1].name = otherBenchName;
@@ -221,7 +226,7 @@ buildReportSuite("Supports benchmarks with different names", () => {
 });
 
 buildReportSuite("Lists all browsers used in details", () => {
-	const results = copyResults();
+	const results = copyTestResults();
 
 	results.benchmarks[0].browser = {
 		name: "firefox",
@@ -301,7 +306,7 @@ buildReportSuite("Lists all browsers used in details", () => {
 buildReportSuite(
 	"Supports benchmarks with different names and no version fields",
 	() => {
-		const results = copyResults();
+		const results = copyTestResults();
 		results.benchmarks = results.benchmarks.map((b, i) => ({
 			...b,
 			name: `Bench #${i}`,

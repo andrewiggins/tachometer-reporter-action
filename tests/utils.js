@@ -11,7 +11,7 @@ const testResultsPath = testRoot("results/test-results.json");
 const testResults = JSON.parse(readFileSync(testResultsPath, "utf8"));
 
 /** @type {() => import('../src/global').TachResults} */
-const copyResults = () => JSON.parse(JSON.stringify(testResults));
+const copyTestResults = () => JSON.parse(JSON.stringify(testResults));
 
 /** @type {(html: string) => string} */
 const formatHtml = (html) =>
@@ -37,7 +37,7 @@ const getSummaryId = (id) =>
 
 module.exports = {
 	testRoot,
-	copyResults,
+	copyTestResults,
 	formatHtml,
 	assertFixture,
 	getBenchmarkSectionId,

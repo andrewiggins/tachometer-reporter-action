@@ -1,4 +1,4 @@
-const { testRoot, copyResults } = require("./utils");
+const { testRoot, copyTestResults } = require("./utils");
 const { buildReport } = require("../lib/index");
 
 const prBenchName = "local-framework";
@@ -74,7 +74,7 @@ function invokeBuildReport({
 	commit = fakeCommit,
 	workflow = fakeWorkflowRun,
 	inputs = null,
-	results = copyResults(),
+	results = copyTestResults(),
 	isRunning = false,
 } = {}) {
 	const fullInputs = {

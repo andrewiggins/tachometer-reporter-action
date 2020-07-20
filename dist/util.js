@@ -8575,55 +8575,44 @@ function getCommentBody(inputs, report, commentBody, logger) {
 	const resultsId = getBenchmarkSectionId(report.id);
 	const results = commentHtml.querySelector(`#${resultsId}`);
 
-	const summaryStatus = summary.querySelector(`.${statusClass}`);
-	const resultStatus = results.querySelector(`.${statusClass}`);
+	const summaryStatus = _optionalChain([summary, 'optionalAccess', _4 => _4.querySelector, 'call', _5 => _5(`.${statusClass}`)]);
+	const resultStatus = _optionalChain([results, 'optionalAccess', _6 => _6.querySelector, 'call', _7 => _7(`.${statusClass}`)]);
 
 	// TODO: Consider inserting markup so the results are always ordered by
 	// report.workflowRun.jobIndex. Same jobIndex should be inserted at the end of
 	// all the same numbers to maintain order they report results (since steps
 	// inside of a job run sequentially).
 
-	if (report.isRunning) {
-		// If benchmarks are running, just update or add the status fields
-
-		if (summaryStatus) {
+	// Update summary
+	if (summary) {
+		if (report.isRunning) {
 			summaryStatus.set_content(report.status);
 		} else {
-			summaryContainer.appendChild(h('li', null, report.summary));
-		}
-
-		if (resultStatus) {
-			resultStatus.set_content(report.status);
-		} else {
-			resultsContainer.appendChild(
-				h(BenchmarkSection, { report: report, open: inputs.defaultOpen,}
-, report.body
-)
-			);
-		}
-	} else {
-		// Benchmark finished, update existing results or add new results
-		if (summary) {
 			// @ts-ignore - Can safely assume summary.parentNode is HTMLElement
 			summary.parentNode.exchangeChild(summary, report.summary);
-		} else {
-			summaryContainer.appendChild(h('li', null, report.summary));
 		}
+	} else {
+		summaryContainer.appendChild(h('li', null, report.summary));
+	}
 
-		if (results) {
+	// Update results entry
+	if (results) {
+		if (report.isRunning) {
+			resultStatus.set_content(report.status);
+		} else {
 			const resultEntry = results.querySelector(`.${resultEntryClass}`);
 			// @ts-ignore - Can safely assume results.parentNode is HTMLElement
 			resultEntry.parentNode.exchangeChild(resultEntry, report.body);
 
 			const resultStatus = results.querySelector(`.${statusClass}`);
 			resultStatus.set_content("");
-		} else {
-			resultsContainer.appendChild(
-				h(BenchmarkSection, { report: report, open: inputs.defaultOpen,}
+		}
+	} else {
+		resultsContainer.appendChild(
+			h(BenchmarkSection, { report: report, open: inputs.defaultOpen,}
 , report.body
 )
-			);
-		}
+		);
 	}
 
 	return commentHtml.toString();
