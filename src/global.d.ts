@@ -70,9 +70,9 @@ interface Report {
 	workflowRun: WorkflowRunInfo | null;
 	isRunning: boolean;
 	// results: BenchmarkResult[];
-	status: JSX.Element | string | null;
-	summary: JSX.Element | string | null;
-	body: JSX.Element | string;
+	status: JSX.Element | null;
+	summary: JSX.Element | null;
+	body: JSX.Element;
 }
 
 interface SerializedReport extends Report {

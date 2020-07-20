@@ -9,10 +9,13 @@ const {
 } = require("./tachometer");
 
 const statusClass = "status";
+const resultEntryClass = "result-entry";
 
 const getId = (id) => `tachometer-reporter-action--${id}`;
-const getBenchmarkSectionId = (id) => getId(`results-${id}`);
+const getResultsContainerId = () => getId("results");
 const getSummaryListId = () => getId("summaries");
+
+const getBenchmarkSectionId = (id) => getId(`results-${id}`);
 const getSummaryId = (id) => getId(`summary-${id}`);
 
 /**
@@ -75,7 +78,7 @@ function ResultsEntry({ reportId, benchmarks, workflowRun, commitInfo }) {
 
 	if (!Array.isArray(benchmarks)) {
 		return (
-			<div>
+			<div class={resultEntryClass}>
 				<SummaryStatus workflowRun={workflowRun} icon={false} />
 			</div>
 		);
@@ -103,7 +106,7 @@ function ResultsEntry({ reportId, benchmarks, workflowRun, commitInfo }) {
 	];
 
 	return (
-		<div>
+		<div class={resultEntryClass}>
 			<ul>
 				{listDimensions.map((dim) => {
 					const uniqueValues = new Set(benchmarks.map((b) => dim.format(b)));
@@ -317,7 +320,7 @@ function NewCommentBody({ inputs, report }) {
 				<li>{report.summary}</li>
 			</ul>
 			<h3>Results</h3>
-			<div id={getId("results")}>
+			<div id={getResultsContainerId()}>
 				<BenchmarkSection report={report} open={inputs.defaultOpen}>
 					{report.body}
 				</BenchmarkSection>
@@ -350,10 +353,12 @@ function Icon() {
 
 module.exports = {
 	h,
-	getSummaryId,
-	getSummaryListId,
-	getBenchmarkSectionId,
 	statusClass,
+	resultEntryClass,
+	getSummaryListId,
+	getResultsContainerId,
+	getSummaryId,
+	getBenchmarkSectionId,
 	SummaryStatus,
 	ResultsEntry,
 	BenchmarkSection,

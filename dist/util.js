@@ -8230,10 +8230,13 @@ const {
 } = tachometer;
 
 const statusClass = "status";
+const resultEntryClass = "result-entry";
 
 const getId = (id) => `tachometer-reporter-action--${id}`;
-const getBenchmarkSectionId = (id) => getId(`results-${id}`);
+const getResultsContainerId = () => getId("results");
 const getSummaryListId = () => getId("summaries");
+
+const getBenchmarkSectionId = (id) => getId(`results-${id}`);
 const getSummaryId = (id) => getId(`summary-${id}`);
 
 /**
@@ -8296,7 +8299,7 @@ function ResultsEntry({ reportId, benchmarks, workflowRun, commitInfo }) {
 
 	if (!Array.isArray(benchmarks)) {
 		return (
-			h('div', null
+			h('div', { class: resultEntryClass,}
 , h(SummaryStatus, { workflowRun: workflowRun, icon: false,} )
 )
 		);
@@ -8324,7 +8327,7 @@ function ResultsEntry({ reportId, benchmarks, workflowRun, commitInfo }) {
 	];
 
 	return (
-		h('div', null
+		h('div', { class: resultEntryClass,}
 , h('ul', null
 , listDimensions.map((dim) => {
 					const uniqueValues = new Set(benchmarks.map((b) => dim.format(b)));
@@ -8538,7 +8541,7 @@ function NewCommentBody({ inputs, report }) {
 , h('li', null, report.summary)
 )
 , h('h3', null, "Results")
-, h('div', { id: getId("results"),}
+, h('div', { id: getResultsContainerId(),}
 , h(BenchmarkSection, { report: report, open: inputs.defaultOpen,}
 , report.body
 )
@@ -8549,10 +8552,12 @@ function NewCommentBody({ inputs, report }) {
 
 var html$1 = {
 	h,
-	getSummaryId,
-	getSummaryListId,
-	getBenchmarkSectionId,
 	statusClass,
+	resultEntryClass,
+	getSummaryListId,
+	getResultsContainerId,
+	getSummaryId,
+	getBenchmarkSectionId,
 	SummaryStatus,
 	ResultsEntry,
 	BenchmarkSection,
@@ -8985,12 +8990,17 @@ function _optionalChain$1(ops) { let lastAccessLHS = undefined; let value = ops[
 const { parse: parse$1 } = dist;
 const {
 	h: h$1,
+	statusClass: statusClass$1,
+	resultEntryClass: resultEntryClass$1,
+	NewCommentBody: NewCommentBody$1,
 	Summary: Summary$1,
 	SummaryStatus: SummaryStatus$1,
 	ResultsEntry: ResultsEntry$1,
+	BenchmarkSection: BenchmarkSection$1,
+	getSummaryListId: getSummaryListId$1,
 	getSummaryId: getSummaryId$1,
+	getResultsContainerId: getResultsContainerId$1,
 	getBenchmarkSectionId: getBenchmarkSectionId$1,
-	NewCommentBody: NewCommentBody$1,
 } = html$1;
 const { getWorkflowRunInfo: getWorkflowRunInfo$1, getCommit: getCommit$1 } = github$1;
 const { createCommentContext: createCommentContext$1, postOrUpdateComment: postOrUpdateComment$1 } = comments;
@@ -9094,38 +9104,75 @@ function buildReport(
  * @returns {string}
  */
 function getCommentBody(inputs, report, commentBody, logger) {
-	/** @type {JSX.Element} */
-	let result;
-
 	if (!commentBody) {
-		result = h$1(NewCommentBody$1, { report: report, inputs: inputs,} );
-	} else if (report.isRunning) {
-		// If report is running, just update the status fields
-		const commentHtml = parse$1(commentBody);
+		const newHtml = h$1(NewCommentBody$1, { report: report, inputs: inputs,} );
+		return newHtml.toString();
+	}
 
-		const summaryId = getSummaryId$1(report.id);
-		const summaryStatus = commentHtml.querySelector(`#${summaryId} .status`);
+	const commentHtml = parse$1(commentBody);
+	const summaryContainer = commentHtml.querySelector(`#${getSummaryListId$1()}`);
+	const resultsContainer = commentHtml.querySelector(
+		`#${getResultsContainerId$1()}`
+	);
 
-		const bodyId = getBenchmarkSectionId$1(report.id);
-		const bodyStatus = commentHtml.querySelector(`#${bodyId} .status`);
+	const summaryId = getSummaryId$1(report.id);
+	const summary = commentHtml.querySelector(`#${summaryId}`);
 
-		if (bodyStatus && summaryStatus) {
+	const resultsId = getBenchmarkSectionId$1(report.id);
+	const results = commentHtml.querySelector(`#${resultsId}`);
+
+	const summaryStatus = summary.querySelector(`.${statusClass$1}`);
+	const resultStatus = results.querySelector(`.${statusClass$1}`);
+
+	// TODO: Consider inserting markup so the results are always ordered by
+	// report.workflowRun.jobIndex. Same jobIndex should be inserted at the end of
+	// all the same numbers to maintain order they report results (since steps
+	// inside of a job run sequentially).
+
+	if (report.isRunning) {
+		// If benchmarks are running, just update or add the status fields
+
+		if (summaryStatus) {
 			summaryStatus.set_content(report.status);
-			bodyStatus.set_content(report.status);
+		} else {
+			summaryContainer.appendChild(h$1('li', null, report.summary));
 		}
 
-		// If bodyStatus or summaryStatus doesn't exist, leave comment unmodified
-		result = commentHtml;
+		if (resultStatus) {
+			resultStatus.set_content(report.status);
+		} else {
+			resultsContainer.appendChild(
+				h$1(BenchmarkSection$1, { report: report, open: inputs.defaultOpen,}
+, report.body
+)
+			);
+		}
+	} else {
+		// Benchmark finished, update existing results or add new results
+		if (summary) {
+			// @ts-ignore - Can safely assume summary.parentNode is HTMLElement
+			summary.parentNode.exchangeChild(summary, report.summary);
+		} else {
+			summaryContainer.appendChild(h$1('li', null, report.summary));
+		}
+
+		if (results) {
+			const resultEntry = results.querySelector(`.${resultEntryClass$1}`);
+			// @ts-ignore - Can safely assume results.parentNode is HTMLElement
+			resultEntry.parentNode.exchangeChild(resultEntry, report.body);
+
+			const resultStatus = results.querySelector(`.${statusClass$1}`);
+			resultStatus.set_content("");
+		} else {
+			resultsContainer.appendChild(
+				h$1(BenchmarkSection$1, { report: report, open: inputs.defaultOpen,}
+, report.body
+)
+			);
+		}
 	}
 
-	if (!result) {
-		// If something failed above, just generate a new comment
-
-		// TODO: Update comment body with new results to support multiple benchmarks
-		result = h$1(NewCommentBody$1, { report: report, inputs: inputs,} );
-	}
-
-	return result.toString();
+	return commentHtml.toString();
 }
 
 /** @type {import('./global').Logger} */

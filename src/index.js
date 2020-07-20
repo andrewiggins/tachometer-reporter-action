@@ -3,12 +3,17 @@ const crypto = require("crypto");
 const { parse } = require("node-html-parser");
 const {
 	h,
+	statusClass,
+	resultEntryClass,
+	NewCommentBody,
 	Summary,
 	SummaryStatus,
 	ResultsEntry,
+	BenchmarkSection,
+	getSummaryListId,
 	getSummaryId,
+	getResultsContainerId,
 	getBenchmarkSectionId,
-	NewCommentBody,
 } = require("./utils/html");
 const { getWorkflowRunInfo, getCommit } = require("./utils/github");
 const { createCommentContext, postOrUpdateComment } = require("./comments");
@@ -112,38 +117,75 @@ function buildReport(
  * @returns {string}
  */
 function getCommentBody(inputs, report, commentBody, logger) {
-	/** @type {JSX.Element} */
-	let result;
-
 	if (!commentBody) {
-		result = <NewCommentBody report={report} inputs={inputs} />;
-	} else if (report.isRunning) {
-		// If report is running, just update the status fields
-		const commentHtml = parse(commentBody);
+		const newHtml = <NewCommentBody report={report} inputs={inputs} />;
+		return newHtml.toString();
+	}
 
-		const summaryId = getSummaryId(report.id);
-		const summaryStatus = commentHtml.querySelector(`#${summaryId} .status`);
+	const commentHtml = parse(commentBody);
+	const summaryContainer = commentHtml.querySelector(`#${getSummaryListId()}`);
+	const resultsContainer = commentHtml.querySelector(
+		`#${getResultsContainerId()}`
+	);
 
-		const bodyId = getBenchmarkSectionId(report.id);
-		const bodyStatus = commentHtml.querySelector(`#${bodyId} .status`);
+	const summaryId = getSummaryId(report.id);
+	const summary = commentHtml.querySelector(`#${summaryId}`);
 
-		if (bodyStatus && summaryStatus) {
+	const resultsId = getBenchmarkSectionId(report.id);
+	const results = commentHtml.querySelector(`#${resultsId}`);
+
+	const summaryStatus = summary.querySelector(`.${statusClass}`);
+	const resultStatus = results.querySelector(`.${statusClass}`);
+
+	// TODO: Consider inserting markup so the results are always ordered by
+	// report.workflowRun.jobIndex. Same jobIndex should be inserted at the end of
+	// all the same numbers to maintain order they report results (since steps
+	// inside of a job run sequentially).
+
+	if (report.isRunning) {
+		// If benchmarks are running, just update or add the status fields
+
+		if (summaryStatus) {
 			summaryStatus.set_content(report.status);
-			bodyStatus.set_content(report.status);
+		} else {
+			summaryContainer.appendChild(<li>{report.summary}</li>);
 		}
 
-		// If bodyStatus or summaryStatus doesn't exist, leave comment unmodified
-		result = commentHtml;
+		if (resultStatus) {
+			resultStatus.set_content(report.status);
+		} else {
+			resultsContainer.appendChild(
+				<BenchmarkSection report={report} open={inputs.defaultOpen}>
+					{report.body}
+				</BenchmarkSection>
+			);
+		}
+	} else {
+		// Benchmark finished, update existing results or add new results
+		if (summary) {
+			// @ts-ignore - Can safely assume summary.parentNode is HTMLElement
+			summary.parentNode.exchangeChild(summary, report.summary);
+		} else {
+			summaryContainer.appendChild(<li>{report.summary}</li>);
+		}
+
+		if (results) {
+			const resultEntry = results.querySelector(`.${resultEntryClass}`);
+			// @ts-ignore - Can safely assume results.parentNode is HTMLElement
+			resultEntry.parentNode.exchangeChild(resultEntry, report.body);
+
+			const resultStatus = results.querySelector(`.${statusClass}`);
+			resultStatus.set_content("");
+		} else {
+			resultsContainer.appendChild(
+				<BenchmarkSection report={report} open={inputs.defaultOpen}>
+					{report.body}
+				</BenchmarkSection>
+			);
+		}
 	}
 
-	if (!result) {
-		// If something failed above, just generate a new comment
-
-		// TODO: Update comment body with new results to support multiple benchmarks
-		result = <NewCommentBody report={report} inputs={inputs} />;
-	}
-
-	return result.toString();
+	return commentHtml.toString();
 }
 
 /** @type {import('./global').Logger} */
