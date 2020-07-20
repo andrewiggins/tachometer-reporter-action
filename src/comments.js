@@ -10,24 +10,11 @@ const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
  * @returns {Promise<import('./global').CommentData>}
  */
 async function initiateCommentLock(github, context, getInitialBody, logger) {
-	// TODO: Consider adding an initiateCommentLock function which finds all
-	// workflow runs associated with this PR and searches for runs whose jobs
-	// contain this action. ~~The job whose run_id and job/step index is first
-	// creates a new comment. All others wait for comment to be created.~~ Can't
-	// determine which other jobs use tachometer-reporter-action so this doesn't
-	// work. Instead we are going to use the index of the job in the run to
-	// deterministically delay the potentially write of the comment so hopefully
-	// only the first job writes the comment.
-	//
-	// Creating a comment per workflow def should simplify this a bit since you'll
-	// only have to search the jobs for the current workflow instead of trying to
-	// find all workflow runs. Would mean the footer and comment matcher needs to
-	// be customized per workflow with the workflow name.
-	//
-	// Don't worry about steps since steps must run sequentially. Multiple
-	// reporter actions in one job can't parallelly try to initiate comment lock.
-
 	logger.startGroup("Initiating comment lock...");
+
+	// Use the index of the job in the run to deterministically delay the
+	// potentially write of the comment so hopefully only the first job writes the
+	// comment.
 	let delay = context.delayFactor * 100; // (factor * 100) milliseconds
 
 	/** @type {import('./global').CommentData} */
@@ -39,8 +26,8 @@ async function initiateCommentLock(github, context, getInitialBody, logger) {
 		comment = await readComment(github, context, logger);
 
 		if (!comment) {
-			// TODO: Consider going ahead and adding a lock for this job to the
-			// comment now since this job is creating the comment.
+			// TODO: Consider adding the lock text identifying this job has having the
+			// lock this job is creating the comment.
 
 			logger.info("After delay, comment not found. Creating comment...");
 			comment = await createComment(
@@ -220,11 +207,8 @@ async function postOrUpdateComment(github, context, getCommentBody, logger) {
 	// logger.startGroup(`Updating PR comment:`);
 	logger.info(`Updating PR comment:`);
 
-	// TODO: Need to get writer id to identify this run as having the lock
-
-	// TODO: How will getCommentBody handle if the comment already exists but with
-	// just the lock metadata? Perhaps acquireCommentLock returns if it created
-	// the comment? Perhaps initiateCommentLock takes an initial template?
+	// TODO: Need to get writer id to identify this run as having the lock. Would
+	// workflow_id + run_id + job_id suffice?
 
 	let comment = await acquireCommentLock(
 		github,
@@ -238,7 +222,7 @@ async function postOrUpdateComment(github, context, getCommentBody, logger) {
 
 		try {
 			// TODO: Consider checking if last write was by a workflow whose run
-			// number is great that ours, meaning we are out-of-date and should do
+			// number is greater than ours, meaning we are out-of-date and should do
 			// nothing. Perhaps pass a metadata string into getCommentBody so it can
 			// put it in its DOM
 
