@@ -38,6 +38,7 @@ interface CommentContext {
 	footer: string;
 	footerRe: RegExp;
 	matches(comment: CommentData): boolean;
+	delayFactor: number;
 }
 
 interface WorkflowRunInfo {

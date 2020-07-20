@@ -196,13 +196,7 @@ async function reportTachRunning(
 	await postOrUpdateComment(
 		github,
 		createCommentContext(context, workflowRun),
-		(comment) => {
-			const body = getCommentBody(inputs, report, comment?.body, logger);
-			logger.debug(
-				() => `${comment ? "Updated" : "New"} Comment Body: ${body}`
-			);
-			return body;
-		},
+		(comment) => getCommentBody(inputs, report, comment?.body, logger),
 		logger
 	);
 
@@ -247,13 +241,7 @@ async function reportTachResults(
 	await postOrUpdateComment(
 		github,
 		createCommentContext(context, workflowRun),
-		(comment) => {
-			const body = getCommentBody(inputs, report, comment?.body, logger);
-			logger.debug(
-				() => `${comment ? "Updated" : "New"} Comment Body: ${body}`
-			);
-			return body;
-		},
+		(comment) => getCommentBody(inputs, report, comment?.body, logger),
 		logger
 	);
 
