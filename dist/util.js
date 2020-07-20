@@ -8644,7 +8644,7 @@ async function postOrUpdateComment(github, context, getCommentBody, logger) {
  * @returns {import('./global').CommentContext}
  */
 function createCommentContext(context, workflowInfo) {
-	const footer = `\n\n<sub><a href="https://github.com/andrewiggins/tachometer-reporter-action">tachometer-reporter-action</a> for <a href="${workflowInfo.workflowHtmlUrl}">${workflowInfo.workflowName}</a></sub>`;
+	const footer = `\n\n<sub><a href="https://github.com/andrewiggins/tachometer-reporter-action" target="_blank">tachometer-reporter-action</a> for <a href="${workflowInfo.workflowRunsHtmlUrl}" target="_blank">${workflowInfo.workflowName}</a></sub>`;
 	const footerRe = new RegExp(escapeStringRegexp(footer.trim()));
 
 	return {
@@ -8711,7 +8711,11 @@ async function getWorkflowRunInfo(context, github, logger) {
 		})
 	).data;
 
-	const workflowHtmlUrl = workflow.html_url;
+	const e = encodeURIComponent;
+	const workflowSrcHtmlUrl = workflow.html_url;
+	const workflowRunsHtmlUrl = `https://github.com/${e(context.repo.owner)}/${e(
+		context.repo.repo
+	)}/actions?query=workflow%3A%22${e(workflow.name)}%22`;
 
 	/** @type {import('../global').WorkflowRunJob} */
 	let matchingJob;
@@ -8741,7 +8745,8 @@ async function getWorkflowRunInfo(context, github, logger) {
 
 		return {
 			workflowName,
-			workflowHtmlUrl,
+			workflowRunsHtmlUrl,
+			workflowSrcHtmlUrl,
 			workflowRunName,
 			jobIndex: null,
 			jobHtmlUrl: run.data.html_url,
@@ -8750,7 +8755,8 @@ async function getWorkflowRunInfo(context, github, logger) {
 
 	return {
 		workflowName,
-		workflowHtmlUrl,
+		workflowRunsHtmlUrl,
+		workflowSrcHtmlUrl,
 		workflowRunName,
 		jobIndex,
 		jobHtmlUrl: matchingJob.html_url,

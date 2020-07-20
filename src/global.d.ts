@@ -41,7 +41,8 @@ interface CommentContext {
 
 interface WorkflowRunInfo {
 	workflowName: string;
-	workflowHtmlUrl: string;
+	workflowRunsHtmlUrl: string;
+	workflowSrcHtmlUrl: string;
 	workflowRunName: string;
 	jobIndex: number | null;
 	jobHtmlUrl: string;

@@ -46,7 +46,11 @@ async function getWorkflowRunInfo(context, github, logger) {
 		})
 	).data;
 
-	const workflowHtmlUrl = workflow.html_url;
+	const e = encodeURIComponent;
+	const workflowSrcHtmlUrl = workflow.html_url;
+	const workflowRunsHtmlUrl = `https://github.com/${e(context.repo.owner)}/${e(
+		context.repo.repo
+	)}/actions?query=workflow%3A%22${e(workflow.name)}%22`;
 
 	/** @type {import('../global').WorkflowRunJob} */
 	let matchingJob;
@@ -76,7 +80,8 @@ async function getWorkflowRunInfo(context, github, logger) {
 
 		return {
 			workflowName,
-			workflowHtmlUrl,
+			workflowRunsHtmlUrl,
+			workflowSrcHtmlUrl,
 			workflowRunName,
 			jobIndex: null,
 			jobHtmlUrl: run.data.html_url,
@@ -85,7 +90,8 @@ async function getWorkflowRunInfo(context, github, logger) {
 
 	return {
 		workflowName,
-		workflowHtmlUrl,
+		workflowRunsHtmlUrl,
+		workflowSrcHtmlUrl,
 		workflowRunName,
 		jobIndex,
 		jobHtmlUrl: matchingJob.html_url,

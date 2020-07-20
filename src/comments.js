@@ -180,7 +180,7 @@ async function postOrUpdateComment(github, context, getCommentBody, logger) {
  * @returns {import('./global').CommentContext}
  */
 function createCommentContext(context, workflowInfo) {
-	const footer = `\n\n<sub><a href="https://github.com/andrewiggins/tachometer-reporter-action">tachometer-reporter-action</a> for <a href="${workflowInfo.workflowHtmlUrl}">${workflowInfo.workflowName}</a></sub>`;
+	const footer = `\n\n<sub><a href="https://github.com/andrewiggins/tachometer-reporter-action" target="_blank">tachometer-reporter-action</a> for <a href="${workflowInfo.workflowRunsHtmlUrl}" target="_blank">${workflowInfo.workflowName}</a></sub>`;
 	const footerRe = new RegExp(escapeRe(footer.trim()));
 
 	return {
