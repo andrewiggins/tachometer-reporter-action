@@ -36,6 +36,7 @@ interface CommentContext {
 	issueNumber: number;
 	id: number | null;
 	footer: string;
+	footerRe: RegExp;
 	matches(comment: CommentData): boolean;
 }
 

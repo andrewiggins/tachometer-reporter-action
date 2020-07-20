@@ -8652,6 +8652,13 @@ async function readComment(github, context, logger) {
 
 		for (let i = comments.length; i--; ) {
 			const c = comments[i];
+
+			logger.debug(() => {
+				return `Testing if "${context.footerRe.toString()}" matches the following by "${
+					c.user.type
+				}":\n${c.body}\n\n`;
+			});
+
 			if (context.matches(c)) {
 				comment = c;
 				logger.info(`Found comment! (id: ${c.id})`);
@@ -8773,6 +8780,7 @@ function createCommentContext(context, workflowInfo) {
 		issueNumber: context.issue.number,
 		id: null,
 		footer,
+		footerRe,
 		matches(c) {
 			return c.user.type === "Bot" && footerRe.test(c.body);
 		},
