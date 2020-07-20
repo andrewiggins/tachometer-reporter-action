@@ -8494,22 +8494,13 @@ var html$1 = {
 	NewCommentBody,
 };
 
-/** @type {(c: import('./global').CommentData) => boolean} */
-const commentMatcher = (c) =>
-	c.user.type === "Bot" &&
-	/<sub>[\s\n]*tachometer-reporter-action/.test(c.body);
-
-const footer = `\n\n<a href="https://github.com/andrewiggins/tachometer-reporter-action"><sub>tachometer-reporter-action</sub></a>`;
-
 /**
  * Read a comment matching with matching regex
- * @typedef {{ owner: string; repo: string; issue_number: number; }} CommentInfo
  * @param {import('./global').GitHubActionClient} github
- * @param {CommentInfo} commentInfo
- * @param {(c: import('./global').CommentData) => boolean} matches
+ * @param {import('./global').CommentContext} context
  * @param {import('./global').Logger} logger
  */
-async function readComment(github, commentInfo, matches, logger) {
+async function readComment(github, context, logger) {
 	/** @type {import('./global').CommentData} */
 	let comment;
 
@@ -8518,10 +8509,17 @@ async function readComment(github, commentInfo, matches, logger) {
 
 		// Assuming comment is in the first page of results for now...
 		// https://docs.github.com/en/rest/reference/issues#list-issue-comments
-		const comments = (await github.issues.listComments(commentInfo)).data;
+		const comments = (
+			await github.issues.listComments({
+				owner: context.owner,
+				repo: context.repo,
+				issue_number: context.issueNumber,
+			})
+		).data;
+
 		for (let i = comments.length; i--; ) {
 			const c = comments[i];
-			if (matches(c)) {
+			if (context.matches(c)) {
 				comment = c;
 				logger.info(`Found comment! (id: ${c.id})`);
 				logger.debug(() => `Found comment: ${JSON.stringify(c, null, 2)}`);
@@ -8538,17 +8536,16 @@ async function readComment(github, commentInfo, matches, logger) {
 
 /**
  * @param {import('./global').GitHubActionClient} github
- * @param {CommentInfo} commentInfo
- * @param {number} commentId
+ * @param {import('./global').CommentContext} context
  * @param {string} body
  * @param {import('./global').Logger} logger
  */
-async function writeComment(github, commentInfo, commentId, body, logger) {
-	logger.info(`Writing comment body (id: ${commentId})...`);
+async function updateComment(github, context, body, logger) {
+	logger.info(`Writing comment body (id: ${context.id})...`);
 	await github.issues.updateComment({
-		repo: commentInfo.repo,
-		owner: commentInfo.owner,
-		comment_id: commentId,
+		repo: context.repo,
+		owner: context.owner,
+		comment_id: context.id,
 		body,
 	});
 
@@ -8556,18 +8553,29 @@ async function writeComment(github, commentInfo, commentId, body, logger) {
 }
 
 /**
+ * @param {import('./global').GitHubActionClient} github
+ * @param {import('./global').CommentContext} context
+ * @param {string} body
+ * @param {import('./global').Logger} logger
+ */
+async function createComment(github, context, body, logger) {
+	logger.info("Creating new comment...");
+	await github.issues.createComment({
+		owner: context.owner,
+		repo: context.repo,
+		issue_number: context.issueNumber,
+		body,
+	});
+}
+
+/**
  * Create a PR comment, or update one if it already exists
  * @param {import('./global').GitHubActionClient} github
- * @param {import('./global').GitHubActionContext} context
+ * @param {import('./global').CommentContext} context
  * @param {(comment: import('./global').CommentData | null) => string} getCommentBody
  * @param {import('./global').Logger} logger
  */
 async function postOrUpdateComment(github, context, getCommentBody, logger) {
-	const commentInfo = {
-		...context.repo,
-		issue_number: context.issue.number,
-	};
-
 	// logger.startGroup(`Updating PR comment:`);
 	logger.info(`Updating PR comment:`);
 
@@ -8579,19 +8587,21 @@ async function postOrUpdateComment(github, context, getCommentBody, logger) {
 
 	// TODO: Replace with acquireCommentLock. Should acquireCommentLock return the
 	// comment once it is locked so we don't need to read it again?
-	let comment = await readComment(github, commentInfo, commentMatcher, logger);
+	let comment = await readComment(github, context, logger);
 
 	if (comment) {
+		context.id = comment.id;
+
 		try {
 			let updatedBody = getCommentBody(comment);
-			if (!updatedBody.includes(footer)) {
-				updatedBody = updatedBody + footer;
+			if (!updatedBody.includes(context.footer)) {
+				updatedBody = updatedBody + context.footer;
 			}
 
 			// TODO: Write `removeCommentLock` function to remove the comment lock
 			// from updatedBody
 
-			await writeComment(github, commentInfo, comment.id, updatedBody, logger);
+			await updateComment(github, context, updatedBody, logger);
 		} catch (e) {
 			logger.info(`Error updating comment: ${e.message}`);
 			logger.debug(() => e.toString());
@@ -8601,11 +8611,12 @@ async function postOrUpdateComment(github, context, getCommentBody, logger) {
 
 	if (!comment) {
 		try {
-			logger.info(`Creating new comment...`);
-			await github.issues.createComment({
-				...commentInfo,
-				body: getCommentBody(null) + footer,
-			});
+			await createComment(
+				github,
+				context,
+				getCommentBody(null) + context.footer,
+				logger
+			);
 		} catch (e) {
 			logger.info(`Error creating comment: ${e.message}`);
 			logger.debug(() => e.toString());
@@ -8615,7 +8626,30 @@ async function postOrUpdateComment(github, context, getCommentBody, logger) {
 	// logger.endGroup();
 }
 
+/**
+ * @param {import('./global').GitHubActionContext} context
+ * @param {import('./global').WorkflowRunInfo} workflowInfo
+ * @returns {import('./global').CommentContext}
+ */
+function createCommentContext(context, workflowInfo) {
+	// const footer = `\n\n<sub><a href="https://github.com/andrewiggins/tachometer-reporter-action">tachometer-reporter-action</a> for <a href="${workflowInfo.workflowHtmlUrl}">${workflowInfo.workflowName}</a></sub>`;
+	// const footerRe = new RegExp(escapeRe(footer.trim()));
+
+	const footer = `\n\n<a href="https://github.com/andrewiggins/tachometer-reporter-action"><sub>tachometer-reporter-action</sub></a>`;
+	const footerRe = /<sub>[\s\n]*tachometer-reporter-action/;
+	return {
+		...context.repo,
+		issueNumber: context.issue.number,
+		id: null,
+		footer,
+		matches(c) {
+			return c.user.type === "Bot" && footerRe.test(c.body);
+		},
+	};
+}
+
 var comments = {
+	createCommentContext,
 	postOrUpdateComment,
 };
 
@@ -8727,7 +8761,7 @@ const {
 	getBenchmarkSectionId: getBenchmarkSectionId$1,
 	NewCommentBody: NewCommentBody$1,
 } = html$1;
-const { postOrUpdateComment: postOrUpdateComment$1 } = comments;
+const { createCommentContext: createCommentContext$1, postOrUpdateComment: postOrUpdateComment$1 } = comments;
 const { getWorkflowRunInfo: getWorkflowRunInfo$1, getCommit: getCommit$1 } = github$1;
 
 /**
@@ -8913,7 +8947,7 @@ async function reportTachRunning(
 
 	await postOrUpdateComment$1(
 		github,
-		context,
+		createCommentContext$1(context, workflowRun),
 		(comment) => {
 			const body = getCommentBody(inputs, report, _optionalChain([comment, 'optionalAccess', _2 => _2.body]));
 			logger.debug(
@@ -8964,7 +8998,7 @@ async function reportTachResults(
 
 	await postOrUpdateComment$1(
 		github,
-		context,
+		createCommentContext$1(context, workflowRun),
 		(comment) => {
 			const body = getCommentBody(inputs, report, _optionalChain([comment, 'optionalAccess', _12 => _12.body]));
 			logger.debug(

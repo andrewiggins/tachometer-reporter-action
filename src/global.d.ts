@@ -30,10 +30,14 @@ interface CommitInfo extends Commit {
 	html_url: string;
 }
 
-// interface WorkflowRunData extends WorkflowRun {
-// 	workflow_name: string;
-// 	run_name: string;
-// }
+interface CommentContext {
+	owner: string;
+	repo: string;
+	issueNumber: number;
+	id: number | null;
+	footer: string;
+	matches(comment: CommentData): boolean;
+}
 
 interface WorkflowRunInfo {
 	jobIndex: number | null;

@@ -10,7 +10,7 @@ const {
 	getBenchmarkSectionId,
 	NewCommentBody,
 } = require("./html");
-const { postOrUpdateComment } = require("./comments");
+const { createCommentContext, postOrUpdateComment } = require("./comments");
 const { getWorkflowRunInfo, getCommit } = require("./utils/github");
 
 /**
@@ -196,7 +196,7 @@ async function reportTachRunning(
 
 	await postOrUpdateComment(
 		github,
-		context,
+		createCommentContext(context, workflowRun),
 		(comment) => {
 			const body = getCommentBody(inputs, report, comment?.body, logger);
 			logger.debug(
@@ -247,7 +247,7 @@ async function reportTachResults(
 
 	await postOrUpdateComment(
 		github,
-		context,
+		createCommentContext(context, workflowRun),
 		(comment) => {
 			const body = getCommentBody(inputs, report, comment?.body, logger);
 			logger.debug(
