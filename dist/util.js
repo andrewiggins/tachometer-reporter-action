@@ -7996,16 +7996,16 @@ var uaParser = createCommonjsModule(function (module, exports) {
 
 const { UAParser } = uaParser;
 
-// Utilities from Tachometer, adapted from: https://github.com/Polymer/tachometer/blob/ac0bc64e4521fb0ba9c78ceea0d382e55724be75/src/format.ts
+// Utilities from Tachometer, adapted from: https://github.com/Polymer/tachometer/blob/ff284b0329aa24249aa5ebce8bb009d88d0b057a/src/format.ts
 
 const lineBreak = "<br />";
 
 /**
- * @param {import('./global').BenchmarkResult[]} benchmarks
+ * @param {import('../global').BenchmarkResult[]} benchmarks
  */
 function makeDifferenceDimensions(labelFn, benchmarks) {
 	return benchmarks.map((b, i) => {
-		/** @type {import('./global').Dimension} */
+		/** @type {import('../global').Dimension} */
 		const dimension = {
 			label: `vs ${labelFn(b)}`,
 			format: (b) => {
@@ -8031,19 +8031,19 @@ function makeDifferenceDimensions(labelFn, benchmarks) {
 	});
 }
 
-/** @type {import("./global").Dimension} */
+/** @type {import("../global").Dimension} */
 const benchmarkDimension = {
 	label: "Benchmark",
 	format: (b) => b.name,
 };
 
-/** @type {import("./global").Dimension} */
+/** @type {import("../global").Dimension} */
 const versionDimension = {
 	label: "Version",
 	format: (b) => b.version,
 };
 
-/** @type {import("./global").Dimension} */
+/** @type {import("../global").Dimension} */
 const browserDimension = {
 	label: "Browser",
 	format: (b) => {
@@ -8066,19 +8066,19 @@ const browserDimension = {
 	},
 };
 
-/** @type {import("./global").Dimension} */
+/** @type {import("../global").Dimension} */
 const sampleSizeDimension = {
 	label: "Sample size",
 	format: (b) => b.samples.length.toString(),
 };
 
-/** @type {import("./global").Dimension} */
+/** @type {import("../global").Dimension} */
 const bytesSentDimension = {
 	label: "Bytes",
 	format: (b) => prettyBytes(b.bytesSent),
 };
 
-/** @type {import("./global").Dimension} */
+/** @type {import("../global").Dimension} */
 const runtimeConfidenceIntervalDimension = {
 	label: "Avg time",
 	format: (b) => formatConfidenceInterval(b.mean, milli),
@@ -8089,7 +8089,7 @@ const runtimeConfidenceIntervalDimension = {
 
 /**
  * Format a confidence interval as "[low, high]".
- * @param {import('./global').BenchmarkResult["mean"]} ci Confidence interval
+ * @param {import('../global').BenchmarkResult["mean"]} ci Confidence interval
  * @param {(n: number) => string} format
  * @returns {string}
  */
@@ -8117,7 +8117,7 @@ const colorizeSign = (n, format) => {
 };
 
 /**
- * @param {import('./global').BenchmarkResult["differences"][0]} difference
+ * @param {import('../global').BenchmarkResult["differences"][0]} difference
  * @returns {{ label: string; relative: string; absolute: string }}
  */
 function formatDifference({ absolute, percentChange: relative }) {
@@ -8161,8 +8161,8 @@ function milli(n) {
 }
 
 /**
- * @param {import('./global').ConfidenceInterval} ci
- * @returns {import('./global').ConfidenceInterval}
+ * @param {import('../global').ConfidenceInterval} ci
+ * @returns {import('../global').ConfidenceInterval}
  */
 function negate(ci) {
 	return {
@@ -8174,8 +8174,8 @@ function negate(ci) {
 /**
  * Create a function that will return the shortest unambiguous label for a
  * result, given the full array of results.
- * @param {import('./global').BenchmarkResult[]} results
- * @returns {(result: import('./global').BenchmarkResult) => string}
+ * @param {import('../global').BenchmarkResult[]} results
+ * @returns {(result: import('../global').BenchmarkResult) => string}
  */
 function makeUniqueLabelFn(results) {
 	const names = new Set();
@@ -8207,7 +8207,7 @@ function makeUniqueLabelFn(results) {
 	};
 }
 
-var tachometerUtils = {
+var tachometer = {
 	formatDifference,
 	makeUniqueLabelFn,
 	makeDifferenceDimensions,
@@ -8227,7 +8227,7 @@ const {
 	browserDimension: browserDimension$1,
 	sampleSizeDimension: sampleSizeDimension$1,
 	runtimeConfidenceIntervalDimension: runtimeConfidenceIntervalDimension$1,
-} = tachometerUtils;
+} = tachometer;
 
 const statusClass = "status";
 
@@ -8283,9 +8283,9 @@ function h(tag, attrs, ...children) {
 /**
  * @typedef ResultsEntryProps
  * @property {string} reportId
- * @property {import('./global').BenchmarkResult[]} benchmarks
- * @property {import('./global').WorkflowRunInfo} workflowRun
- * @property {import('./global').CommitInfo} commitInfo
+ * @property {import('../global').BenchmarkResult[]} benchmarks
+ * @property {import('../global').WorkflowRunInfo} workflowRun
+ * @property {import('../global').CommitInfo} commitInfo
  *
  * @param {ResultsEntryProps} props
  */
@@ -8311,7 +8311,7 @@ function ResultsEntry({ reportId, benchmarks, workflowRun, commitInfo }) {
 		sha
 	);
 
-	/** @type {import("./global").Dimension[]} */
+	/** @type {import("../global").Dimension[]} */
 	const tableDimensions = [
 		// Custom dimension that combines Tachometer's benchmark & version dimensions
 		{
@@ -8365,7 +8365,7 @@ function ResultsEntry({ reportId, benchmarks, workflowRun, commitInfo }) {
 
 /**
  * @typedef BenchmarkSectionProps
- * @property {import('./global').Report} report
+ * @property {import('../global').Report} report
  * @property {boolean} open
  * @property {JSX.Element | string} children
  *
@@ -8390,7 +8390,7 @@ function BenchmarkSection({ report, open, children }) {
 }
 
 /**
- * @param {{ workflowRun: import('./global').WorkflowRunInfo; icon: boolean; }} props
+ * @param {{ workflowRun: import('../global').WorkflowRunInfo; icon: boolean; }} props
  */
 function SummaryStatus({ workflowRun, icon }) {
 	const label = `Currently running in ${workflowRun.workflowRunName}…`;
@@ -8409,10 +8409,10 @@ function SummaryStatus({ workflowRun, icon }) {
  * @typedef SummaryProps
  * @property {string} reportId
  * @property {string} title
- * @property {import('./global').BenchmarkResult[]} benchmarks
+ * @property {import('../global').BenchmarkResult[]} benchmarks
  * @property {string} prBenchName
  * @property {string} baseBenchName
- * @property {import('./global').WorkflowRunInfo | null} workflowRun
+ * @property {import('../global').WorkflowRunInfo | null} workflowRun
  * @property {boolean} isRunning
  *
  * @param {SummaryProps} props
@@ -8470,7 +8470,7 @@ function SummaryList({ children }) {
 }
 
 /**
- * @param {{ inputs: import('./global').Inputs; report: import('./global').Report; }} props
+ * @param {{ inputs: import('../global').Inputs; report: import('../global').Report; }} props
  */
 function NewCommentBody({ inputs, report }) {
 	return (
@@ -8504,81 +8504,6 @@ var html$1 = {
 	Summary,
 	SummaryList,
 	NewCommentBody,
-};
-
-/**
- * Create a PR comment, or update one if it already exists
- * @param {import('./global').GitHubActionClient} github,
- * @param {import('./global').GitHubActionContext} context
- * @param {(comment: import('./global').CommentData | null) => string} getCommentBody
- * @param {import('./global').Logger} logger
- */
-async function postOrUpdateComment(github, context, getCommentBody, logger) {
-	const footer = `\n\n<a href="https://github.com/andrewiggins/tachometer-reporter-action"><sub>tachometer-reporter-action</sub></a>`;
-	const commentInfo = {
-		...context.repo,
-		issue_number: context.issue.number,
-	};
-
-	logger.startGroup(`Updating PR comment`);
-
-	/** @type {import('./global').CommentData} */
-	let comment;
-	try {
-		logger.info(`Looking for existing comment...`);
-		const comments = (await github.issues.listComments(commentInfo)).data;
-		for (let i = comments.length; i--; ) {
-			const c = comments[i];
-			if (
-				c.user.type === "Bot" &&
-				/<sub>[\s\n]*tachometer-reporter-action/.test(c.body)
-			) {
-				comment = c;
-				logger.info(`Found comment! (id: ${c.id})`);
-				logger.debug(() => `Found comment: ${JSON.stringify(c, null, 2)}`);
-				break;
-			}
-		}
-	} catch (e) {
-		logger.info("Error checking for previous comments: " + e.message);
-	}
-
-	if (comment) {
-		try {
-			logger.info(`Updating comment (id: ${comment.id})...`);
-			let updatedBody = getCommentBody(comment);
-			if (!updatedBody.includes(footer)) {
-				updatedBody = updatedBody + footer;
-			}
-
-			await github.issues.updateComment({
-				...context.repo,
-				comment_id: comment.id,
-				body: updatedBody,
-			});
-		} catch (e) {
-			logger.info(`Error updating comment: ${e.message}`);
-			comment = null;
-		}
-	}
-
-	if (!comment) {
-		try {
-			logger.info(`Creating new comment...`);
-			await github.issues.createComment({
-				...commentInfo,
-				body: getCommentBody(null) + footer,
-			});
-		} catch (e) {
-			logger.info(`Error creating comment: ${e.message}`);
-		}
-	}
-
-	logger.endGroup();
-}
-
-var comments = {
-	postOrUpdateComment,
 };
 
 /**
@@ -8658,6 +8583,81 @@ var github$1 = {
 	getCommit,
 };
 
+/**
+ * Create a PR comment, or update one if it already exists
+ * @param {import('./global').GitHubActionClient} github,
+ * @param {import('./global').GitHubActionContext} context
+ * @param {(comment: import('./global').CommentData | null) => string} getCommentBody
+ * @param {import('./global').Logger} logger
+ */
+async function postOrUpdateComment(github, context, getCommentBody, logger) {
+	const footer = `\n\n<a href="https://github.com/andrewiggins/tachometer-reporter-action"><sub>tachometer-reporter-action</sub></a>`;
+	const commentInfo = {
+		...context.repo,
+		issue_number: context.issue.number,
+	};
+
+	logger.startGroup(`Updating PR comment`);
+
+	/** @type {import('./global').CommentData} */
+	let comment;
+	try {
+		logger.info(`Looking for existing comment...`);
+		const comments = (await github.issues.listComments(commentInfo)).data;
+		for (let i = comments.length; i--; ) {
+			const c = comments[i];
+			if (
+				c.user.type === "Bot" &&
+				/<sub>[\s\n]*tachometer-reporter-action/.test(c.body)
+			) {
+				comment = c;
+				logger.info(`Found comment! (id: ${c.id})`);
+				logger.debug(() => `Found comment: ${JSON.stringify(c, null, 2)}`);
+				break;
+			}
+		}
+	} catch (e) {
+		logger.info("Error checking for previous comments: " + e.message);
+	}
+
+	if (comment) {
+		try {
+			logger.info(`Updating comment (id: ${comment.id})...`);
+			let updatedBody = getCommentBody(comment);
+			if (!updatedBody.includes(footer)) {
+				updatedBody = updatedBody + footer;
+			}
+
+			await github.issues.updateComment({
+				...context.repo,
+				comment_id: comment.id,
+				body: updatedBody,
+			});
+		} catch (e) {
+			logger.info(`Error updating comment: ${e.message}`);
+			comment = null;
+		}
+	}
+
+	if (!comment) {
+		try {
+			logger.info(`Creating new comment...`);
+			await github.issues.createComment({
+				...commentInfo,
+				body: getCommentBody(null) + footer,
+			});
+		} catch (e) {
+			logger.info(`Error creating comment: ${e.message}`);
+		}
+	}
+
+	logger.endGroup();
+}
+
+var comments = {
+	postOrUpdateComment,
+};
+
 function _optionalChain(ops) { let lastAccessLHS = undefined; let value = ops[0]; let i = 1; while (i < ops.length) { const op = ops[i]; const fn = ops[i + 1]; i += 2; if ((op === 'optionalAccess' || op === 'optionalCall') && value == null) { return undefined; } if (op === 'access' || op === 'optionalAccess') { lastAccessLHS = value; value = fn(value); } else if (op === 'call' || op === 'optionalCall') { value = fn((...args) => value.call(lastAccessLHS, ...args)); lastAccessLHS = undefined; } } return value; }const { readFile } = fs.promises;
 
 const { parse: parse$1 } = dist;
@@ -8670,8 +8670,8 @@ const {
 	getBenchmarkSectionId: getBenchmarkSectionId$1,
 	NewCommentBody: NewCommentBody$1,
 } = html$1;
-const { postOrUpdateComment: postOrUpdateComment$1 } = comments;
 const { getWorkflowRunInfo: getWorkflowRunInfo$1, getCommit: getCommit$1 } = github$1;
+const { postOrUpdateComment: postOrUpdateComment$1 } = comments;
 
 /**
  * @param {import('./global').BenchmarkResult[]} benchmarks

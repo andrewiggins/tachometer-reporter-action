@@ -6,7 +6,7 @@ const {
 	browserDimension,
 	sampleSizeDimension,
 	runtimeConfidenceIntervalDimension,
-} = require("./tachometer-utils");
+} = require("./tachometer");
 
 const statusClass = "status";
 
@@ -62,9 +62,9 @@ function h(tag, attrs, ...children) {
 /**
  * @typedef ResultsEntryProps
  * @property {string} reportId
- * @property {import('./global').BenchmarkResult[]} benchmarks
- * @property {import('./global').WorkflowRunInfo} workflowRun
- * @property {import('./global').CommitInfo} commitInfo
+ * @property {import('../global').BenchmarkResult[]} benchmarks
+ * @property {import('../global').WorkflowRunInfo} workflowRun
+ * @property {import('../global').CommitInfo} commitInfo
  *
  * @param {ResultsEntryProps} props
  */
@@ -90,7 +90,7 @@ function ResultsEntry({ reportId, benchmarks, workflowRun, commitInfo }) {
 		sha
 	);
 
-	/** @type {import("./global").Dimension[]} */
+	/** @type {import("../global").Dimension[]} */
 	const tableDimensions = [
 		// Custom dimension that combines Tachometer's benchmark & version dimensions
 		{
@@ -144,7 +144,7 @@ function ResultsEntry({ reportId, benchmarks, workflowRun, commitInfo }) {
 
 /**
  * @typedef BenchmarkSectionProps
- * @property {import('./global').Report} report
+ * @property {import('../global').Report} report
  * @property {boolean} open
  * @property {JSX.Element | string} children
  *
@@ -169,7 +169,7 @@ function BenchmarkSection({ report, open, children }) {
 }
 
 /**
- * @param {{ workflowRun: import('./global').WorkflowRunInfo; icon: boolean; }} props
+ * @param {{ workflowRun: import('../global').WorkflowRunInfo; icon: boolean; }} props
  */
 function SummaryStatus({ workflowRun, icon }) {
 	const label = `Currently running in ${workflowRun.workflowRunName}…`;
@@ -188,10 +188,10 @@ function SummaryStatus({ workflowRun, icon }) {
  * @typedef SummaryProps
  * @property {string} reportId
  * @property {string} title
- * @property {import('./global').BenchmarkResult[]} benchmarks
+ * @property {import('../global').BenchmarkResult[]} benchmarks
  * @property {string} prBenchName
  * @property {string} baseBenchName
- * @property {import('./global').WorkflowRunInfo | null} workflowRun
+ * @property {import('../global').WorkflowRunInfo | null} workflowRun
  * @property {boolean} isRunning
  *
  * @param {SummaryProps} props
@@ -249,7 +249,7 @@ function SummaryList({ children }) {
 }
 
 /**
- * @param {{ inputs: import('./global').Inputs; report: import('./global').Report; }} props
+ * @param {{ inputs: import('../global').Inputs; report: import('../global').Report; }} props
  */
 function NewCommentBody({ inputs, report }) {
 	return (
