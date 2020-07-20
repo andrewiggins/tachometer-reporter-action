@@ -8219,7 +8219,7 @@ var tachometer = {
 	runtimeConfidenceIntervalDimension,
 };
 
-function _nullishCoalesce(lhs, rhsFn) { if (lhs != null) { return lhs; } else { return rhsFn(); } } function _optionalChain(ops) { let lastAccessLHS = undefined; let value = ops[0]; let i = 1; while (i < ops.length) { const op = ops[i]; const fn = ops[i + 1]; i += 2; if ((op === 'optionalAccess' || op === 'optionalCall') && value == null) { return undefined; } if (op === 'access' || op === 'optionalAccess') { lastAccessLHS = value; value = fn(value); } else if (op === 'call' || op === 'optionalCall') { value = fn((...args) => value.call(lastAccessLHS, ...args)); lastAccessLHS = undefined; } } return value; }const { HTMLElement, TextNode } = dist;
+function _nullishCoalesce(lhs, rhsFn) { if (lhs != null) { return lhs; } else { return rhsFn(); } } function _optionalChain(ops) { let lastAccessLHS = undefined; let value = ops[0]; let i = 1; while (i < ops.length) { const op = ops[i]; const fn = ops[i + 1]; i += 2; if ((op === 'optionalAccess' || op === 'optionalCall') && value == null) { return undefined; } if (op === 'access' || op === 'optionalAccess') { lastAccessLHS = value; value = fn(value); } else if (op === 'call' || op === 'optionalCall') { value = fn((...args) => value.call(lastAccessLHS, ...args)); lastAccessLHS = undefined; } } return value; }const { parse: parse$1, HTMLElement, TextNode } = dist;
 const {
 	formatDifference: formatDifference$1,
 	makeUniqueLabelFn: makeUniqueLabelFn$1,
@@ -8287,9 +8287,9 @@ function h(tag, attrs, ...children) {
 /**
  * @typedef ResultsEntryProps
  * @property {string} reportId
- * @property {import('../global').BenchmarkResult[]} benchmarks
- * @property {import('../global').WorkflowRunInfo} workflowRun
- * @property {import('../global').CommitInfo} commitInfo
+ * @property {import('./global').BenchmarkResult[]} benchmarks
+ * @property {import('./global').WorkflowRunInfo} workflowRun
+ * @property {import('./global').CommitInfo} commitInfo
  *
  * @param {ResultsEntryProps} props
  */
@@ -8315,7 +8315,7 @@ function ResultsEntry({ reportId, benchmarks, workflowRun, commitInfo }) {
 		sha
 	);
 
-	/** @type {import("../global").Dimension[]} */
+	/** @type {import("./global").Dimension[]} */
 	const tableDimensions = [
 		// Custom dimension that combines Tachometer's benchmark & version dimensions
 		{
@@ -8369,7 +8369,7 @@ function ResultsEntry({ reportId, benchmarks, workflowRun, commitInfo }) {
 
 /**
  * @typedef BenchmarkSectionProps
- * @property {import('../global').Report} report
+ * @property {import('./global').Report} report
  * @property {boolean} open
  * @property {JSX.Element | string} children
  *
@@ -8394,7 +8394,7 @@ function BenchmarkSection({ report, open, children }) {
 }
 
 /**
- * @param {{ workflowRun: import('../global').WorkflowRunInfo; icon: boolean; }} props
+ * @param {{ workflowRun: import('./global').WorkflowRunInfo; icon: boolean; }} props
  */
 function SummaryStatus({ workflowRun, icon }) {
 	const label = `Currently running in ${workflowRun.workflowRunName}…`;
@@ -8413,10 +8413,10 @@ function SummaryStatus({ workflowRun, icon }) {
  * @typedef SummaryProps
  * @property {string} reportId
  * @property {string} title
- * @property {import('../global').BenchmarkResult[]} benchmarks
+ * @property {import('./global').BenchmarkResult[]} benchmarks
  * @property {string} prBenchName
  * @property {string} baseBenchName
- * @property {import('../global').WorkflowRunInfo | null} workflowRun
+ * @property {import('./global').WorkflowRunInfo | null} workflowRun
  * @property {boolean} isRunning
  *
  * @param {SummaryProps} props
@@ -8530,7 +8530,7 @@ function Summary({
 }
 
 /**
- * @param {{ inputs: import('../global').Inputs; report: import('../global').Report; }} props
+ * @param {{ inputs: import('./global').Inputs; report: import('./global').Report; }} props
  */
 function NewCommentBody({ inputs, report }) {
 	return (
@@ -8550,19 +8550,91 @@ function NewCommentBody({ inputs, report }) {
 	);
 }
 
-var html$1 = {
+/**
+ * @param {import('./global').Inputs} inputs
+ * @param {import('./global').Report} report
+ * @param {string} commentBody
+ * @param {import('./global').Logger} logger
+ * @returns {string}
+ */
+function getCommentBody(inputs, report, commentBody, logger) {
+	if (!commentBody) {
+		const newHtml = h(NewCommentBody, { report: report, inputs: inputs,} );
+		return newHtml.toString();
+	}
+
+	const commentHtml = parse$1(commentBody);
+	const summaryContainer = commentHtml.querySelector(`#${getSummaryListId()}`);
+	const resultsContainer = commentHtml.querySelector(
+		`#${getResultsContainerId()}`
+	);
+
+	const summaryId = getSummaryId(report.id);
+	const summary = commentHtml.querySelector(`#${summaryId}`);
+
+	const resultsId = getBenchmarkSectionId(report.id);
+	const results = commentHtml.querySelector(`#${resultsId}`);
+
+	const summaryStatus = summary.querySelector(`.${statusClass}`);
+	const resultStatus = results.querySelector(`.${statusClass}`);
+
+	// TODO: Consider inserting markup so the results are always ordered by
+	// report.workflowRun.jobIndex. Same jobIndex should be inserted at the end of
+	// all the same numbers to maintain order they report results (since steps
+	// inside of a job run sequentially).
+
+	if (report.isRunning) {
+		// If benchmarks are running, just update or add the status fields
+
+		if (summaryStatus) {
+			summaryStatus.set_content(report.status);
+		} else {
+			summaryContainer.appendChild(h('li', null, report.summary));
+		}
+
+		if (resultStatus) {
+			resultStatus.set_content(report.status);
+		} else {
+			resultsContainer.appendChild(
+				h(BenchmarkSection, { report: report, open: inputs.defaultOpen,}
+, report.body
+)
+			);
+		}
+	} else {
+		// Benchmark finished, update existing results or add new results
+		if (summary) {
+			// @ts-ignore - Can safely assume summary.parentNode is HTMLElement
+			summary.parentNode.exchangeChild(summary, report.summary);
+		} else {
+			summaryContainer.appendChild(h('li', null, report.summary));
+		}
+
+		if (results) {
+			const resultEntry = results.querySelector(`.${resultEntryClass}`);
+			// @ts-ignore - Can safely assume results.parentNode is HTMLElement
+			resultEntry.parentNode.exchangeChild(resultEntry, report.body);
+
+			const resultStatus = results.querySelector(`.${statusClass}`);
+			resultStatus.set_content("");
+		} else {
+			resultsContainer.appendChild(
+				h(BenchmarkSection, { report: report, open: inputs.defaultOpen,}
+, report.body
+)
+			);
+		}
+	}
+
+	return commentHtml.toString();
+}
+
+var getCommentBody_1 = {
 	h,
-	statusClass,
-	resultEntryClass,
-	getSummaryListId,
-	getResultsContainerId,
-	getSummaryId,
-	getBenchmarkSectionId,
-	SummaryStatus,
+	getCommentBody,
 	ResultsEntry,
-	BenchmarkSection,
 	Summary,
-	NewCommentBody,
+	SummaryStatus,
 };
 
 /**
@@ -8987,21 +9059,13 @@ var comments = {
 
 function _optionalChain$1(ops) { let lastAccessLHS = undefined; let value = ops[0]; let i = 1; while (i < ops.length) { const op = ops[i]; const fn = ops[i + 1]; i += 2; if ((op === 'optionalAccess' || op === 'optionalCall') && value == null) { return undefined; } if (op === 'access' || op === 'optionalAccess') { lastAccessLHS = value; value = fn(value); } else if (op === 'call' || op === 'optionalCall') { value = fn((...args) => value.call(lastAccessLHS, ...args)); lastAccessLHS = undefined; } } return value; }const { readFile } = fs.promises;
 
-const { parse: parse$1 } = dist;
 const {
 	h: h$1,
-	statusClass: statusClass$1,
-	resultEntryClass: resultEntryClass$1,
-	NewCommentBody: NewCommentBody$1,
+	getCommentBody: getCommentBody$1,
 	Summary: Summary$1,
 	SummaryStatus: SummaryStatus$1,
 	ResultsEntry: ResultsEntry$1,
-	BenchmarkSection: BenchmarkSection$1,
-	getSummaryListId: getSummaryListId$1,
-	getSummaryId: getSummaryId$1,
-	getResultsContainerId: getResultsContainerId$1,
-	getBenchmarkSectionId: getBenchmarkSectionId$1,
-} = html$1;
+} = getCommentBody_1;
 const { getWorkflowRunInfo: getWorkflowRunInfo$1, getCommit: getCommit$1 } = github$1;
 const { createCommentContext: createCommentContext$1, postOrUpdateComment: postOrUpdateComment$1 } = comments;
 
@@ -9096,85 +9160,6 @@ function buildReport(
 	};
 }
 
-/**
- * @param {import('./global').Inputs} inputs
- * @param {import('./global').Report} report
- * @param {string} commentBody
- * @param {import('./global').Logger} logger
- * @returns {string}
- */
-function getCommentBody(inputs, report, commentBody, logger) {
-	if (!commentBody) {
-		const newHtml = h$1(NewCommentBody$1, { report: report, inputs: inputs,} );
-		return newHtml.toString();
-	}
-
-	const commentHtml = parse$1(commentBody);
-	const summaryContainer = commentHtml.querySelector(`#${getSummaryListId$1()}`);
-	const resultsContainer = commentHtml.querySelector(
-		`#${getResultsContainerId$1()}`
-	);
-
-	const summaryId = getSummaryId$1(report.id);
-	const summary = commentHtml.querySelector(`#${summaryId}`);
-
-	const resultsId = getBenchmarkSectionId$1(report.id);
-	const results = commentHtml.querySelector(`#${resultsId}`);
-
-	const summaryStatus = summary.querySelector(`.${statusClass$1}`);
-	const resultStatus = results.querySelector(`.${statusClass$1}`);
-
-	// TODO: Consider inserting markup so the results are always ordered by
-	// report.workflowRun.jobIndex. Same jobIndex should be inserted at the end of
-	// all the same numbers to maintain order they report results (since steps
-	// inside of a job run sequentially).
-
-	if (report.isRunning) {
-		// If benchmarks are running, just update or add the status fields
-
-		if (summaryStatus) {
-			summaryStatus.set_content(report.status);
-		} else {
-			summaryContainer.appendChild(h$1('li', null, report.summary));
-		}
-
-		if (resultStatus) {
-			resultStatus.set_content(report.status);
-		} else {
-			resultsContainer.appendChild(
-				h$1(BenchmarkSection$1, { report: report, open: inputs.defaultOpen,}
-, report.body
-)
-			);
-		}
-	} else {
-		// Benchmark finished, update existing results or add new results
-		if (summary) {
-			// @ts-ignore - Can safely assume summary.parentNode is HTMLElement
-			summary.parentNode.exchangeChild(summary, report.summary);
-		} else {
-			summaryContainer.appendChild(h$1('li', null, report.summary));
-		}
-
-		if (results) {
-			const resultEntry = results.querySelector(`.${resultEntryClass$1}`);
-			// @ts-ignore - Can safely assume results.parentNode is HTMLElement
-			resultEntry.parentNode.exchangeChild(resultEntry, report.body);
-
-			const resultStatus = results.querySelector(`.${statusClass$1}`);
-			resultStatus.set_content("");
-		} else {
-			resultsContainer.appendChild(
-				h$1(BenchmarkSection$1, { report: report, open: inputs.defaultOpen,}
-, report.body
-)
-			);
-		}
-	}
-
-	return commentHtml.toString();
-}
-
 /** @type {import('./global').Logger} */
 const defaultLogger = {
 	warn(getMsg) {
@@ -9225,7 +9210,7 @@ async function reportTachRunning(
 	await postOrUpdateComment$1(
 		github,
 		createCommentContext$1(context, workflowRun),
-		(comment) => getCommentBody(inputs, report, _optionalChain$1([comment, 'optionalAccess', _2 => _2.body])),
+		(comment) => getCommentBody$1(inputs, report, _optionalChain$1([comment, 'optionalAccess', _2 => _2.body]), logger),
 		logger
 	);
 
@@ -9270,7 +9255,7 @@ async function reportTachResults(
 	await postOrUpdateComment$1(
 		github,
 		createCommentContext$1(context, workflowRun),
-		(comment) => getCommentBody(inputs, report, _optionalChain$1([comment, 'optionalAccess', _12 => _12.body])),
+		(comment) => getCommentBody$1(inputs, report, _optionalChain$1([comment, 'optionalAccess', _12 => _12.body]), logger),
 		logger
 	);
 
@@ -9284,7 +9269,7 @@ async function reportTachResults(
 
 var src = {
 	buildReport,
-	getCommentBody,
+	getCommentBody: getCommentBody$1,
 	reportTachRunning,
 	reportTachResults,
 };

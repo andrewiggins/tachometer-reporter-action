@@ -1,4 +1,4 @@
-const { HTMLElement, TextNode } = require("node-html-parser");
+const { parse, HTMLElement, TextNode } = require("node-html-parser");
 const {
 	formatDifference,
 	makeUniqueLabelFn,
@@ -6,7 +6,7 @@ const {
 	browserDimension,
 	sampleSizeDimension,
 	runtimeConfidenceIntervalDimension,
-} = require("./tachometer");
+} = require("./utils/tachometer");
 
 const statusClass = "status";
 const resultEntryClass = "result-entry";
@@ -66,9 +66,9 @@ function h(tag, attrs, ...children) {
 /**
  * @typedef ResultsEntryProps
  * @property {string} reportId
- * @property {import('../global').BenchmarkResult[]} benchmarks
- * @property {import('../global').WorkflowRunInfo} workflowRun
- * @property {import('../global').CommitInfo} commitInfo
+ * @property {import('./global').BenchmarkResult[]} benchmarks
+ * @property {import('./global').WorkflowRunInfo} workflowRun
+ * @property {import('./global').CommitInfo} commitInfo
  *
  * @param {ResultsEntryProps} props
  */
@@ -94,7 +94,7 @@ function ResultsEntry({ reportId, benchmarks, workflowRun, commitInfo }) {
 		sha
 	);
 
-	/** @type {import("../global").Dimension[]} */
+	/** @type {import("./global").Dimension[]} */
 	const tableDimensions = [
 		// Custom dimension that combines Tachometer's benchmark & version dimensions
 		{
@@ -148,7 +148,7 @@ function ResultsEntry({ reportId, benchmarks, workflowRun, commitInfo }) {
 
 /**
  * @typedef BenchmarkSectionProps
- * @property {import('../global').Report} report
+ * @property {import('./global').Report} report
  * @property {boolean} open
  * @property {JSX.Element | string} children
  *
@@ -173,7 +173,7 @@ function BenchmarkSection({ report, open, children }) {
 }
 
 /**
- * @param {{ workflowRun: import('../global').WorkflowRunInfo; icon: boolean; }} props
+ * @param {{ workflowRun: import('./global').WorkflowRunInfo; icon: boolean; }} props
  */
 function SummaryStatus({ workflowRun, icon }) {
 	const label = `Currently running in ${workflowRun.workflowRunName}…`;
@@ -192,10 +192,10 @@ function SummaryStatus({ workflowRun, icon }) {
  * @typedef SummaryProps
  * @property {string} reportId
  * @property {string} title
- * @property {import('../global').BenchmarkResult[]} benchmarks
+ * @property {import('./global').BenchmarkResult[]} benchmarks
  * @property {string} prBenchName
  * @property {string} baseBenchName
- * @property {import('../global').WorkflowRunInfo | null} workflowRun
+ * @property {import('./global').WorkflowRunInfo | null} workflowRun
  * @property {boolean} isRunning
  *
  * @param {SummaryProps} props
@@ -309,7 +309,7 @@ function Summary({
 }
 
 /**
- * @param {{ inputs: import('../global').Inputs; report: import('../global').Report; }} props
+ * @param {{ inputs: import('./global').Inputs; report: import('./global').Report; }} props
  */
 function NewCommentBody({ inputs, report }) {
 	return (
@@ -351,17 +351,89 @@ function Icon() {
 	);
 }
 
+/**
+ * @param {import('./global').Inputs} inputs
+ * @param {import('./global').Report} report
+ * @param {string} commentBody
+ * @param {import('./global').Logger} logger
+ * @returns {string}
+ */
+function getCommentBody(inputs, report, commentBody, logger) {
+	if (!commentBody) {
+		const newHtml = <NewCommentBody report={report} inputs={inputs} />;
+		return newHtml.toString();
+	}
+
+	const commentHtml = parse(commentBody);
+	const summaryContainer = commentHtml.querySelector(`#${getSummaryListId()}`);
+	const resultsContainer = commentHtml.querySelector(
+		`#${getResultsContainerId()}`
+	);
+
+	const summaryId = getSummaryId(report.id);
+	const summary = commentHtml.querySelector(`#${summaryId}`);
+
+	const resultsId = getBenchmarkSectionId(report.id);
+	const results = commentHtml.querySelector(`#${resultsId}`);
+
+	const summaryStatus = summary.querySelector(`.${statusClass}`);
+	const resultStatus = results.querySelector(`.${statusClass}`);
+
+	// TODO: Consider inserting markup so the results are always ordered by
+	// report.workflowRun.jobIndex. Same jobIndex should be inserted at the end of
+	// all the same numbers to maintain order they report results (since steps
+	// inside of a job run sequentially).
+
+	if (report.isRunning) {
+		// If benchmarks are running, just update or add the status fields
+
+		if (summaryStatus) {
+			summaryStatus.set_content(report.status);
+		} else {
+			summaryContainer.appendChild(<li>{report.summary}</li>);
+		}
+
+		if (resultStatus) {
+			resultStatus.set_content(report.status);
+		} else {
+			resultsContainer.appendChild(
+				<BenchmarkSection report={report} open={inputs.defaultOpen}>
+					{report.body}
+				</BenchmarkSection>
+			);
+		}
+	} else {
+		// Benchmark finished, update existing results or add new results
+		if (summary) {
+			// @ts-ignore - Can safely assume summary.parentNode is HTMLElement
+			summary.parentNode.exchangeChild(summary, report.summary);
+		} else {
+			summaryContainer.appendChild(<li>{report.summary}</li>);
+		}
+
+		if (results) {
+			const resultEntry = results.querySelector(`.${resultEntryClass}`);
+			// @ts-ignore - Can safely assume results.parentNode is HTMLElement
+			resultEntry.parentNode.exchangeChild(resultEntry, report.body);
+
+			const resultStatus = results.querySelector(`.${statusClass}`);
+			resultStatus.set_content("");
+		} else {
+			resultsContainer.appendChild(
+				<BenchmarkSection report={report} open={inputs.defaultOpen}>
+					{report.body}
+				</BenchmarkSection>
+			);
+		}
+	}
+
+	return commentHtml.toString();
+}
+
 module.exports = {
 	h,
-	statusClass,
-	resultEntryClass,
-	getSummaryListId,
-	getResultsContainerId,
-	getSummaryId,
-	getBenchmarkSectionId,
-	SummaryStatus,
+	getCommentBody,
 	ResultsEntry,
-	BenchmarkSection,
 	Summary,
-	NewCommentBody,
+	SummaryStatus,
 };
