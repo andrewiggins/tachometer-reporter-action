@@ -1,3 +1,5 @@
+const escapeRe = require("escape-string-regexp");
+
 async function initiateCommentLock() {
 	// TODO: Consider adding an initiateCommentLock function which finds all
 	// workflow runs associated with this PR and searches for runs whose jobs
@@ -178,11 +180,9 @@ async function postOrUpdateComment(github, context, getCommentBody, logger) {
  * @returns {import('./global').CommentContext}
  */
 function createCommentContext(context, workflowInfo) {
-	// const footer = `\n\n<sub><a href="https://github.com/andrewiggins/tachometer-reporter-action">tachometer-reporter-action</a> for <a href="${workflowInfo.workflowHtmlUrl}">${workflowInfo.workflowName}</a></sub>`;
-	// const footerRe = new RegExp(escapeRe(footer.trim()));
+	const footer = `\n\n<sub><a href="https://github.com/andrewiggins/tachometer-reporter-action">tachometer-reporter-action</a> for <a href="${workflowInfo.workflowHtmlUrl}">${workflowInfo.workflowName}</a></sub>`;
+	const footerRe = new RegExp(escapeRe(footer.trim()));
 
-	const footer = `\n\n<a href="https://github.com/andrewiggins/tachometer-reporter-action"><sub>tachometer-reporter-action</sub></a>`;
-	const footerRe = /<sub>[\s\n]*tachometer-reporter-action/;
 	return {
 		...context.repo,
 		issueNumber: context.issue.number,

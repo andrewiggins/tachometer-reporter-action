@@ -8494,6 +8494,18 @@ var html$1 = {
 	NewCommentBody,
 };
 
+var escapeStringRegexp = string => {
+	if (typeof string !== 'string') {
+		throw new TypeError('Expected a string');
+	}
+
+	// Escape characters with special meaning either inside or outside character sets.
+	// Use a simple backslash escape when it’s always valid, and a \unnnn escape when the simpler form would be disallowed by Unicode patterns’ stricter grammar.
+	return string
+		.replace(/[|\\{}()[\]^$+*?.]/g, '\\$&')
+		.replace(/-/g, '\\x2d');
+};
+
 /**
  * Read a comment matching with matching regex
  * @param {import('./global').GitHubActionClient} github
@@ -8632,11 +8644,9 @@ async function postOrUpdateComment(github, context, getCommentBody, logger) {
  * @returns {import('./global').CommentContext}
  */
 function createCommentContext(context, workflowInfo) {
-	// const footer = `\n\n<sub><a href="https://github.com/andrewiggins/tachometer-reporter-action">tachometer-reporter-action</a> for <a href="${workflowInfo.workflowHtmlUrl}">${workflowInfo.workflowName}</a></sub>`;
-	// const footerRe = new RegExp(escapeRe(footer.trim()));
+	const footer = `\n\n<sub><a href="https://github.com/andrewiggins/tachometer-reporter-action">tachometer-reporter-action</a> for <a href="${workflowInfo.workflowHtmlUrl}">${workflowInfo.workflowName}</a></sub>`;
+	const footerRe = new RegExp(escapeStringRegexp(footer.trim()));
 
-	const footer = `\n\n<a href="https://github.com/andrewiggins/tachometer-reporter-action"><sub>tachometer-reporter-action</sub></a>`;
-	const footerRe = /<sub>[\s\n]*tachometer-reporter-action/;
 	return {
 		...context.repo,
 		issueNumber: context.issue.number,
@@ -8686,7 +8696,22 @@ async function* getWorkflowJobs(context, github, logger) {
  * @returns {Promise<import('../global').WorkflowRunInfo>}
  */
 async function getWorkflowRunInfo(context, github, logger) {
+	const workflowName = context.workflow;
 	const workflowRunName = `${context.workflow} #${context.runNumber}`;
+
+	const run = await github.actions.getWorkflowRun({
+		...context.repo,
+		run_id: context.runId,
+	});
+
+	/** @type {import('@octokit/types').ActionsGetWorkflowResponseData} */
+	const workflow = (
+		await github.request({
+			url: run.data.workflow_url,
+		})
+	).data;
+
+	const workflowHtmlUrl = workflow.html_url;
 
 	/** @type {import('../global').WorkflowRunJob} */
 	let matchingJob;
@@ -8715,15 +8740,19 @@ async function getWorkflowRunInfo(context, github, logger) {
 		});
 
 		return {
-			jobIndex: null,
+			workflowName,
+			workflowHtmlUrl,
 			workflowRunName,
+			jobIndex: null,
 			jobHtmlUrl: run.data.html_url,
 		};
 	}
 
 	return {
-		jobIndex,
+		workflowName,
+		workflowHtmlUrl,
 		workflowRunName,
+		jobIndex,
 		jobHtmlUrl: matchingJob.html_url,
 	};
 }

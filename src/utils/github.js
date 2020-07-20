@@ -31,7 +31,22 @@ async function* getWorkflowJobs(context, github, logger) {
  * @returns {Promise<import('../global').WorkflowRunInfo>}
  */
 async function getWorkflowRunInfo(context, github, logger) {
+	const workflowName = context.workflow;
 	const workflowRunName = `${context.workflow} #${context.runNumber}`;
+
+	const run = await github.actions.getWorkflowRun({
+		...context.repo,
+		run_id: context.runId,
+	});
+
+	/** @type {import('@octokit/types').ActionsGetWorkflowResponseData} */
+	const workflow = (
+		await github.request({
+			url: run.data.workflow_url,
+		})
+	).data;
+
+	const workflowHtmlUrl = workflow.html_url;
 
 	/** @type {import('../global').WorkflowRunJob} */
 	let matchingJob;
@@ -60,15 +75,19 @@ async function getWorkflowRunInfo(context, github, logger) {
 		});
 
 		return {
-			jobIndex: null,
+			workflowName,
+			workflowHtmlUrl,
 			workflowRunName,
+			jobIndex: null,
 			jobHtmlUrl: run.data.html_url,
 		};
 	}
 
 	return {
-		jobIndex,
+		workflowName,
+		workflowHtmlUrl,
 		workflowRunName,
+		jobIndex,
 		jobHtmlUrl: matchingJob.html_url,
 	};
 }

@@ -40,8 +40,10 @@ interface CommentContext {
 }
 
 interface WorkflowRunInfo {
-	jobIndex: number | null;
+	workflowName: string;
+	workflowHtmlUrl: string;
 	workflowRunName: string;
+	jobIndex: number | null;
 	jobHtmlUrl: string;
 }
 
