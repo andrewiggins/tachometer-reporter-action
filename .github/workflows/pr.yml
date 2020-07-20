@@ -18,7 +18,7 @@ jobs:
         env:
           TACH_REPORTER_SKIP_SNAPSHOT_TESTS: "true"
       - name: Report Tachometer Result
-        uses: andrewiggins/tachometer-reporter-action@pre-action
+        uses: andrewiggins/tachometer-reporter-action@comment-locking
         with:
           path: tests/results/test-results.json
           report-id: test-results
