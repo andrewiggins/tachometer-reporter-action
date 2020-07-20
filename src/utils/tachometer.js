@@ -1,16 +1,16 @@
 const prettyBytes = require("pretty-bytes");
 const { UAParser } = require("ua-parser-js");
 
-// Utilities from Tachometer, adapted from: https://github.com/Polymer/tachometer/blob/ac0bc64e4521fb0ba9c78ceea0d382e55724be75/src/format.ts
+// Utilities from Tachometer, adapted from: https://github.com/Polymer/tachometer/blob/ff284b0329aa24249aa5ebce8bb009d88d0b057a/src/format.ts
 
 const lineBreak = "<br />";
 
 /**
- * @param {import('./global').BenchmarkResult[]} benchmarks
+ * @param {import('../global').BenchmarkResult[]} benchmarks
  */
 function makeDifferenceDimensions(labelFn, benchmarks) {
 	return benchmarks.map((b, i) => {
-		/** @type {import('./global').Dimension} */
+		/** @type {import('../global').Dimension} */
 		const dimension = {
 			label: `vs ${labelFn(b)}`,
 			format: (b) => {
@@ -36,19 +36,19 @@ function makeDifferenceDimensions(labelFn, benchmarks) {
 	});
 }
 
-/** @type {import("./global").Dimension} */
+/** @type {import("../global").Dimension} */
 const benchmarkDimension = {
 	label: "Benchmark",
 	format: (b) => b.name,
 };
 
-/** @type {import("./global").Dimension} */
+/** @type {import("../global").Dimension} */
 const versionDimension = {
 	label: "Version",
 	format: (b) => b.version,
 };
 
-/** @type {import("./global").Dimension} */
+/** @type {import("../global").Dimension} */
 const browserDimension = {
 	label: "Browser",
 	format: (b) => {
@@ -71,19 +71,19 @@ const browserDimension = {
 	},
 };
 
-/** @type {import("./global").Dimension} */
+/** @type {import("../global").Dimension} */
 const sampleSizeDimension = {
 	label: "Sample size",
 	format: (b) => b.samples.length.toString(),
 };
 
-/** @type {import("./global").Dimension} */
+/** @type {import("../global").Dimension} */
 const bytesSentDimension = {
 	label: "Bytes",
 	format: (b) => prettyBytes(b.bytesSent),
 };
 
-/** @type {import("./global").Dimension} */
+/** @type {import("../global").Dimension} */
 const runtimeConfidenceIntervalDimension = {
 	label: "Avg time",
 	format: (b) => formatConfidenceInterval(b.mean, milli),
@@ -94,7 +94,7 @@ const runtimeConfidenceIntervalDimension = {
 
 /**
  * Format a confidence interval as "[low, high]".
- * @param {import('./global').BenchmarkResult["mean"]} ci Confidence interval
+ * @param {import('../global').BenchmarkResult["mean"]} ci Confidence interval
  * @param {(n: number) => string} format
  * @returns {string}
  */
@@ -122,7 +122,7 @@ const colorizeSign = (n, format) => {
 };
 
 /**
- * @param {import('./global').BenchmarkResult["differences"][0]} difference
+ * @param {import('../global').BenchmarkResult["differences"][0]} difference
  * @returns {{ label: string; relative: string; absolute: string }}
  */
 function formatDifference({ absolute, percentChange: relative }) {
@@ -166,8 +166,8 @@ function milli(n) {
 }
 
 /**
- * @param {import('./global').ConfidenceInterval} ci
- * @returns {import('./global').ConfidenceInterval}
+ * @param {import('../global').ConfidenceInterval} ci
+ * @returns {import('../global').ConfidenceInterval}
  */
 function negate(ci) {
 	return {
@@ -179,8 +179,8 @@ function negate(ci) {
 /**
  * Create a function that will return the shortest unambiguous label for a
  * result, given the full array of results.
- * @param {import('./global').BenchmarkResult[]} results
- * @returns {(result: import('./global').BenchmarkResult) => string}
+ * @param {import('../global').BenchmarkResult[]} results
+ * @returns {(result: import('../global').BenchmarkResult) => string}
  */
 function makeUniqueLabelFn(results) {
 	const names = new Set();

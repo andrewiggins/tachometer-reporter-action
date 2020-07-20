@@ -9,9 +9,9 @@ const {
 	getSummaryId,
 	getBenchmarkSectionId,
 	NewCommentBody,
-} = require("./html");
-const { createCommentContext, postOrUpdateComment } = require("./comments");
+} = require("./utils/html");
 const { getWorkflowRunInfo, getCommit } = require("./utils/github");
+const { createCommentContext, postOrUpdateComment } = require("./comments");
 
 /**
  * @param {import('./global').BenchmarkResult[]} benchmarks
