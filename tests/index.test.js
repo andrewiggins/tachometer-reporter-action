@@ -197,7 +197,7 @@ buildReportSuite("Generates reportId if not given", () => {
 	assert.is(report.id, expectedId, "report.id matches expectation");
 });
 
-buildReportSuite("Summaries on benchmark correctly", () => {
+buildReportSuite("Summarizes one benchmark correctly", () => {
 	const singleResult = copyResults().benchmarks[0];
 	const results = { benchmarks: [singleResult] };
 
@@ -263,14 +263,64 @@ buildReportSuite("Default summary if base and local version are null", () => {
 	);
 });
 
+buildReportSuite(
+	"Summary includes error message if can't find pr-bench-name",
+	() => {
+		const report = invokeBuildReport({
+			inputs: { prBenchName: "Bench #1" },
+		});
+		const summaryText = report.summary.toString();
+		assert.ok(
+			summaryText.includes(
+				"Could not find benchmark matching <code>pr-bench-name</code>"
+			),
+			"Error message for bad pr-bench-name"
+		);
+	}
+);
+
+buildReportSuite(
+	"Summary includes error message if can't find base-bench-name",
+	() => {
+		const report = invokeBuildReport({
+			inputs: { baseBenchName: "Bench #1" },
+		});
+		const summaryText = report.summary.toString();
+		assert.ok(
+			summaryText.includes(
+				"Could not find benchmark matching <code>base-bench-name</code>"
+			),
+			"Error message for bad base-bench-name"
+		);
+	}
+);
+
+buildReportSuite(
+	"Summary includes error message if base-bench-name and pr-bench-name match same result",
+	() => {
+		const report = invokeBuildReport({
+			inputs: { prBenchName: "fast-framework", baseBenchName: "test_bench" },
+		});
+		const summaryText = report.summary.toString();
+		assert.ok(
+			summaryText.includes("matched the same benchmark"),
+			"Error message for same pr-bench-name and base-bench-name"
+		);
+	}
+);
+
 buildReportSuite("Supports benchmarks with different names", () => {
 	const results = copyResults();
 	const otherBenchName = "other-bench";
 
-	results.benchmarks[0].name = otherBenchName;
+	results.benchmarks[1].name = otherBenchName;
 	const report = invokeBuildReport({ results });
 	const bodyDoc =
 		report.body instanceof HTMLElement ? report.body : parse(report.body);
+	const summaryDoc =
+		report.summary instanceof HTMLElement
+			? report.summary
+			: parse(report.summary);
 
 	// console.log(prettier.format(report.body, { parser: "html" }));
 
@@ -298,14 +348,26 @@ buildReportSuite("Supports benchmarks with different names", () => {
 			"Row label contains bench.version"
 		);
 		assert.ok(
-			rowLabel.includes(bench.version),
-			"Row label contains bench.version"
+			columnLabel.includes(bench.version),
+			"Column label contains bench.version"
 		);
 	}
 
-	// TODO: Figure out what summary should do here.
-	// const summaryDoc = parse(report.summary);
-	// console.log(prettier.format(report.summary, { parser: "html" }));
+	// Summary should use report title as label, and show both names in "vs." subtext
+	// console.log(prettier.format(summaryDoc.toString(), { parser: "html" }));
+	const summaryText = summaryDoc.toString();
+	assert.ok(
+		summaryText.includes(report.title),
+		"Summary includes report title"
+	);
+	assert.ok(
+		summaryText.includes("-10% - +12%"),
+		"Summary includes expected diff"
+	);
+	assert.ok(
+		summaryText.includes("local-framework vs base-framework"),
+		"Summary includes 'vs.' text, still using versions if present"
+	);
 });
 
 buildReportSuite("Lists all browsers used in details", () => {
@@ -320,6 +382,10 @@ buildReportSuite("Lists all browsers used in details", () => {
 	const report = invokeBuildReport({ results });
 	const bodyDoc =
 		report.body instanceof HTMLElement ? report.body : parse(report.body);
+	const summaryDoc =
+		report.summary instanceof HTMLElement
+			? report.summary
+			: parse(report.summary);
 
 	// console.log(prettier.format(report.body.toString(), { parser: "html" }));
 
@@ -360,25 +426,88 @@ buildReportSuite("Lists all browsers used in details", () => {
 			"Row label contains bench.version"
 		);
 		assert.ok(
-			rowLabel.includes(bench.version),
-			"Row label contains bench.version"
+			columnLabel.includes(bench.version),
+			"Column label contains bench.version"
 		);
 	}
 
-	// TODO: Figure out summary should do here. Summary should probably just
-	// ignore browser field and just match the first bench with the given name or
-	// version.
-
-	// const summaryDoc = parse(report.summary);
+	// Summary should use report title as label, and show both names in "vs." subtext
+	// console.log(prettier.format(summaryDoc.toString(), { parser: "html" }));
+	const summaryText = summaryDoc.toString();
+	assert.ok(
+		summaryText.includes(report.title),
+		"Summary includes report title"
+	);
+	assert.ok(
+		summaryText.includes("-10% - +12%"),
+		"Summary includes expected diff"
+	);
+	assert.ok(
+		summaryText.includes("local-framework vs base-framework"),
+		"Summary includes 'vs.' text, still using versions if present"
+	);
 });
 
-buildReportSuite("Supports benchmarks with no version field", () => {
-	// TODO: How to do Summary?? Perhaps rework prBenchName to be something that
-	// can be a benchmark name or version field value?
-	// Check <summary> tag includes all names
-	// Check table row labels
-	// Check table column labels
-});
+buildReportSuite(
+	"Supports benchmarks with different names and no version fields",
+	() => {
+		const results = copyResults();
+		results.benchmarks = results.benchmarks.map((b, i) => ({
+			...b,
+			name: `Bench #${i}`,
+			version: null,
+		}));
+
+		const report = invokeBuildReport({
+			results,
+			inputs: { prBenchName: "Bench #1", baseBenchName: "Bench #2" },
+		});
+		const bodyDoc =
+			report.body instanceof HTMLElement ? report.body : parse(report.body);
+		const summaryDoc =
+			report.summary instanceof HTMLElement
+				? report.summary
+				: parse(report.summary);
+
+		// console.log(prettier.format(report.body, { parser: "html" }));
+
+		// Check row and columns include both bench name and version name
+		const rowLabels = bodyDoc
+			.querySelectorAll("tbody tr")
+			.map((row) => row.childNodes[0].text);
+		const columnLabels = bodyDoc
+			.querySelectorAll("thead th")
+			.map((td) => td.text);
+
+		for (let i = 0; i < results.benchmarks.length; i++) {
+			const bench = results.benchmarks[i];
+			const rowLabel = rowLabels[i];
+			const columnLabel = columnLabels[i + 2];
+
+			assert.ok(rowLabel.includes(bench.name), "Row label contains bench.name");
+			assert.ok(
+				columnLabel.includes(bench.name),
+				"Column label contains bench.name"
+			);
+		}
+
+		// Summary should use report title as label, and show both names in "vs." subtext
+		// console.log(prettier.format(summaryDoc.toString(), { parser: "html" }));
+		const summaryText = summaryDoc.toString();
+		assert.ok(
+			summaryText.includes(report.title),
+			"Summary includes report title"
+		);
+		assert.ok(
+			summaryText.includes("-12% - +9%"),
+			"Summary includes expected diff"
+		);
+		assert.ok(
+			summaryText.includes("Bench #1 vs Bench #2"),
+			"Summary includes 'vs.' text, still using versions if present"
+		);
+	}
+);
 
 buildReportSuite(
 	"Throws an error if inputs.reportId not provided without results",

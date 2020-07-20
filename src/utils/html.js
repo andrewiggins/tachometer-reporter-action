@@ -222,32 +222,59 @@ function Summary({
 
 		let baseIndex;
 		if (baseBenchName) {
-			baseIndex = benchmarks.findIndex((b) => b.version == baseBenchName);
+			baseIndex = benchmarks.findIndex(
+				(b) => b.version == baseBenchName || b.name == baseBenchName
+			);
 		} else {
 			baseIndex = 0;
 			baseBenchName = benchmarks[0]?.version ?? benchmarks[0].name;
 		}
 
-		let localResults;
+		let localIndex, localResults;
 		if (prBenchName) {
-			localResults = benchmarks.find((b) => b.version == prBenchName);
+			localIndex = benchmarks.findIndex(
+				(b) => b.version == prBenchName || b.name == prBenchName
+			);
+			localResults = benchmarks[localIndex];
 		} else {
 			let localIndex = (baseIndex + 1) % benchLength;
 			localResults = benchmarks[localIndex];
 			prBenchName = localResults?.version ?? localResults.name;
 		}
 
-		const diff = formatDifference(localResults.differences[baseIndex]);
-
 		showDiff = true;
-		summaryBody = (
-			<span>
-				: {diff.label}{" "}
-				<em>
-					{diff.relative} ({diff.absolute})
-				</em>
-			</span>
-		);
+		if (localIndex == -1) {
+			summaryBody = (
+				<span>
+					: Could not find benchmark matching <code>pr-bench-name</code> input:{" "}
+					<code>{prBenchName}</code>
+				</span>
+			);
+		} else if (baseIndex == -1) {
+			summaryBody = (
+				<span>
+					: Could not find benchmark matching <code>base-bench-name</code>{" "}
+					input: <code>{baseBenchName}</code>
+				</span>
+			);
+		} else if (localIndex == baseIndex) {
+			summaryBody = (
+				<span>
+					: <code>pr-bench-name</code> and <code>base-bench-name</code> inputs
+					matched the same benchmark so cannot show comparison.
+				</span>
+			);
+		} else {
+			const diff = formatDifference(localResults.differences[baseIndex]);
+			summaryBody = (
+				<span>
+					: {diff.label}{" "}
+					<em>
+						{diff.relative} ({diff.absolute})
+					</em>
+				</span>
+			);
+		}
 	}
 
 	const status = isRunning ? (

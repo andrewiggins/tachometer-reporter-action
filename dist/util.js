@@ -8443,32 +8443,59 @@ function Summary({
 
 		let baseIndex;
 		if (baseBenchName) {
-			baseIndex = benchmarks.findIndex((b) => b.version == baseBenchName);
+			baseIndex = benchmarks.findIndex(
+				(b) => b.version == baseBenchName || b.name == baseBenchName
+			);
 		} else {
 			baseIndex = 0;
 			baseBenchName = _nullishCoalesce(_optionalChain([benchmarks, 'access', _ => _[0], 'optionalAccess', _2 => _2.version]), () => ( benchmarks[0].name));
 		}
 
-		let localResults;
+		let localIndex, localResults;
 		if (prBenchName) {
-			localResults = benchmarks.find((b) => b.version == prBenchName);
+			localIndex = benchmarks.findIndex(
+				(b) => b.version == prBenchName || b.name == prBenchName
+			);
+			localResults = benchmarks[localIndex];
 		} else {
 			let localIndex = (baseIndex + 1) % benchLength;
 			localResults = benchmarks[localIndex];
 			prBenchName = _nullishCoalesce(_optionalChain([localResults, 'optionalAccess', _3 => _3.version]), () => ( localResults.name));
 		}
 
-		const diff = formatDifference$1(localResults.differences[baseIndex]);
-
 		showDiff = true;
-		summaryBody = (
-			h('span', null, ": "
+		if (localIndex == -1) {
+			summaryBody = (
+				h('span', null, ": Could not find benchmark matching "
+      , h('code', null, "pr-bench-name"), " input:" , " "
+, h('code', null, prBenchName)
+)
+			);
+		} else if (baseIndex == -1) {
+			summaryBody = (
+				h('span', null, ": Could not find benchmark matching "
+      , h('code', null, "base-bench-name"), " ", "input: "
+ , h('code', null, baseBenchName)
+)
+			);
+		} else if (localIndex == baseIndex) {
+			summaryBody = (
+				h('span', null, ": "
+ , h('code', null, "pr-bench-name"), " and "  , h('code', null, "base-bench-name"), " inputs matched the same benchmark so cannot show comparison."
+
+)
+			);
+		} else {
+			const diff = formatDifference$1(localResults.differences[baseIndex]);
+			summaryBody = (
+				h('span', null, ": "
  , diff.label, " "
 , h('em', null
 , diff.relative, " (" , diff.absolute, ")"
 )
 )
-		);
+			);
+		}
 	}
 
 	const status = isRunning ? (
