@@ -234,21 +234,6 @@ function Summary({
 }
 
 /**
- * @param {{ children: Array<JSX.Element | string> }} props
- */
-function SummaryList({ children }) {
-	// @ts-ignore
-	children = children.flat(Infinity);
-	return (
-		<ul id={getId("summaries")}>
-			{children.map((child) => (
-				<li>{child}</li>
-			))}
-		</ul>
-	);
-}
-
-/**
  * @param {{ inputs: import('./global').Inputs; report: import('./global').Report; }} props
  */
 function NewCommentBody({ inputs, report }) {
@@ -262,12 +247,16 @@ function NewCommentBody({ inputs, report }) {
 						{report.prBenchName} vs {report.baseBenchName}
 					</sub>
 				</p>,
-				<SummaryList>{[report.summary]}</SummaryList>,
+				<ul id={getId("summaries")}>
+					<li>{report.summary}</li>
+				</ul>,
 			]}
 			<h3>Results</h3>
-			<BenchmarkSection report={report} open={inputs.defaultOpen}>
-				{report.body}
-			</BenchmarkSection>
+			<div id={getId("results")}>
+				<BenchmarkSection report={report} open={inputs.defaultOpen}>
+					{report.body}
+				</BenchmarkSection>
+			</div>
 		</div>
 	);
 }
@@ -303,6 +292,5 @@ module.exports = {
 	ResultsEntry,
 	BenchmarkSection,
 	Summary,
-	SummaryList,
 	NewCommentBody,
 };

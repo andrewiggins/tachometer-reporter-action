@@ -8455,21 +8455,6 @@ function Summary({
 }
 
 /**
- * @param {{ children: Array<JSX.Element | string> }} props
- */
-function SummaryList({ children }) {
-	// @ts-ignore
-	children = children.flat(Infinity);
-	return (
-		h('ul', { id: getId("summaries"),}
-, children.map((child) => (
-				h('li', null, child)
-			))
-)
-	);
-}
-
-/**
  * @param {{ inputs: import('./global').Inputs; report: import('./global').Report; }} props
  */
 function NewCommentBody({ inputs, report }) {
@@ -8483,11 +8468,15 @@ function NewCommentBody({ inputs, report }) {
 , report.prBenchName, " vs "  , report.baseBenchName
 )
 ),
-				h(SummaryList, null, [report.summary]),
+				h('ul', { id: getId("summaries"),}
+, h('li', null, report.summary)
+),
 			]
 , h('h3', null, "Results")
+, h('div', { id: getId("results"),}
 , h(BenchmarkSection, { report: report, open: inputs.defaultOpen,}
 , report.body
+)
 )
 )
 	);
@@ -8502,7 +8491,6 @@ var html$1 = {
 	ResultsEntry,
 	BenchmarkSection,
 	Summary,
-	SummaryList,
 	NewCommentBody,
 };
 
