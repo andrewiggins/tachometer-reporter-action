@@ -43,7 +43,6 @@ const { getLogger, getInputs } = util.util;
 	const context = util.github.context;
 	const octokit = util.github.getOctokit(token);
 
-	// TODO: Update comment body so as not to erase existing results while running
 	const report = await reportTachRunning(octokit, context, inputs, logger);
 
 	logger.debug(() => "Report: " + JSON.stringify(report, null, 2));

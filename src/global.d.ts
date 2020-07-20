@@ -36,6 +36,7 @@ interface CommitInfo extends Commit {
 // }
 
 interface WorkflowRunInfo {
+	jobIndex: number | null;
 	workflowRunName: string;
 	jobHtmlUrl: string;
 }

@@ -36,11 +36,18 @@ async function getWorkflowRunInfo(context, github, logger) {
 	/** @type {import('../global').WorkflowRunJob} */
 	let matchingJob;
 
+	/** @type {number} */
+	let jobIndex;
+
+	let i = 0;
 	for await (const job of getWorkflowJobs(context, github, logger)) {
 		if (job.name == context.job) {
 			matchingJob = job;
+			jobIndex = i;
 			break;
 		}
+
+		i++;
 	}
 
 	if (matchingJob == null) {
@@ -53,12 +60,14 @@ async function getWorkflowRunInfo(context, github, logger) {
 		});
 
 		return {
+			jobIndex: null,
 			workflowRunName,
 			jobHtmlUrl: run.data.html_url,
 		};
 	}
 
 	return {
+		jobIndex,
 		workflowRunName,
 		jobHtmlUrl: matchingJob.html_url,
 	};
