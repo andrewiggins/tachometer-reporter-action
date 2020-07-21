@@ -641,6 +641,96 @@ updateCommentSuite(
 	}
 );
 
+updateCommentSuite(
+	"Updates benchmark results if run number is higher than the run number in HTML",
+	async () => {
+		const newResults = generateNewTestResults();
+
+		const commentBodyPath = testRoot(
+			"fixtures/test-results-existing-comment.html"
+		);
+		const commentBody = await readFile(commentBodyPath, "utf-8");
+		const report = invokeBuildReport({
+			inputs: { reportId: testReportId },
+			results: newResults,
+			workflow: {
+				...defaultWorkflowInfo,
+				runNumber: defaultWorkflowInfo.runNumber + 1,
+			},
+		});
+
+		const bodyHtml = parse(invokeGetCommentBody({ report, commentBody }));
+		const resultTableCell = bodyHtml
+			.querySelectorAll(`tbody tr`)[2]
+			.querySelectorAll("td")[3];
+
+		assert.ok(
+			resultTableCell.text.includes("faster"),
+			"Result table is updated to show new results"
+		);
+	}
+);
+
+updateCommentSuite(
+	"Updates benchmark results if run number is the same as the run number in HTML",
+	async () => {
+		const newResults = generateNewTestResults();
+
+		const commentBodyPath = testRoot(
+			"fixtures/test-results-existing-comment.html"
+		);
+		const commentBody = await readFile(commentBodyPath, "utf-8");
+		const report = invokeBuildReport({
+			inputs: { reportId: testReportId },
+			results: newResults,
+			workflow: {
+				...defaultWorkflowInfo,
+				runNumber: defaultWorkflowInfo.runNumber,
+			},
+		});
+
+		const bodyHtml = parse(invokeGetCommentBody({ report, commentBody }));
+		const resultTableCell = bodyHtml
+			.querySelectorAll(`tbody tr`)[2]
+			.querySelectorAll("td")[3];
+
+		assert.ok(
+			resultTableCell.text.includes("faster"),
+			"Result table is updated to show new results"
+		);
+	}
+);
+
+updateCommentSuite(
+	"Does not update benchmark results if run number is the lower than the run number in HTML",
+	async () => {
+		const newResults = generateNewTestResults();
+
+		const commentBodyPath = testRoot(
+			"fixtures/test-results-existing-comment.html"
+		);
+		const commentBody = await readFile(commentBodyPath, "utf-8");
+		const report = invokeBuildReport({
+			inputs: { reportId: testReportId },
+			results: newResults,
+			workflow: {
+				...defaultWorkflowInfo,
+				runNumber: defaultWorkflowInfo.runNumber - 1,
+			},
+		});
+
+		const bodyHtml = parse(invokeGetCommentBody({ report, commentBody }));
+		const resultTableCell = bodyHtml
+			.querySelectorAll(`tbody tr`)[2]
+			.querySelectorAll("td")[3];
+
+		assert.ok(
+			resultTableCell.text.includes("unsure"),
+			"Result table is updated to show new results"
+		);
+	}
+);
+
 // keep-old-results option
 // updateCommentSuite(
 // 	"Updates existing comment that contains matching ID with keep old option and no old content",

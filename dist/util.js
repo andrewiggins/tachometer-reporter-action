@@ -8629,8 +8629,15 @@ function getCommentBody(inputs, report, commentBody, logger) {
 
 	// Update summary
 	if (summary) {
+		const htmlRunNumber = parseInt(results.getAttribute("data-run-number"), 10);
+
 		if (report.isRunning) {
 			summaryStatus.set_content(report.status);
+		} else if (htmlRunNumber > report.workflowRun.runNumber) {
+			logger.info(
+				`Existing summary is from a run (#${htmlRunNumber}) that is more recent than the` +
+					`current run (#${report.workflowRun.runNumber}). Not updating the results.`
+			);
 		} else {
 			// @ts-ignore - Can safely assume summary.parentNode is HTMLElement
 			summary.parentNode.exchangeChild(summary, report.summary);
@@ -8645,8 +8652,15 @@ function getCommentBody(inputs, report, commentBody, logger) {
 
 	// Update results entry
 	if (results) {
+		const htmlRunNumber = parseInt(results.getAttribute("data-run-number"), 10);
+
 		if (report.isRunning) {
 			resultStatus.set_content(report.status);
+		} else if (htmlRunNumber > report.workflowRun.runNumber) {
+			logger.info(
+				`Existing results are from a run (#${htmlRunNumber}) that is more recent than the ` +
+					`current run (#${report.workflowRun.runNumber}). Not updating the results.`
+			);
 		} else {
 			// Update result data
 			const resultEntry = results.querySelector(`.${resultEntryClass}`);
