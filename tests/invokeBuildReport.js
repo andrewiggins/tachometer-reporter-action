@@ -12,18 +12,32 @@ const defaultInputs = Object.freeze({
 	keepOldResults: false,
 });
 
-/** @type {import('../src/global').WorkflowRunInfo} */
-const defaultWorkflowInfo = {
-	workflowName: "Pull Request Test",
-	workflowRunName: "Pull Request Test #50",
-	workflowSrcHtmlUrl:
-		"https://github.com/andrewiggins/tachometer-reporter-action/blob/master/.github/workflows/pr.yml",
-	workflowRunsHtmlUrl:
-		"https://github.com/andrewiggins/tachometer-reporter-action/actions?query=workflow%3A%22Pull+Request+Test%22",
-	runNumber: 4,
-	jobIndex: 2,
-	jobHtmlUrl:
-		"https://github.com/andrewiggins/tachometer-reporter-action/runs/862224869?check_suite_focus=true",
+/** @type {import('../src/global').ActionInfo} */
+const defaultActionInfo = {
+	// curl -H "Accept: application/vnd.github.v3+json" https://api.github.com/repos/andrewiggins/tachometer-reporter-action/actions/workflows/1850458
+	workflow: {
+		id: 1850458,
+		name: "Pull Request Test",
+		runsHtmlUrl:
+			"https://github.com/andrewiggins/tachometer-reporter-action/actions?query=workflow%3A%22Pull+Request+Test%22",
+		srcHtmlUrl:
+			"https://github.com/andrewiggins/tachometer-reporter-action/blob/master/.github/workflows/pr.yml",
+	},
+	// curl -H "Accept: application/vnd.github.v3+json" https://api.github.com/repos/andrewiggins/tachometer-reporter-action/actions/runs/166203010
+	run: {
+		id: 166203010,
+		number: 50,
+		name: "Pull Request Test #50",
+	},
+	// Job Data: curl -H "Accept: application/vnd.github.v3+json" https://api.github.com/repos/andrewiggins/tachometer-reporter-action/actions/jobs/862215228
+	// Job Index: curl -H "Accept: application/vnd.github.v3+json" https://api.github.com/repos/andrewiggins/tachometer-reporter-action/actions/runs/166203010/jobs
+	job: {
+		id: 862215228,
+		name: "pr_test",
+		index: 2, // Manually faked to be 2 to make tests more interesting
+		htmlUrl:
+			"https://github.com/andrewiggins/tachometer-reporter-action/runs/862215228",
+	},
 };
 
 /** @type {import('../src/global').CommitInfo} */
@@ -70,7 +84,7 @@ const fakeCommit = {
 /**
  * @typedef BuildReportParams
  * @property {import('../src/global').CommitInfo} [commit]
- * @property {import('../src/global').WorkflowRunInfo} [workflow]
+ * @property {import('../src/global').ActionInfo} [actionInfo]
  * @property {Partial<import('../src/global').Inputs>} [inputs]
  * @property {import('../src/global').TachResults} [results]
  * @property {boolean} [isRunning]
@@ -78,7 +92,7 @@ const fakeCommit = {
  */
 function invokeBuildReport({
 	commit = fakeCommit,
-	workflow = defaultWorkflowInfo,
+	actionInfo = defaultActionInfo,
 	inputs = null,
 	results = copyTestResults(),
 	isRunning = false,
@@ -88,11 +102,11 @@ function invokeBuildReport({
 		...inputs,
 	};
 
-	return buildReport(commit, workflow, fullInputs, results, isRunning);
+	return buildReport(commit, actionInfo, fullInputs, results, isRunning);
 }
 
 module.exports = {
 	defaultInputs,
-	defaultWorkflowInfo,
+	defaultActionInfo,
 	invokeBuildReport,
 };

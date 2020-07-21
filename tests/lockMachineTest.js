@@ -239,4 +239,4 @@ async function run() {
 	console.log("Comment:", lastReadComment);
 }
 
-run();
+// run();

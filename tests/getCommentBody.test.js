@@ -14,7 +14,7 @@ const {
 } = require("./utils");
 const {
 	defaultInputs,
-	defaultWorkflowInfo,
+	defaultActionInfo,
 	invokeBuildReport,
 } = require("./invokeBuildReport");
 const { getCommentBody } = require("../lib/index");
@@ -432,9 +432,12 @@ updateCommentSuite("Add new summary/results entry snapshot", async () => {
 	const report = invokeBuildReport({
 		inputs: { reportId: otherReportId },
 		results: newResults,
-		workflow: {
-			...defaultWorkflowInfo,
-			jobIndex: defaultWorkflowInfo.jobIndex + 2,
+		actionInfo: {
+			...defaultActionInfo,
+			job: {
+				...defaultActionInfo.job,
+				index: defaultActionInfo.job.index + 2,
+			},
 		},
 	});
 
@@ -462,9 +465,12 @@ updateCommentSuite(
 		const report = invokeBuildReport({
 			inputs: { reportId: newId },
 			results: newResults,
-			workflow: {
-				...defaultWorkflowInfo,
-				jobIndex: defaultWorkflowInfo.jobIndex - 1,
+			actionInfo: {
+				...defaultActionInfo,
+				job: {
+					...defaultActionInfo.job,
+					index: defaultActionInfo.job.index - 1,
+				},
 			},
 		});
 
@@ -526,9 +532,12 @@ updateCommentSuite(
 		const report = invokeBuildReport({
 			inputs: { reportId: newId },
 			results: newResults,
-			workflow: {
-				...defaultWorkflowInfo,
-				jobIndex: defaultWorkflowInfo.jobIndex,
+			actionInfo: {
+				...defaultActionInfo,
+				job: {
+					...defaultActionInfo.job,
+					index: defaultActionInfo.job.index,
+				},
 			},
 		});
 
@@ -590,9 +599,12 @@ updateCommentSuite(
 		const report = invokeBuildReport({
 			inputs: { reportId: newId },
 			results: newResults,
-			workflow: {
-				...defaultWorkflowInfo,
-				jobIndex: defaultWorkflowInfo.jobIndex + 10,
+			actionInfo: {
+				...defaultActionInfo,
+				job: {
+					...defaultActionInfo.job,
+					index: defaultActionInfo.job.index + 10,
+				},
 			},
 		});
 
@@ -653,9 +665,12 @@ updateCommentSuite(
 		const report = invokeBuildReport({
 			inputs: { reportId: testReportId },
 			results: newResults,
-			workflow: {
-				...defaultWorkflowInfo,
-				runNumber: defaultWorkflowInfo.runNumber + 1,
+			actionInfo: {
+				...defaultActionInfo,
+				run: {
+					...defaultActionInfo.run,
+					number: defaultActionInfo.run.number + 1,
+				},
 			},
 		});
 
@@ -683,9 +698,12 @@ updateCommentSuite(
 		const report = invokeBuildReport({
 			inputs: { reportId: testReportId },
 			results: newResults,
-			workflow: {
-				...defaultWorkflowInfo,
-				runNumber: defaultWorkflowInfo.runNumber,
+			actionInfo: {
+				...defaultActionInfo,
+				run: {
+					...defaultActionInfo.run,
+					number: defaultActionInfo.run.number,
+				},
 			},
 		});
 
@@ -713,9 +731,12 @@ updateCommentSuite(
 		const report = invokeBuildReport({
 			inputs: { reportId: testReportId },
 			results: newResults,
-			workflow: {
-				...defaultWorkflowInfo,
-				runNumber: defaultWorkflowInfo.runNumber - 1,
+			actionInfo: {
+				...defaultActionInfo,
+				run: {
+					...defaultActionInfo.run,
+					number: defaultActionInfo.run.number - 1,
+				},
 			},
 		});
 
