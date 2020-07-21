@@ -34,6 +34,8 @@ const getBenchmarkSectionId = (id) =>
 	`tachometer-reporter-action--results-${id ? id : ""}`;
 const getSummaryId = (id) =>
 	`tachometer-reporter-action--summary-${id ? id : ""}`;
+const getSummaryListId = () => `tachometer-reporter-action--summaries`;
+const getResultsContainerId = () => `tachometer-reporter-action--results`;
 
 module.exports = {
 	testRoot,
@@ -42,4 +44,6 @@ module.exports = {
 	assertFixture,
 	getBenchmarkSectionId,
 	getSummaryId,
+	getSummaryListId,
+	getResultsContainerId,
 };

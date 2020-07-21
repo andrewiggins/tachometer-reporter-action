@@ -1,4 +1,4 @@
-const { readFile } = require("fs").promises;
+const { readFile, writeFile } = require("fs").promises;
 const { suite } = require("uvu");
 const assert = require("uvu/assert");
 const { parse } = require("node-html-parser");
@@ -9,8 +9,14 @@ const {
 	assertFixture,
 	getBenchmarkSectionId,
 	getSummaryId,
+	getSummaryListId,
+	getResultsContainerId,
 } = require("./utils");
-const { defaultInputs, invokeBuildReport } = require("./invokeBuildReport");
+const {
+	defaultInputs,
+	defaultWorkflowInfo,
+	invokeBuildReport,
+} = require("./invokeBuildReport");
 const { getCommentBody } = require("../lib/index");
 
 /** @type {import('../src/global').Logger} */
@@ -196,6 +202,7 @@ newCommentSuite("Supports benchmarks with different names", () => {
 
 const updateCommentSuite = suite("getCommentBody (update)");
 const testReportId = "report-id";
+const otherReportId = "new-id";
 
 updateCommentSuite(
 	"Update status for existing comment with old results",
@@ -413,12 +420,226 @@ updateCommentSuite(
 	}
 );
 
-// updateCommentSuite(
-// 	"Benchmarks always inserted in same order regardless of when they finish",
-// 	() => {
-// 		// TODO: Consider using job-index for insertion order
-// 	}
-// );
+updateCommentSuite("Add new summary/results entry snapshot", async () => {
+	const newResults = JSON.parse(
+		await readFile(testRoot("results/other-results.json"), "utf8")
+	);
+
+	const commentBodyPath = testRoot(
+		"fixtures/test-results-existing-comment.html"
+	);
+	const commentBody = await readFile(commentBodyPath, "utf-8");
+	const report = invokeBuildReport({
+		inputs: { reportId: otherReportId },
+		results: newResults,
+		workflow: {
+			...defaultWorkflowInfo,
+			jobIndex: defaultWorkflowInfo.jobIndex + 2,
+		},
+	});
+
+	const html = formatHtml(invokeGetCommentBody({ report, commentBody }));
+
+	const fixturePath = testRoot("fixtures/multiple-entries.html");
+	const fixture = await readFile(fixturePath, "utf-8");
+
+	// Uncomment to update fixture
+	// await writeFile(fixturePath, html, "utf8");
+
+	assertFixture(html, fixture, "Multiple results snapshot");
+});
+
+updateCommentSuite(
+	"Insert a benchmark with a lower job index at the front",
+	async () => {
+		const newId = "another-new-id";
+		const newResults = JSON.parse(
+			await readFile(testRoot("results/other-results.json"), "utf8")
+		);
+
+		const commentBodyPath = testRoot("fixtures/multiple-entries.html");
+		const commentBody = await readFile(commentBodyPath, "utf-8");
+		const report = invokeBuildReport({
+			inputs: { reportId: newId },
+			results: newResults,
+			workflow: {
+				...defaultWorkflowInfo,
+				jobIndex: defaultWorkflowInfo.jobIndex - 1,
+			},
+		});
+
+		const bodyHtml = parse(invokeGetCommentBody({ report, commentBody }));
+
+		const summaries = bodyHtml.querySelectorAll(
+			`#${getSummaryListId()} li div`
+		);
+		const results = bodyHtml.querySelectorAll(
+			`#${getResultsContainerId()} div`
+		);
+
+		// console.log(formatHtml(bodyHtml.toString()));
+
+		assert.equal(
+			summaries[0].getAttribute("id"),
+			getSummaryId(newId),
+			"First summary should be new report"
+		);
+		assert.equal(
+			summaries[1].getAttribute("id"),
+			getSummaryId(testReportId),
+			"Second summary should be test results"
+		);
+		assert.equal(
+			summaries[2].getAttribute("id"),
+			getSummaryId(otherReportId),
+			"Third summary should be other test results"
+		);
+
+		assert.equal(
+			results[0].getAttribute("id"),
+			getBenchmarkSectionId(newId),
+			"First result entry should be new report"
+		);
+		assert.equal(
+			results[1].getAttribute("id"),
+			getBenchmarkSectionId(testReportId),
+			"Second result entry should be test results"
+		);
+		assert.equal(
+			results[2].getAttribute("id"),
+			getBenchmarkSectionId(otherReportId),
+			"Third result entry should be other test results"
+		);
+	}
+);
+
+updateCommentSuite(
+	"Insert a benchmark with the same job index at the end of the benchmarks with the same job index",
+	async () => {
+		const newId = "another-new-id";
+		const newResults = JSON.parse(
+			await readFile(testRoot("results/other-results.json"), "utf8")
+		);
+
+		const commentBodyPath = testRoot("fixtures/multiple-entries.html");
+		const commentBody = await readFile(commentBodyPath, "utf-8");
+		const report = invokeBuildReport({
+			inputs: { reportId: newId },
+			results: newResults,
+			workflow: {
+				...defaultWorkflowInfo,
+				jobIndex: defaultWorkflowInfo.jobIndex,
+			},
+		});
+
+		const bodyHtml = parse(invokeGetCommentBody({ report, commentBody }));
+
+		const summaries = bodyHtml.querySelectorAll(
+			`#${getSummaryListId()} li div`
+		);
+		const results = bodyHtml.querySelectorAll(
+			`#${getResultsContainerId()} div`
+		);
+
+		// console.log(formatHtml(bodyHtml.toString()));
+
+		assert.equal(
+			summaries[0].getAttribute("id"),
+			getSummaryId(testReportId),
+			"First summary should be test results"
+		);
+		assert.equal(
+			summaries[1].getAttribute("id"),
+			getSummaryId(newId),
+			"Second summary should be new results"
+		);
+		assert.equal(
+			summaries[2].getAttribute("id"),
+			getSummaryId(otherReportId),
+			"Third summary should be other test results"
+		);
+
+		assert.equal(
+			results[0].getAttribute("id"),
+			getBenchmarkSectionId(testReportId),
+			"First result entry should be test results"
+		);
+		assert.equal(
+			results[1].getAttribute("id"),
+			getBenchmarkSectionId(newId),
+			"Second result entry should be new results"
+		);
+		assert.equal(
+			results[2].getAttribute("id"),
+			getBenchmarkSectionId(otherReportId),
+			"Third result entry should be other test results"
+		);
+	}
+);
+
+updateCommentSuite(
+	"Insert a benchmark with the higher job index at the end of the benchmarks",
+	async () => {
+		const newId = "another-new-id";
+		const newResults = JSON.parse(
+			await readFile(testRoot("results/other-results.json"), "utf8")
+		);
+
+		const commentBodyPath = testRoot("fixtures/multiple-entries.html");
+		const commentBody = await readFile(commentBodyPath, "utf-8");
+		const report = invokeBuildReport({
+			inputs: { reportId: newId },
+			results: newResults,
+			workflow: {
+				...defaultWorkflowInfo,
+				jobIndex: defaultWorkflowInfo.jobIndex + 10,
+			},
+		});
+
+		const bodyHtml = parse(invokeGetCommentBody({ report, commentBody }));
+
+		const summaries = bodyHtml.querySelectorAll(
+			`#${getSummaryListId()} li div`
+		);
+		const results = bodyHtml.querySelectorAll(
+			`#${getResultsContainerId()} div`
+		);
+
+		// console.log(formatHtml(bodyHtml.toString()));
+
+		assert.equal(
+			summaries[0].getAttribute("id"),
+			getSummaryId(testReportId),
+			"First summary should be test results"
+		);
+		assert.equal(
+			summaries[1].getAttribute("id"),
+			getSummaryId(otherReportId),
+			"Second summary should be other test results"
+		);
+		assert.equal(
+			summaries[2].getAttribute("id"),
+			getSummaryId(newId),
+			"Third summary should be new results"
+		);
+
+		assert.equal(
+			results[0].getAttribute("id"),
+			getBenchmarkSectionId(testReportId),
+			"First result entry should be test results"
+		);
+		assert.equal(
+			results[1].getAttribute("id"),
+			getBenchmarkSectionId(otherReportId),
+			"Third result entry should be other test results"
+		);
+		assert.equal(
+			results[2].getAttribute("id"),
+			getBenchmarkSectionId(newId),
+			"Third result entry should be new results"
+		);
+	}
+);
 
 // keep-old-results option
 // updateCommentSuite(

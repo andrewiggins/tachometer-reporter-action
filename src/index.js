@@ -4,7 +4,7 @@ const {
 	h,
 	getCommentBody,
 	Summary,
-	SummaryStatus,
+	Status,
 	ResultsEntry,
 } = require("./getCommentBody");
 const { getWorkflowRunInfo, getCommit } = require("./utils/github");
@@ -76,9 +76,7 @@ function buildReport(
 		workflowRun,
 		isRunning,
 		// results: benchmarks,
-		status: isRunning ? (
-			<SummaryStatus workflowRun={workflowRun} icon={true} />
-		) : null,
+		status: isRunning ? <Status workflowRun={workflowRun} icon={true} /> : null,
 		body: (
 			<ResultsEntry
 				reportId={reportId}

@@ -1,4 +1,4 @@
-const { parse, HTMLElement, TextNode } = require("node-html-parser");
+const { parse, HTMLElement, TextNode, NodeType } = require("node-html-parser");
 const {
 	formatDifference,
 	makeUniqueLabelFn,
@@ -38,7 +38,9 @@ function h(tag, attrs, ...children) {
 			id = attrs[key];
 		} else if (key == "class") {
 			className = attrs[key];
-		} else if (attrs[key] != null) {
+		}
+
+		if (attrs[key] != null) {
 			attrStr += `${attrStr ? " " : ""}${key}="${attrs[key]}"`;
 		}
 	}
@@ -79,7 +81,7 @@ function ResultsEntry({ reportId, benchmarks, workflowRun, commitInfo }) {
 	if (!Array.isArray(benchmarks)) {
 		return (
 			<div class={resultEntryClass}>
-				<SummaryStatus workflowRun={workflowRun} icon={false} />
+				<Status workflowRun={workflowRun} icon={false} />
 			</div>
 		);
 	}
@@ -150,23 +152,26 @@ function ResultsEntry({ reportId, benchmarks, workflowRun, commitInfo }) {
  * @typedef BenchmarkSectionProps
  * @property {import('./global').Report} report
  * @property {boolean} open
- * @property {JSX.Element | string} children
  *
  * @param {BenchmarkSectionProps} props
  */
-function BenchmarkSection({ report, open, children }) {
+function BenchmarkSection({ report, open }) {
 	return (
-		<div id={getBenchmarkSectionId(report.id)}>
+		<div
+			id={getBenchmarkSectionId(report.id)}
+			data-run-number={report.workflowRun.runNumber.toString()}
+			data-job-index={report.workflowRun.jobIndex.toString()}
+		>
 			<details open={open ? "open" : null}>
 				<summary>
 					<span class={statusClass}>
 						{report.isRunning ? (
-							<SummaryStatus workflowRun={report.workflowRun} icon={true} />
+							<Status workflowRun={report.workflowRun} icon={true} />
 						) : null}
 					</span>
 					<strong>{report.title}</strong>
 				</summary>
-				{children}
+				{report.body}
 			</details>
 		</div>
 	);
@@ -175,7 +180,7 @@ function BenchmarkSection({ report, open, children }) {
 /**
  * @param {{ workflowRun: import('./global').WorkflowRunInfo; icon: boolean; }} props
  */
-function SummaryStatus({ workflowRun, icon }) {
+function Status({ workflowRun, icon }) {
 	const label = `Currently running in ${workflowRun.workflowRunName}…`;
 	return (
 		<a
@@ -281,11 +286,14 @@ function Summary({
 	}
 
 	const status = isRunning ? (
-		<SummaryStatus workflowRun={workflowRun} icon={true} />
+		<Status workflowRun={workflowRun} icon={true} />
 	) : null;
 
 	return (
-		<div id={getSummaryId(reportId)}>
+		<div
+			id={getSummaryId(reportId)}
+			data-run-number={workflowRun.runNumber.toString()}
+		>
 			<span class={statusClass}>{status}</span>
 			{title}
 			{summaryBody}
@@ -309,6 +317,17 @@ function Summary({
 }
 
 /**
+ * @param {{ report: import('./global').Report; }} props
+ */
+function SummaryListItem({ report }) {
+	return (
+		<li data-job-index={report.workflowRun.jobIndex.toString()}>
+			{report.summary}
+		</li>
+	);
+}
+
+/**
  * @param {{ inputs: import('./global').Inputs; report: import('./global').Report; }} props
  */
 function NewCommentBody({ inputs, report }) {
@@ -317,13 +336,11 @@ function NewCommentBody({ inputs, report }) {
 			<h2>📊 Tachometer Benchmark Results</h2>
 			<h3>Summary</h3>
 			<ul id={getSummaryListId()}>
-				<li>{report.summary}</li>
+				<SummaryListItem report={report} />
 			</ul>
 			<h3>Results</h3>
 			<div id={getResultsContainerId()}>
-				<BenchmarkSection report={report} open={inputs.defaultOpen}>
-					{report.body}
-				</BenchmarkSection>
+				<BenchmarkSection report={report} open={inputs.defaultOpen} />
 			</div>
 		</div>
 	);
@@ -349,6 +366,33 @@ function Icon() {
 			<line x1="6" y1="20" x2="6" y2="14" />
 		</svg>
 	);
+}
+
+/**
+ * @param {import('node-html-parser').HTMLElement} container
+ * @param {number} jobIndex
+ * @param {import('node-html-parser').HTMLElement} newNode
+ */
+function insertNewBenchData(container, jobIndex, newNode) {
+	let insertionIndex;
+	for (let i = 0; i < container.childNodes.length; i++) {
+		/** @type {import('node-html-parser').HTMLElement} */
+		// @ts-ignore - We should be abel to safely assume these are HTMLElements
+		const child = container.childNodes[i];
+		if (child.nodeType == NodeType.ELEMENT_NODE) {
+			const childJobIndex = parseInt(child.getAttribute("data-job-index"), 10);
+			if (childJobIndex > jobIndex) {
+				insertionIndex = i;
+				break;
+			}
+		}
+	}
+
+	if (insertionIndex == null) {
+		container.appendChild(newNode);
+	} else {
+		container.childNodes.splice(insertionIndex, 0, newNode);
+	}
 }
 
 /**
@@ -393,7 +437,11 @@ function getCommentBody(inputs, report, commentBody, logger) {
 			summary.parentNode.exchangeChild(summary, report.summary);
 		}
 	} else {
-		summaryContainer.appendChild(<li>{report.summary}</li>);
+		insertNewBenchData(
+			summaryContainer,
+			report.workflowRun.jobIndex,
+			<SummaryListItem report={report} />
+		);
 	}
 
 	// Update results entry
@@ -401,18 +449,20 @@ function getCommentBody(inputs, report, commentBody, logger) {
 		if (report.isRunning) {
 			resultStatus.set_content(report.status);
 		} else {
+			// Update result data
 			const resultEntry = results.querySelector(`.${resultEntryClass}`);
 			// @ts-ignore - Can safely assume results.parentNode is HTMLElement
 			resultEntry.parentNode.exchangeChild(resultEntry, report.body);
 
+			// Clear status
 			const resultStatus = results.querySelector(`.${statusClass}`);
 			resultStatus.set_content("");
 		}
 	} else {
-		resultsContainer.appendChild(
-			<BenchmarkSection report={report} open={inputs.defaultOpen}>
-				{report.body}
-			</BenchmarkSection>
+		insertNewBenchData(
+			resultsContainer,
+			report.workflowRun.jobIndex,
+			<BenchmarkSection report={report} open={inputs.defaultOpen} />
 		);
 	}
 
@@ -424,5 +474,5 @@ module.exports = {
 	getCommentBody,
 	ResultsEntry,
 	Summary,
-	SummaryStatus,
+	Status,
 };

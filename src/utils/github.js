@@ -73,19 +73,6 @@ async function getWorkflowRunInfo(context, github, logger) {
 		logger.warn(
 			`Could not find job matching the name ${context.job} for workflow run ${context.runId}.`
 		);
-		const run = await github.actions.getWorkflowRun({
-			...context.repo,
-			run_id: context.runId,
-		});
-
-		return {
-			workflowName,
-			workflowRunsHtmlUrl,
-			workflowSrcHtmlUrl,
-			workflowRunName,
-			jobIndex: null,
-			jobHtmlUrl: run.data.html_url,
-		};
 	}
 
 	return {
@@ -93,8 +80,9 @@ async function getWorkflowRunInfo(context, github, logger) {
 		workflowRunsHtmlUrl,
 		workflowSrcHtmlUrl,
 		workflowRunName,
+		runNumber: run.data.run_number,
 		jobIndex,
-		jobHtmlUrl: matchingJob.html_url,
+		jobHtmlUrl: matchingJob?.html_url,
 	};
 }
 

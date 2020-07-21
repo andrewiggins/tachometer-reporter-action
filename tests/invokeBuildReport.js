@@ -13,9 +13,15 @@ const defaultInputs = Object.freeze({
 });
 
 /** @type {import('../src/global').WorkflowRunInfo} */
-// @ts-ignore
-const fakeWorkflowRun = {
+const defaultWorkflowInfo = {
+	workflowName: "Pull Request Test",
 	workflowRunName: "Pull Request Test #50",
+	workflowSrcHtmlUrl:
+		"https://github.com/andrewiggins/tachometer-reporter-action/blob/master/.github/workflows/pr.yml",
+	workflowRunsHtmlUrl:
+		"https://github.com/andrewiggins/tachometer-reporter-action/actions?query=workflow%3A%22Pull+Request+Test%22",
+	runNumber: 4,
+	jobIndex: 2,
 	jobHtmlUrl:
 		"https://github.com/andrewiggins/tachometer-reporter-action/runs/862224869?check_suite_focus=true",
 };
@@ -72,7 +78,7 @@ const fakeCommit = {
  */
 function invokeBuildReport({
 	commit = fakeCommit,
-	workflow = fakeWorkflowRun,
+	workflow = defaultWorkflowInfo,
 	inputs = null,
 	results = copyTestResults(),
 	isRunning = false,
@@ -87,5 +93,6 @@ function invokeBuildReport({
 
 module.exports = {
 	defaultInputs,
+	defaultWorkflowInfo,
 	invokeBuildReport,
 };

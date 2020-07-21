@@ -8219,7 +8219,7 @@ var tachometer = {
 	runtimeConfidenceIntervalDimension,
 };
 
-function _nullishCoalesce(lhs, rhsFn) { if (lhs != null) { return lhs; } else { return rhsFn(); } } function _optionalChain(ops) { let lastAccessLHS = undefined; let value = ops[0]; let i = 1; while (i < ops.length) { const op = ops[i]; const fn = ops[i + 1]; i += 2; if ((op === 'optionalAccess' || op === 'optionalCall') && value == null) { return undefined; } if (op === 'access' || op === 'optionalAccess') { lastAccessLHS = value; value = fn(value); } else if (op === 'call' || op === 'optionalCall') { value = fn((...args) => value.call(lastAccessLHS, ...args)); lastAccessLHS = undefined; } } return value; }const { parse: parse$1, HTMLElement, TextNode } = dist;
+function _nullishCoalesce(lhs, rhsFn) { if (lhs != null) { return lhs; } else { return rhsFn(); } } function _optionalChain(ops) { let lastAccessLHS = undefined; let value = ops[0]; let i = 1; while (i < ops.length) { const op = ops[i]; const fn = ops[i + 1]; i += 2; if ((op === 'optionalAccess' || op === 'optionalCall') && value == null) { return undefined; } if (op === 'access' || op === 'optionalAccess') { lastAccessLHS = value; value = fn(value); } else if (op === 'call' || op === 'optionalCall') { value = fn((...args) => value.call(lastAccessLHS, ...args)); lastAccessLHS = undefined; } } return value; }const { parse: parse$1, HTMLElement, TextNode, NodeType } = dist;
 const {
 	formatDifference: formatDifference$1,
 	makeUniqueLabelFn: makeUniqueLabelFn$1,
@@ -8259,7 +8259,9 @@ function h(tag, attrs, ...children) {
 			id = attrs[key];
 		} else if (key == "class") {
 			className = attrs[key];
-		} else if (attrs[key] != null) {
+		}
+
+		if (attrs[key] != null) {
 			attrStr += `${attrStr ? " " : ""}${key}="${attrs[key]}"`;
 		}
 	}
@@ -8300,7 +8302,7 @@ function ResultsEntry({ reportId, benchmarks, workflowRun, commitInfo }) {
 	if (!Array.isArray(benchmarks)) {
 		return (
 			h('div', { class: resultEntryClass,}
-, h(SummaryStatus, { workflowRun: workflowRun, icon: false,} )
+, h(Status, { workflowRun: workflowRun, icon: false,} )
 )
 		);
 	}
@@ -8371,23 +8373,26 @@ function ResultsEntry({ reportId, benchmarks, workflowRun, commitInfo }) {
  * @typedef BenchmarkSectionProps
  * @property {import('./global').Report} report
  * @property {boolean} open
- * @property {JSX.Element | string} children
  *
  * @param {BenchmarkSectionProps} props
  */
-function BenchmarkSection({ report, open, children }) {
+function BenchmarkSection({ report, open }) {
 	return (
-		h('div', { id: getBenchmarkSectionId(report.id),}
+		h('div', {
+			id: getBenchmarkSectionId(report.id),
+			'data-run-number': report.workflowRun.runNumber.toString(),
+			'data-job-index': report.workflowRun.jobIndex.toString(),}
+		
 , h('details', { open: open ? "open" : null,}
 , h('summary', null
 , h('span', { class: statusClass,}
 , report.isRunning ? (
-							h(SummaryStatus, { workflowRun: report.workflowRun, icon: true,} )
+							h(Status, { workflowRun: report.workflowRun, icon: true,} )
 						) : null
 )
 , h('strong', null, report.title)
 )
-, children
+, report.body
 )
 )
 	);
@@ -8396,7 +8401,7 @@ function BenchmarkSection({ report, open, children }) {
 /**
  * @param {{ workflowRun: import('./global').WorkflowRunInfo; icon: boolean; }} props
  */
-function SummaryStatus({ workflowRun, icon }) {
+function Status({ workflowRun, icon }) {
 	const label = `Currently running in ${workflowRun.workflowRunName}…`;
 	return (
 		h('a', {
@@ -8502,11 +8507,14 @@ function Summary({
 	}
 
 	const status = isRunning ? (
-		h(SummaryStatus, { workflowRun: workflowRun, icon: true,} )
+		h(Status, { workflowRun: workflowRun, icon: true,} )
 	) : null;
 
 	return (
-		h('div', { id: getSummaryId(reportId),}
+		h('div', {
+			id: getSummaryId(reportId),
+			'data-run-number': workflowRun.runNumber.toString(),}
+		
 , h('span', { class: statusClass,}, status)
 , title
 , summaryBody
@@ -8530,6 +8538,17 @@ function Summary({
 }
 
 /**
+ * @param {{ report: import('./global').Report; }} props
+ */
+function SummaryListItem({ report }) {
+	return (
+		h('li', { 'data-job-index': report.workflowRun.jobIndex.toString(),}
+, report.summary
+)
+	);
+}
+
+/**
  * @param {{ inputs: import('./global').Inputs; report: import('./global').Report; }} props
  */
 function NewCommentBody({ inputs, report }) {
@@ -8538,16 +8557,41 @@ function NewCommentBody({ inputs, report }) {
 , h('h2', null, "📊 Tachometer Benchmark Results"   )
 , h('h3', null, "Summary")
 , h('ul', { id: getSummaryListId(),}
-, h('li', null, report.summary)
+, h(SummaryListItem, { report: report,} )
 )
 , h('h3', null, "Results")
 , h('div', { id: getResultsContainerId(),}
-, h(BenchmarkSection, { report: report, open: inputs.defaultOpen,}
-, report.body
-)
+, h(BenchmarkSection, { report: report, open: inputs.defaultOpen,} )
 )
 )
 	);
+}
+
+/**
+ * @param {import('node-html-parser').HTMLElement} container
+ * @param {number} jobIndex
+ * @param {import('node-html-parser').HTMLElement} newNode
+ */
+function insertNewBenchData(container, jobIndex, newNode) {
+	let insertionIndex;
+	for (let i = 0; i < container.childNodes.length; i++) {
+		/** @type {import('node-html-parser').HTMLElement} */
+		// @ts-ignore - We should be abel to safely assume these are HTMLElements
+		const child = container.childNodes[i];
+		if (child.nodeType == NodeType.ELEMENT_NODE) {
+			const childJobIndex = parseInt(child.getAttribute("data-job-index"), 10);
+			if (childJobIndex > jobIndex) {
+				insertionIndex = i;
+				break;
+			}
+		}
+	}
+
+	if (insertionIndex == null) {
+		container.appendChild(newNode);
+	} else {
+		container.childNodes.splice(insertionIndex, 0, newNode);
+	}
 }
 
 /**
@@ -8592,7 +8636,11 @@ function getCommentBody(inputs, report, commentBody, logger) {
 			summary.parentNode.exchangeChild(summary, report.summary);
 		}
 	} else {
-		summaryContainer.appendChild(h('li', null, report.summary));
+		insertNewBenchData(
+			summaryContainer,
+			report.workflowRun.jobIndex,
+			h(SummaryListItem, { report: report,} )
+		);
 	}
 
 	// Update results entry
@@ -8600,18 +8648,20 @@ function getCommentBody(inputs, report, commentBody, logger) {
 		if (report.isRunning) {
 			resultStatus.set_content(report.status);
 		} else {
+			// Update result data
 			const resultEntry = results.querySelector(`.${resultEntryClass}`);
 			// @ts-ignore - Can safely assume results.parentNode is HTMLElement
 			resultEntry.parentNode.exchangeChild(resultEntry, report.body);
 
+			// Clear status
 			const resultStatus = results.querySelector(`.${statusClass}`);
 			resultStatus.set_content("");
 		}
 	} else {
-		resultsContainer.appendChild(
-			h(BenchmarkSection, { report: report, open: inputs.defaultOpen,}
-, report.body
-)
+		insertNewBenchData(
+			resultsContainer,
+			report.workflowRun.jobIndex,
+			h(BenchmarkSection, { report: report, open: inputs.defaultOpen,} )
 		);
 	}
 
@@ -8623,10 +8673,10 @@ var getCommentBody_1 = {
 	getCommentBody,
 	ResultsEntry,
 	Summary,
-	SummaryStatus,
+	Status,
 };
 
-/**
+function _optionalChain$1(ops) { let lastAccessLHS = undefined; let value = ops[0]; let i = 1; while (i < ops.length) { const op = ops[i]; const fn = ops[i + 1]; i += 2; if ((op === 'optionalAccess' || op === 'optionalCall') && value == null) { return undefined; } if (op === 'access' || op === 'optionalAccess') { lastAccessLHS = value; value = fn(value); } else if (op === 'call' || op === 'optionalCall') { value = fn((...args) => value.call(lastAccessLHS, ...args)); lastAccessLHS = undefined; } } return value; }/**
  * @param {import('../global').GitHubActionContext} context
  * @param {import('../global').GitHubActionClient} github
  * @param {import('../global').Logger} logger
@@ -8701,19 +8751,6 @@ async function getWorkflowRunInfo(context, github, logger) {
 		logger.warn(
 			`Could not find job matching the name ${context.job} for workflow run ${context.runId}.`
 		);
-		const run = await github.actions.getWorkflowRun({
-			...context.repo,
-			run_id: context.runId,
-		});
-
-		return {
-			workflowName,
-			workflowRunsHtmlUrl,
-			workflowSrcHtmlUrl,
-			workflowRunName,
-			jobIndex: null,
-			jobHtmlUrl: run.data.html_url,
-		};
 	}
 
 	return {
@@ -8721,8 +8758,9 @@ async function getWorkflowRunInfo(context, github, logger) {
 		workflowRunsHtmlUrl,
 		workflowSrcHtmlUrl,
 		workflowRunName,
+		runNumber: run.data.run_number,
 		jobIndex,
-		jobHtmlUrl: matchingJob.html_url,
+		jobHtmlUrl: _optionalChain$1([matchingJob, 'optionalAccess', _ => _.html_url]),
 	};
 }
 
@@ -9046,13 +9084,13 @@ var comments = {
 	postOrUpdateComment,
 };
 
-function _optionalChain$1(ops) { let lastAccessLHS = undefined; let value = ops[0]; let i = 1; while (i < ops.length) { const op = ops[i]; const fn = ops[i + 1]; i += 2; if ((op === 'optionalAccess' || op === 'optionalCall') && value == null) { return undefined; } if (op === 'access' || op === 'optionalAccess') { lastAccessLHS = value; value = fn(value); } else if (op === 'call' || op === 'optionalCall') { value = fn((...args) => value.call(lastAccessLHS, ...args)); lastAccessLHS = undefined; } } return value; }const { readFile } = fs.promises;
+function _optionalChain$2(ops) { let lastAccessLHS = undefined; let value = ops[0]; let i = 1; while (i < ops.length) { const op = ops[i]; const fn = ops[i + 1]; i += 2; if ((op === 'optionalAccess' || op === 'optionalCall') && value == null) { return undefined; } if (op === 'access' || op === 'optionalAccess') { lastAccessLHS = value; value = fn(value); } else if (op === 'call' || op === 'optionalCall') { value = fn((...args) => value.call(lastAccessLHS, ...args)); lastAccessLHS = undefined; } } return value; }const { readFile } = fs.promises;
 
 const {
 	h: h$1,
 	getCommentBody: getCommentBody$1,
 	Summary: Summary$1,
-	SummaryStatus: SummaryStatus$1,
+	Status: Status$1,
 	ResultsEntry: ResultsEntry$1,
 } = getCommentBody_1;
 const { getWorkflowRunInfo: getWorkflowRunInfo$1, getCommit: getCommit$1 } = github$1;
@@ -9100,7 +9138,7 @@ function buildReport(
 	//    - Allowing aliases
 	//    - replace `base-bench-name` with `branch@SHA`
 
-	const benchmarks = _optionalChain$1([tachResults, 'optionalAccess', _ => _.benchmarks]);
+	const benchmarks = _optionalChain$2([tachResults, 'optionalAccess', _ => _.benchmarks]);
 
 	let reportId;
 	let title;
@@ -9124,9 +9162,7 @@ function buildReport(
 		workflowRun,
 		isRunning,
 		// results: benchmarks,
-		status: isRunning ? (
-			h$1(SummaryStatus$1, { workflowRun: workflowRun, icon: true,} )
-		) : null,
+		status: isRunning ? h$1(Status$1, { workflowRun: workflowRun, icon: true,} ) : null,
 		body: (
 			h$1(ResultsEntry$1, {
 				reportId: reportId,
@@ -9199,15 +9235,15 @@ async function reportTachRunning(
 	await postOrUpdateComment$1(
 		github,
 		createCommentContext$1(context, workflowRun),
-		(comment) => getCommentBody$1(inputs, report, _optionalChain$1([comment, 'optionalAccess', _2 => _2.body]), logger),
+		(comment) => getCommentBody$1(inputs, report, _optionalChain$2([comment, 'optionalAccess', _2 => _2.body]), logger),
 		logger
 	);
 
 	return {
 		...report,
-		status: _optionalChain$1([report, 'access', _3 => _3.status, 'optionalAccess', _4 => _4.toString, 'call', _5 => _5()]),
-		body: _optionalChain$1([report, 'access', _6 => _6.body, 'optionalAccess', _7 => _7.toString, 'call', _8 => _8()]),
-		summary: _optionalChain$1([report, 'access', _9 => _9.summary, 'optionalAccess', _10 => _10.toString, 'call', _11 => _11()]),
+		status: _optionalChain$2([report, 'access', _3 => _3.status, 'optionalAccess', _4 => _4.toString, 'call', _5 => _5()]),
+		body: _optionalChain$2([report, 'access', _6 => _6.body, 'optionalAccess', _7 => _7.toString, 'call', _8 => _8()]),
+		summary: _optionalChain$2([report, 'access', _9 => _9.summary, 'optionalAccess', _10 => _10.toString, 'call', _11 => _11()]),
 	};
 }
 
@@ -9244,15 +9280,15 @@ async function reportTachResults(
 	await postOrUpdateComment$1(
 		github,
 		createCommentContext$1(context, workflowRun),
-		(comment) => getCommentBody$1(inputs, report, _optionalChain$1([comment, 'optionalAccess', _12 => _12.body]), logger),
+		(comment) => getCommentBody$1(inputs, report, _optionalChain$2([comment, 'optionalAccess', _12 => _12.body]), logger),
 		logger
 	);
 
 	return {
 		...report,
-		status: _optionalChain$1([report, 'access', _13 => _13.status, 'optionalAccess', _14 => _14.toString, 'call', _15 => _15()]),
-		body: _optionalChain$1([report, 'access', _16 => _16.body, 'optionalAccess', _17 => _17.toString, 'call', _18 => _18()]),
-		summary: _optionalChain$1([report, 'access', _19 => _19.summary, 'optionalAccess', _20 => _20.toString, 'call', _21 => _21()]),
+		status: _optionalChain$2([report, 'access', _13 => _13.status, 'optionalAccess', _14 => _14.toString, 'call', _15 => _15()]),
+		body: _optionalChain$2([report, 'access', _16 => _16.body, 'optionalAccess', _17 => _17.toString, 'call', _18 => _18()]),
+		summary: _optionalChain$2([report, 'access', _19 => _19.summary, 'optionalAccess', _20 => _20.toString, 'call', _21 => _21()]),
 	};
 }
 

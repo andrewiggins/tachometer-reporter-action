@@ -46,6 +46,7 @@ interface WorkflowRunInfo {
 	workflowRunsHtmlUrl: string;
 	workflowSrcHtmlUrl: string;
 	workflowRunName: string;
+	runNumber: number;
 	jobIndex: number | null;
 	jobHtmlUrl: string;
 }
