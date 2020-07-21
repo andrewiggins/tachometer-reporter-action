@@ -94,3 +94,25 @@ field or "version" field) which represents the changes made in this PR.
 The benchmark or version (identified in Tachometer results by either the "name"
 field or "version" field) which serves as the base this PR is to be compared
 against (e.g. the latest published version of your library/website).
+
+## Notes
+
+### Sorting
+
+The results are inserted into the comment based on the index of the job that
+produced the results. So a workflow that has multiple jobs reporting results
+will show the results in the order the jobs are listed in the workflow yaml
+file.
+
+A single job reporting multiple results will list them in the order they finish.
+
+### Only latest updates are shown
+
+If you quickly push to a PR, two different workflow runs could be triggered at
+close to the same time. Depending on how long the benchmarks take to run, the
+earlier workflow run running not the latest code could complete after the later
+workflow run running the latest code.
+
+To prevent this situation, where older out-of-date results could override the
+latest results, only results that come from a workflow run with a run number
+equal or higher to the current run number in the comment will be written.
