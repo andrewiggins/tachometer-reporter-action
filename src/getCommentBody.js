@@ -404,10 +404,12 @@ function insertNewBenchData(container, jobIndex, newNode) {
  */
 function getCommentBody(inputs, report, commentBody, logger) {
 	if (!commentBody) {
+		logger.info("Generating new comment body...");
 		const newHtml = <NewCommentBody report={report} inputs={inputs} />;
 		return newHtml.toString();
 	}
 
+	logger.info("Parsing existing comment...");
 	const commentHtml = parse(commentBody);
 	const summaryContainer = commentHtml.querySelector(`#${getSummaryListId()}`);
 	const resultsContainer = commentHtml.querySelector(
@@ -433,6 +435,7 @@ function getCommentBody(inputs, report, commentBody, logger) {
 		const htmlRunNumber = parseInt(results.getAttribute("data-run-number"), 10);
 
 		if (report.isRunning) {
+			logger.info(`Adding status info to summary with id "${summaryId}"...`);
 			summaryStatus.set_content(report.status);
 		} else if (htmlRunNumber > report.workflowRun.runNumber) {
 			logger.info(
@@ -440,10 +443,12 @@ function getCommentBody(inputs, report, commentBody, logger) {
 					`current run (#${report.workflowRun.runNumber}). Not updating the results.`
 			);
 		} else {
+			logger.info(`Updating summary with id "${summaryId}"...`);
 			// @ts-ignore - Can safely assume summary.parentNode is HTMLElement
 			summary.parentNode.exchangeChild(summary, report.summary);
 		}
 	} else {
+		logger.info(`No summary found with id "${summaryId}" so adding new one.`);
 		insertNewBenchData(
 			summaryContainer,
 			report.workflowRun.jobIndex,
@@ -456,6 +461,7 @@ function getCommentBody(inputs, report, commentBody, logger) {
 		const htmlRunNumber = parseInt(results.getAttribute("data-run-number"), 10);
 
 		if (report.isRunning) {
+			logger.info(`Adding status info to results with id "${resultsId}"...`);
 			resultStatus.set_content(report.status);
 		} else if (htmlRunNumber > report.workflowRun.runNumber) {
 			logger.info(
@@ -463,6 +469,8 @@ function getCommentBody(inputs, report, commentBody, logger) {
 					`current run (#${report.workflowRun.runNumber}). Not updating the results.`
 			);
 		} else {
+			logger.info(`Updating results with id "${resultsId}"...`);
+
 			// Update result data
 			const resultEntry = results.querySelector(`.${resultEntryClass}`);
 			// @ts-ignore - Can safely assume results.parentNode is HTMLElement
@@ -473,6 +481,7 @@ function getCommentBody(inputs, report, commentBody, logger) {
 			resultStatus.set_content("");
 		}
 	} else {
+		logger.info(`No results found with id "${resultsId}" so adding new one.`);
 		insertNewBenchData(
 			resultsContainer,
 			report.workflowRun.jobIndex,

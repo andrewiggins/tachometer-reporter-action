@@ -48,6 +48,9 @@ results of comparing the results identified by the `pr-bench-name` vs. the
 results identified by the `base-bench-name` and put them at the top of the of
 the comment.
 
+By default, if `pr-bench-name` or `base-bench-name` are not provided, then the
+first two benchmarks in the tachometer results will be compared.
+
 ### In-progress benchmarks
 
 ![Picture of a PR comment with icons indicating in progress benchmarks](./docs/in-progress-comment-with-results.png)
