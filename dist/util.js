@@ -8624,11 +8624,6 @@ function getCommentBody(inputs, report, commentBody, logger) {
 	const summaryStatus = _optionalChain([summary, 'optionalAccess', _4 => _4.querySelector, 'call', _5 => _5(`.${statusClass}`)]);
 	const resultStatus = _optionalChain([results, 'optionalAccess', _6 => _6.querySelector, 'call', _7 => _7(`.${statusClass}`)]);
 
-	// TODO: Consider inserting markup so the results are always ordered by
-	// report.workflowRun.jobIndex. Same jobIndex should be inserted at the end of
-	// all the same numbers to maintain order they report results (since steps
-	// inside of a job run sequentially).
-
 	// Update summary
 	if (summary) {
 		const htmlRunNumber = parseInt(results.getAttribute("data-run-number"), 10);
@@ -9041,11 +9036,6 @@ async function postOrUpdateComment(github, context, getCommentBody, logger) {
 		context.id = comment.id;
 
 		try {
-			// TODO: Consider checking if last write was by a workflow whose run
-			// number is greater than ours, meaning we are out-of-date and should do
-			// nothing. Perhaps pass a metadata string into getCommentBody so it can
-			// put it in its DOM
-
 			let updatedBody = getCommentBody(comment);
 			if (!updatedBody.includes(context.footer)) {
 				updatedBody = updatedBody + context.footer;

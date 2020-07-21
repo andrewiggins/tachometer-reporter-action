@@ -221,11 +221,6 @@ async function postOrUpdateComment(github, context, getCommentBody, logger) {
 		context.id = comment.id;
 
 		try {
-			// TODO: Consider checking if last write was by a workflow whose run
-			// number is greater than ours, meaning we are out-of-date and should do
-			// nothing. Perhaps pass a metadata string into getCommentBody so it can
-			// put it in its DOM
-
 			let updatedBody = getCommentBody(comment);
 			if (!updatedBody.includes(context.footer)) {
 				updatedBody = updatedBody + context.footer;

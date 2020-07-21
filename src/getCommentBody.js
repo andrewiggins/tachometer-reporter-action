@@ -425,11 +425,6 @@ function getCommentBody(inputs, report, commentBody, logger) {
 	const summaryStatus = summary?.querySelector(`.${statusClass}`);
 	const resultStatus = results?.querySelector(`.${statusClass}`);
 
-	// TODO: Consider inserting markup so the results are always ordered by
-	// report.workflowRun.jobIndex. Same jobIndex should be inserted at the end of
-	// all the same numbers to maintain order they report results (since steps
-	// inside of a job run sequentially).
-
 	// Update summary
 	if (summary) {
 		const htmlRunNumber = parseInt(results.getAttribute("data-run-number"), 10);
