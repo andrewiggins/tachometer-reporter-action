@@ -18,12 +18,14 @@ type GitHubActionContext = typeof import("@actions/github").context;
 type CommentData = import("@octokit/types").IssuesGetCommentResponseData;
 
 type OctokitResponse<T> = import("@octokit/types").OctokitResponse<T>;
+type Workflow = import("@octokit/types").ActionsGetWorkflowResponseData;
+type WorkflowRun = import("@octokit/types").ActionsGetWorkflowRunResponseData;
 type WorkflowRunJob = import("@octokit/types").ActionsGetJobForWorkflowRunResponseData;
+
 type WorkflowRunJobsAsyncIterator = AsyncIterableIterator<
 	OctokitResponse<WorkflowRunJob[]>
 >;
 
-// type WorkflowRun = import("@octokit/types").ActionsGetWorkflowRunResponseData;
 type Commit = import("@octokit/types").GitGetCommitResponseData;
 
 interface CommitInfo extends Commit {
@@ -41,14 +43,24 @@ interface CommentContext {
 	delayFactor: number;
 }
 
-interface WorkflowRunInfo {
-	workflowName: string;
-	workflowRunsHtmlUrl: string;
-	workflowSrcHtmlUrl: string;
-	workflowRunName: string;
-	runNumber: number;
-	jobIndex: number | null;
-	jobHtmlUrl: string;
+interface ActionInfo {
+	workflow: {
+		id: Workflow["id"];
+		name: Workflow["name"];
+		srcHtmlUrl: string;
+		runsHtmlUrl: string;
+	};
+	run: {
+		id: WorkflowRun["id"];
+		number: WorkflowRun["run_number"];
+		name: string;
+	};
+	job: {
+		id: WorkflowRunJob["id"];
+		name: WorkflowRunJob["name"];
+		htmlUrl: WorkflowRunJob["html_url"];
+		index: number;
+	};
 }
 
 interface Inputs {
@@ -68,7 +80,8 @@ interface Report {
 	title: string;
 	prBenchName: string | null;
 	baseBenchName: string | null;
-	workflowRun: WorkflowRunInfo | null;
+	// TODO: Rename to actionInfo
+	actionInfo: ActionInfo | null;
 	isRunning: boolean;
 	// results: BenchmarkResult[];
 	status: JSX.Element | null;

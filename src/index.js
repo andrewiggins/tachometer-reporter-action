@@ -7,7 +7,7 @@ const {
 	Status,
 	ResultsEntry,
 } = require("./getCommentBody");
-const { getWorkflowRunInfo, getCommit } = require("./utils/github");
+const { getActionInfo, getCommit } = require("./utils/github");
 const { createCommentContext, postOrUpdateComment } = require("./comments");
 
 /**
@@ -33,7 +33,7 @@ function getReportId(benchmarks) {
 
 /**
  * @param {import("./global").CommitInfo} commitInfo
- * @param {import('./global').WorkflowRunInfo} workflowRun
+ * @param {import('./global').ActionInfo} actionInfo
  * @param {Pick<import('./global').Inputs, 'prBenchName' | 'baseBenchName' | 'defaultOpen' | 'reportId'>} inputs
  * @param {import('./global').TachResults} tachResults
  * @param {boolean} [isRunning]
@@ -41,7 +41,7 @@ function getReportId(benchmarks) {
  */
 function buildReport(
 	commitInfo,
-	workflowRun,
+	actionInfo,
 	inputs,
 	tachResults,
 	isRunning = false
@@ -73,15 +73,15 @@ function buildReport(
 		title,
 		prBenchName: inputs.prBenchName,
 		baseBenchName: inputs.baseBenchName,
-		workflowRun,
+		actionInfo: actionInfo,
 		isRunning,
 		// results: benchmarks,
-		status: isRunning ? <Status workflowRun={workflowRun} icon={true} /> : null,
+		status: isRunning ? <Status actionInfo={actionInfo} icon={true} /> : null,
 		body: (
 			<ResultsEntry
 				reportId={reportId}
 				benchmarks={benchmarks}
-				workflowRun={workflowRun}
+				actionInfo={actionInfo}
 				commitInfo={commitInfo}
 			/>
 		),
@@ -92,7 +92,7 @@ function buildReport(
 				benchmarks={benchmarks}
 				prBenchName={inputs.prBenchName}
 				baseBenchName={inputs.baseBenchName}
-				workflowRun={workflowRun}
+				actionInfo={actionInfo}
 				isRunning={isRunning}
 			/>
 		),
@@ -138,17 +138,17 @@ async function reportTachRunning(
 	inputs,
 	logger = defaultLogger
 ) {
-	/** @type {[ import('./global').WorkflowRunInfo, import('./global').CommitInfo ]} */
-	const [workflowRun, commitInfo] = await Promise.all([
-		getWorkflowRunInfo(context, github, logger),
+	/** @type {[ import('./global').ActionInfo, import('./global').CommitInfo ]} */
+	const [actionInfo, commitInfo] = await Promise.all([
+		getActionInfo(context, github, logger),
 		getCommit(context, github),
 	]);
 
-	const report = buildReport(commitInfo, workflowRun, inputs, null, true);
+	const report = buildReport(commitInfo, actionInfo, inputs, null, true);
 
 	await postOrUpdateComment(
 		github,
-		createCommentContext(context, workflowRun),
+		createCommentContext(context, actionInfo),
 		(comment) => getCommentBody(inputs, report, comment?.body, logger),
 		logger
 	);
@@ -176,16 +176,16 @@ async function reportTachResults(
 ) {
 	inputs = { ...defaultInputs, ...inputs };
 
-	/** @type {[ import('./global').TachResults, import('./global').WorkflowRunInfo, import('./global').CommitInfo ]} */
-	const [tachResults, workflowRun, commitInfo] = await Promise.all([
+	/** @type {[ import('./global').TachResults, import('./global').ActionInfo, import('./global').CommitInfo ]} */
+	const [tachResults, actionInfo, commitInfo] = await Promise.all([
 		readFile(inputs.path, "utf8").then((contents) => JSON.parse(contents)),
-		getWorkflowRunInfo(context, github, logger),
+		getActionInfo(context, github, logger),
 		getCommit(context, github),
 	]);
 
 	const report = buildReport(
 		commitInfo,
-		workflowRun,
+		actionInfo,
 		inputs,
 		tachResults,
 		false
@@ -193,7 +193,7 @@ async function reportTachResults(
 
 	await postOrUpdateComment(
 		github,
-		createCommentContext(context, workflowRun),
+		createCommentContext(context, actionInfo),
 		(comment) => getCommentBody(inputs, report, comment?.body, logger),
 		logger
 	);

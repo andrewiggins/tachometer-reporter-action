@@ -8290,19 +8290,19 @@ function h(tag, attrs, ...children) {
  * @typedef ResultsEntryProps
  * @property {string} reportId
  * @property {import('./global').BenchmarkResult[]} benchmarks
- * @property {import('./global').WorkflowRunInfo} workflowRun
+ * @property {import('./global').ActionInfo} actionInfo
  * @property {import('./global').CommitInfo} commitInfo
  *
  * @param {ResultsEntryProps} props
  */
-function ResultsEntry({ reportId, benchmarks, workflowRun, commitInfo }) {
+function ResultsEntry({ reportId, benchmarks, actionInfo, commitInfo }) {
 	// Hard code what dimensions are rendered in the main table since GitHub comments
 	// have limited horizontal space
 
 	if (!Array.isArray(benchmarks)) {
 		return (
 			h('div', { class: resultEntryClass,}
-, h(Status, { workflowRun: workflowRun, icon: false,} )
+, h(Status, { actionInfo: actionInfo, icon: false,} )
 )
 		);
 	}
@@ -8340,9 +8340,8 @@ function ResultsEntry({ reportId, benchmarks, workflowRun, commitInfo }) {
 					);
 				})
 , h('li', null, "Commit: " , commitHtml)
-, h('li', null, "Built by:"
- , " "
-, h('a', { href: workflowRun.jobHtmlUrl,}, workflowRun.workflowRunName)
+, h('li', null, "Built by: "
+  , h('a', { href: actionInfo.job.htmlUrl,}, actionInfo.run.name)
 )
 )
 , h('table', null
@@ -8380,14 +8379,14 @@ function BenchmarkSection({ report, open }) {
 	return (
 		h('div', {
 			id: getBenchmarkSectionId(report.id),
-			'data-run-number': report.workflowRun.runNumber.toString(),
-			'data-job-index': report.workflowRun.jobIndex.toString(),}
+			'data-run-number': report.actionInfo.run.number.toString(),
+			'data-job-index': _optionalChain([report, 'access', _ => _.actionInfo, 'access', _2 => _2.job, 'access', _3 => _3.index, 'optionalAccess', _4 => _4.toString, 'call', _5 => _5()]),}
 		
 , h('details', { open: open ? "open" : null,}
 , h('summary', null
 , h('span', { class: statusClass,}
 , report.isRunning ? (
-							h(Status, { workflowRun: report.workflowRun, icon: true,} )
+							h(Status, { actionInfo: report.actionInfo, icon: true,} )
 						) : null
 )
 , h('strong', null, report.title)
@@ -8399,13 +8398,13 @@ function BenchmarkSection({ report, open }) {
 }
 
 /**
- * @param {{ workflowRun: import('./global').WorkflowRunInfo; icon: boolean; }} props
+ * @param {{ actionInfo: import('./global').ActionInfo; icon: boolean; }} props
  */
-function Status({ workflowRun, icon }) {
-	const label = `Currently running in ${workflowRun.workflowRunName}…`;
+function Status({ actionInfo, icon }) {
+	const label = `Currently running in ${actionInfo.run.name}…`;
 	return (
 		h('a', {
-			href: workflowRun.jobHtmlUrl,
+			href: actionInfo.job.htmlUrl,
 			title: icon ? label : null,
 			'aria-label': icon ? label : null,}
 		
@@ -8421,7 +8420,7 @@ function Status({ workflowRun, icon }) {
  * @property {import('./global').BenchmarkResult[]} benchmarks
  * @property {string} prBenchName
  * @property {string} baseBenchName
- * @property {import('./global').WorkflowRunInfo | null} workflowRun
+ * @property {import('./global').ActionInfo | null} actionInfo
  * @property {boolean} isRunning
  *
  * @param {SummaryProps} props
@@ -8432,7 +8431,7 @@ function Summary({
 	benchmarks,
 	prBenchName,
 	baseBenchName,
-	workflowRun,
+	actionInfo,
 	isRunning,
 }) {
 	const benchLength = Array.isArray(benchmarks) ? benchmarks.length : -1;
@@ -8456,7 +8455,7 @@ function Summary({
 			);
 		} else {
 			baseIndex = 0;
-			baseBenchName = _nullishCoalesce(_optionalChain([benchmarks, 'access', _ => _[0], 'optionalAccess', _2 => _2.version]), () => ( benchmarks[0].name));
+			baseBenchName = _nullishCoalesce(_optionalChain([benchmarks, 'access', _6 => _6[0], 'optionalAccess', _7 => _7.version]), () => ( benchmarks[0].name));
 		}
 
 		let localIndex, localResults;
@@ -8468,7 +8467,7 @@ function Summary({
 		} else {
 			let localIndex = (baseIndex + 1) % benchLength;
 			localResults = benchmarks[localIndex];
-			prBenchName = _nullishCoalesce(_optionalChain([localResults, 'optionalAccess', _3 => _3.version]), () => ( localResults.name));
+			prBenchName = _nullishCoalesce(_optionalChain([localResults, 'optionalAccess', _8 => _8.version]), () => ( localResults.name));
 		}
 
 		showDiff = true;
@@ -8507,13 +8506,13 @@ function Summary({
 	}
 
 	const status = isRunning ? (
-		h(Status, { workflowRun: workflowRun, icon: true,} )
+		h(Status, { actionInfo: actionInfo, icon: true,} )
 	) : null;
 
 	return (
 		h('div', {
 			id: getSummaryId(reportId),
-			'data-run-number': workflowRun.runNumber.toString(),}
+			'data-run-number': actionInfo.run.number.toString(),}
 		
 , h('span', { class: statusClass,}, status)
 , title
@@ -8542,7 +8541,7 @@ function Summary({
  */
 function SummaryListItem({ report }) {
 	return (
-		h('li', { 'data-job-index': report.workflowRun.jobIndex.toString(),}
+		h('li', { 'data-job-index': _optionalChain([report, 'access', _9 => _9.actionInfo, 'access', _10 => _10.job, 'access', _11 => _11.index, 'optionalAccess', _12 => _12.toString, 'call', _13 => _13()]),}
 , report.summary
 )
 	);
@@ -8621,8 +8620,8 @@ function getCommentBody(inputs, report, commentBody, logger) {
 	const resultsId = getBenchmarkSectionId(report.id);
 	const results = commentHtml.querySelector(`#${resultsId}`);
 
-	const summaryStatus = _optionalChain([summary, 'optionalAccess', _4 => _4.querySelector, 'call', _5 => _5(`.${statusClass}`)]);
-	const resultStatus = _optionalChain([results, 'optionalAccess', _6 => _6.querySelector, 'call', _7 => _7(`.${statusClass}`)]);
+	const summaryStatus = _optionalChain([summary, 'optionalAccess', _14 => _14.querySelector, 'call', _15 => _15(`.${statusClass}`)]);
+	const resultStatus = _optionalChain([results, 'optionalAccess', _16 => _16.querySelector, 'call', _17 => _17(`.${statusClass}`)]);
 
 	// Update summary
 	if (summary) {
@@ -8631,10 +8630,10 @@ function getCommentBody(inputs, report, commentBody, logger) {
 		if (report.isRunning) {
 			logger.info(`Adding status info to summary with id "${summaryId}"...`);
 			summaryStatus.set_content(report.status);
-		} else if (htmlRunNumber > report.workflowRun.runNumber) {
+		} else if (htmlRunNumber > report.actionInfo.run.number) {
 			logger.info(
 				`Existing summary is from a run (#${htmlRunNumber}) that is more recent than the` +
-					`current run (#${report.workflowRun.runNumber}). Not updating the results.`
+					`current run (#${report.actionInfo.run.number}). Not updating the results.`
 			);
 		} else {
 			logger.info(`Updating summary with id "${summaryId}"...`);
@@ -8645,7 +8644,7 @@ function getCommentBody(inputs, report, commentBody, logger) {
 		logger.info(`No summary found with id "${summaryId}" so adding new one.`);
 		insertNewBenchData(
 			summaryContainer,
-			report.workflowRun.jobIndex,
+			report.actionInfo.job.index,
 			h(SummaryListItem, { report: report,} )
 		);
 	}
@@ -8657,10 +8656,10 @@ function getCommentBody(inputs, report, commentBody, logger) {
 		if (report.isRunning) {
 			logger.info(`Adding status info to results with id "${resultsId}"...`);
 			resultStatus.set_content(report.status);
-		} else if (htmlRunNumber > report.workflowRun.runNumber) {
+		} else if (htmlRunNumber > report.actionInfo.run.number) {
 			logger.info(
 				`Existing results are from a run (#${htmlRunNumber}) that is more recent than the ` +
-					`current run (#${report.workflowRun.runNumber}). Not updating the results.`
+					`current run (#${report.actionInfo.run.number}). Not updating the results.`
 			);
 		} else {
 			logger.info(`Updating results with id "${resultsId}"...`);
@@ -8678,7 +8677,7 @@ function getCommentBody(inputs, report, commentBody, logger) {
 		logger.info(`No results found with id "${resultsId}" so adding new one.`);
 		insertNewBenchData(
 			resultsContainer,
-			report.workflowRun.jobIndex,
+			report.actionInfo.job.index,
 			h(BenchmarkSection, { report: report, open: inputs.defaultOpen,} )
 		);
 	}
@@ -8694,7 +8693,7 @@ var getCommentBody_1 = {
 	Status,
 };
 
-function _optionalChain$1(ops) { let lastAccessLHS = undefined; let value = ops[0]; let i = 1; while (i < ops.length) { const op = ops[i]; const fn = ops[i + 1]; i += 2; if ((op === 'optionalAccess' || op === 'optionalCall') && value == null) { return undefined; } if (op === 'access' || op === 'optionalAccess') { lastAccessLHS = value; value = fn(value); } else if (op === 'call' || op === 'optionalCall') { value = fn((...args) => value.call(lastAccessLHS, ...args)); lastAccessLHS = undefined; } } return value; }/**
+function _nullishCoalesce$1(lhs, rhsFn) { if (lhs != null) { return lhs; } else { return rhsFn(); } } function _optionalChain$1(ops) { let lastAccessLHS = undefined; let value = ops[0]; let i = 1; while (i < ops.length) { const op = ops[i]; const fn = ops[i + 1]; i += 2; if ((op === 'optionalAccess' || op === 'optionalCall') && value == null) { return undefined; } if (op === 'access' || op === 'optionalAccess') { lastAccessLHS = value; value = fn(value); } else if (op === 'call' || op === 'optionalCall') { value = fn((...args) => value.call(lastAccessLHS, ...args)); lastAccessLHS = undefined; } } return value; }/**
  * @param {import('../global').GitHubActionContext} context
  * @param {import('../global').GitHubActionClient} github
  * @param {import('../global').Logger} logger
@@ -8724,26 +8723,24 @@ async function* getWorkflowJobs(context, github, logger) {
  * @param {import('../global').GitHubActionContext} context
  * @param {import('../global').GitHubActionClient} github
  * @param {import('../global').Logger} logger
- * @returns {Promise<import('../global').WorkflowRunInfo>}
+ * @returns {Promise<import('../global').ActionInfo>}
  */
-async function getWorkflowRunInfo(context, github, logger) {
-	const workflowName = context.workflow;
-	const workflowRunName = `${context.workflow} #${context.runNumber}`;
-
-	const run = await github.actions.getWorkflowRun({
-		...context.repo,
-		run_id: context.runId,
-	});
+async function getActionInfo(context, github, logger) {
+	const run = (
+		await github.actions.getWorkflowRun({
+			...context.repo,
+			run_id: context.runId,
+		})
+	).data;
 
 	/** @type {import('@octokit/types').ActionsGetWorkflowResponseData} */
 	const workflow = (
 		await github.request({
-			url: run.data.workflow_url,
+			url: run.workflow_url,
 		})
 	).data;
 
 	const e = encodeURIComponent;
-	const workflowSrcHtmlUrl = workflow.html_url;
 	const workflowRunsHtmlUrl = `https://github.com/${e(context.repo.owner)}/${e(
 		context.repo.repo
 	)}/actions?query=workflow%3A%22${e(workflow.name)}%22`;
@@ -8772,13 +8769,23 @@ async function getWorkflowRunInfo(context, github, logger) {
 	}
 
 	return {
-		workflowName,
-		workflowRunsHtmlUrl,
-		workflowSrcHtmlUrl,
-		workflowRunName,
-		runNumber: run.data.run_number,
-		jobIndex,
-		jobHtmlUrl: _optionalChain$1([matchingJob, 'optionalAccess', _ => _.html_url]),
+		workflow: {
+			id: workflow.id,
+			name: workflow.name, // Also: context.workflow,
+			srcHtmlUrl: workflow.html_url,
+			runsHtmlUrl: workflowRunsHtmlUrl,
+		},
+		run: {
+			id: context.runId,
+			number: context.runNumber,
+			name: `${context.workflow} #${context.runNumber}`,
+		},
+		job: {
+			id: _optionalChain$1([matchingJob, 'optionalAccess', _ => _.id]),
+			name: _nullishCoalesce$1(_optionalChain$1([matchingJob, 'optionalAccess', _2 => _2.name]), () => ( context.job)),
+			htmlUrl: _optionalChain$1([matchingJob, 'optionalAccess', _3 => _3.html_url]),
+			index: _nullishCoalesce$1(jobIndex, () => ( -1)),
+		},
 	};
 }
 
@@ -8799,7 +8806,7 @@ async function getCommit(context, github) {
 }
 
 var github$1 = {
-	getWorkflowRunInfo,
+	getActionInfo,
 	getCommit,
 };
 
@@ -8814,6 +8821,8 @@ var escapeStringRegexp = string => {
 		.replace(/[|\\{}()[\]^$+*?.]/g, '\\$&')
 		.replace(/-/g, '\\x2d');
 };
+
+function _nullishCoalesce$2(lhs, rhsFn) { if (lhs != null) { return lhs; } else { return rhsFn(); } }
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -9071,11 +9080,11 @@ async function postOrUpdateComment(github, context, getCommentBody, logger) {
 
 /**
  * @param {import('./global').GitHubActionContext} context
- * @param {import('./global').WorkflowRunInfo} workflowInfo
+ * @param {import('./global').ActionInfo} actionInfo
  * @returns {import('./global').CommentContext}
  */
-function createCommentContext(context, workflowInfo) {
-	const footer = `\n\n<sub><a href="https://github.com/andrewiggins/tachometer-reporter-action" target="_blank">tachometer-reporter-action</a> for <a href="${workflowInfo.workflowRunsHtmlUrl}" target="_blank">${workflowInfo.workflowName}</a></sub>`;
+function createCommentContext(context, actionInfo) {
+	const footer = `\n\n<sub><a href="https://github.com/andrewiggins/tachometer-reporter-action" target="_blank">tachometer-reporter-action</a> for <a href="${actionInfo.workflow.runsHtmlUrl}" target="_blank">${actionInfo.workflow.name}</a></sub>`;
 	const footerRe = new RegExp(escapeStringRegexp(footer.trim()));
 
 	return {
@@ -9087,7 +9096,7 @@ function createCommentContext(context, workflowInfo) {
 		matches(c) {
 			return c.user.type === "Bot" && footerRe.test(c.body);
 		},
-		delayFactor: workflowInfo.jobIndex,
+		delayFactor: _nullishCoalesce$2(actionInfo.job.index, () => ( 0)),
 	};
 }
 
@@ -9106,7 +9115,7 @@ const {
 	Status: Status$1,
 	ResultsEntry: ResultsEntry$1,
 } = getCommentBody_1;
-const { getWorkflowRunInfo: getWorkflowRunInfo$1, getCommit: getCommit$1 } = github$1;
+const { getActionInfo: getActionInfo$1, getCommit: getCommit$1 } = github$1;
 const { createCommentContext: createCommentContext$1, postOrUpdateComment: postOrUpdateComment$1 } = comments;
 
 /**
@@ -9132,7 +9141,7 @@ function getReportId(benchmarks) {
 
 /**
  * @param {import("./global").CommitInfo} commitInfo
- * @param {import('./global').WorkflowRunInfo} workflowRun
+ * @param {import('./global').ActionInfo} actionInfo
  * @param {Pick<import('./global').Inputs, 'prBenchName' | 'baseBenchName' | 'defaultOpen' | 'reportId'>} inputs
  * @param {import('./global').TachResults} tachResults
  * @param {boolean} [isRunning]
@@ -9140,7 +9149,7 @@ function getReportId(benchmarks) {
  */
 function buildReport(
 	commitInfo,
-	workflowRun,
+	actionInfo,
 	inputs,
 	tachResults,
 	isRunning = false
@@ -9172,15 +9181,15 @@ function buildReport(
 		title,
 		prBenchName: inputs.prBenchName,
 		baseBenchName: inputs.baseBenchName,
-		workflowRun,
+		actionInfo: actionInfo,
 		isRunning,
 		// results: benchmarks,
-		status: isRunning ? h$1(Status$1, { workflowRun: workflowRun, icon: true,} ) : null,
+		status: isRunning ? h$1(Status$1, { actionInfo: actionInfo, icon: true,} ) : null,
 		body: (
 			h$1(ResultsEntry$1, {
 				reportId: reportId,
 				benchmarks: benchmarks,
-				workflowRun: workflowRun,
+				actionInfo: actionInfo,
 				commitInfo: commitInfo,}
 			)
 		),
@@ -9191,7 +9200,7 @@ function buildReport(
 				benchmarks: benchmarks,
 				prBenchName: inputs.prBenchName,
 				baseBenchName: inputs.baseBenchName,
-				workflowRun: workflowRun,
+				actionInfo: actionInfo,
 				isRunning: isRunning,}
 			)
 		),
@@ -9237,17 +9246,17 @@ async function reportTachRunning(
 	inputs,
 	logger = defaultLogger
 ) {
-	/** @type {[ import('./global').WorkflowRunInfo, import('./global').CommitInfo ]} */
-	const [workflowRun, commitInfo] = await Promise.all([
-		getWorkflowRunInfo$1(context, github, logger),
+	/** @type {[ import('./global').ActionInfo, import('./global').CommitInfo ]} */
+	const [actionInfo, commitInfo] = await Promise.all([
+		getActionInfo$1(context, github, logger),
 		getCommit$1(context, github),
 	]);
 
-	const report = buildReport(commitInfo, workflowRun, inputs, null, true);
+	const report = buildReport(commitInfo, actionInfo, inputs, null, true);
 
 	await postOrUpdateComment$1(
 		github,
-		createCommentContext$1(context, workflowRun),
+		createCommentContext$1(context, actionInfo),
 		(comment) => getCommentBody$1(inputs, report, _optionalChain$2([comment, 'optionalAccess', _2 => _2.body]), logger),
 		logger
 	);
@@ -9275,16 +9284,16 @@ async function reportTachResults(
 ) {
 	inputs = { ...defaultInputs, ...inputs };
 
-	/** @type {[ import('./global').TachResults, import('./global').WorkflowRunInfo, import('./global').CommitInfo ]} */
-	const [tachResults, workflowRun, commitInfo] = await Promise.all([
+	/** @type {[ import('./global').TachResults, import('./global').ActionInfo, import('./global').CommitInfo ]} */
+	const [tachResults, actionInfo, commitInfo] = await Promise.all([
 		readFile(inputs.path, "utf8").then((contents) => JSON.parse(contents)),
-		getWorkflowRunInfo$1(context, github, logger),
+		getActionInfo$1(context, github, logger),
 		getCommit$1(context, github),
 	]);
 
 	const report = buildReport(
 		commitInfo,
-		workflowRun,
+		actionInfo,
 		inputs,
 		tachResults,
 		false
@@ -9292,7 +9301,7 @@ async function reportTachResults(
 
 	await postOrUpdateComment$1(
 		github,
-		createCommentContext$1(context, workflowRun),
+		createCommentContext$1(context, actionInfo),
 		(comment) => getCommentBody$1(inputs, report, _optionalChain$2([comment, 'optionalAccess', _12 => _12.body]), logger),
 		logger
 	);

@@ -256,11 +256,11 @@ async function postOrUpdateComment(github, context, getCommentBody, logger) {
 
 /**
  * @param {import('./global').GitHubActionContext} context
- * @param {import('./global').WorkflowRunInfo} workflowInfo
+ * @param {import('./global').ActionInfo} actionInfo
  * @returns {import('./global').CommentContext}
  */
-function createCommentContext(context, workflowInfo) {
-	const footer = `\n\n<sub><a href="https://github.com/andrewiggins/tachometer-reporter-action" target="_blank">tachometer-reporter-action</a> for <a href="${workflowInfo.workflowRunsHtmlUrl}" target="_blank">${workflowInfo.workflowName}</a></sub>`;
+function createCommentContext(context, actionInfo) {
+	const footer = `\n\n<sub><a href="https://github.com/andrewiggins/tachometer-reporter-action" target="_blank">tachometer-reporter-action</a> for <a href="${actionInfo.workflow.runsHtmlUrl}" target="_blank">${actionInfo.workflow.name}</a></sub>`;
 	const footerRe = new RegExp(escapeRe(footer.trim()));
 
 	return {
@@ -272,7 +272,7 @@ function createCommentContext(context, workflowInfo) {
 		matches(c) {
 			return c.user.type === "Bot" && footerRe.test(c.body);
 		},
-		delayFactor: workflowInfo.jobIndex,
+		delayFactor: actionInfo.job.index ?? 0,
 	};
 }
 

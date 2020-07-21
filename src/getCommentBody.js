@@ -69,19 +69,19 @@ function h(tag, attrs, ...children) {
  * @typedef ResultsEntryProps
  * @property {string} reportId
  * @property {import('./global').BenchmarkResult[]} benchmarks
- * @property {import('./global').WorkflowRunInfo} workflowRun
+ * @property {import('./global').ActionInfo} actionInfo
  * @property {import('./global').CommitInfo} commitInfo
  *
  * @param {ResultsEntryProps} props
  */
-function ResultsEntry({ reportId, benchmarks, workflowRun, commitInfo }) {
+function ResultsEntry({ reportId, benchmarks, actionInfo, commitInfo }) {
 	// Hard code what dimensions are rendered in the main table since GitHub comments
 	// have limited horizontal space
 
 	if (!Array.isArray(benchmarks)) {
 		return (
 			<div class={resultEntryClass}>
-				<Status workflowRun={workflowRun} icon={false} />
+				<Status actionInfo={actionInfo} icon={false} />
 			</div>
 		);
 	}
@@ -120,8 +120,7 @@ function ResultsEntry({ reportId, benchmarks, workflowRun, commitInfo }) {
 				})}
 				<li>Commit: {commitHtml}</li>
 				<li>
-					Built by:{" "}
-					<a href={workflowRun.jobHtmlUrl}>{workflowRun.workflowRunName}</a>
+					Built by: <a href={actionInfo.job.htmlUrl}>{actionInfo.run.name}</a>
 				</li>
 			</ul>
 			<table>
@@ -159,14 +158,14 @@ function BenchmarkSection({ report, open }) {
 	return (
 		<div
 			id={getBenchmarkSectionId(report.id)}
-			data-run-number={report.workflowRun.runNumber.toString()}
-			data-job-index={report.workflowRun.jobIndex.toString()}
+			data-run-number={report.actionInfo.run.number.toString()}
+			data-job-index={report.actionInfo.job.index?.toString()}
 		>
 			<details open={open ? "open" : null}>
 				<summary>
 					<span class={statusClass}>
 						{report.isRunning ? (
-							<Status workflowRun={report.workflowRun} icon={true} />
+							<Status actionInfo={report.actionInfo} icon={true} />
 						) : null}
 					</span>
 					<strong>{report.title}</strong>
@@ -178,13 +177,13 @@ function BenchmarkSection({ report, open }) {
 }
 
 /**
- * @param {{ workflowRun: import('./global').WorkflowRunInfo; icon: boolean; }} props
+ * @param {{ actionInfo: import('./global').ActionInfo; icon: boolean; }} props
  */
-function Status({ workflowRun, icon }) {
-	const label = `Currently running in ${workflowRun.workflowRunName}…`;
+function Status({ actionInfo, icon }) {
+	const label = `Currently running in ${actionInfo.run.name}…`;
 	return (
 		<a
-			href={workflowRun.jobHtmlUrl}
+			href={actionInfo.job.htmlUrl}
 			title={icon ? label : null}
 			aria-label={icon ? label : null}
 		>
@@ -200,7 +199,7 @@ function Status({ workflowRun, icon }) {
  * @property {import('./global').BenchmarkResult[]} benchmarks
  * @property {string} prBenchName
  * @property {string} baseBenchName
- * @property {import('./global').WorkflowRunInfo | null} workflowRun
+ * @property {import('./global').ActionInfo | null} actionInfo
  * @property {boolean} isRunning
  *
  * @param {SummaryProps} props
@@ -211,7 +210,7 @@ function Summary({
 	benchmarks,
 	prBenchName,
 	baseBenchName,
-	workflowRun,
+	actionInfo,
 	isRunning,
 }) {
 	const benchLength = Array.isArray(benchmarks) ? benchmarks.length : -1;
@@ -286,13 +285,13 @@ function Summary({
 	}
 
 	const status = isRunning ? (
-		<Status workflowRun={workflowRun} icon={true} />
+		<Status actionInfo={actionInfo} icon={true} />
 	) : null;
 
 	return (
 		<div
 			id={getSummaryId(reportId)}
-			data-run-number={workflowRun.runNumber.toString()}
+			data-run-number={actionInfo.run.number.toString()}
 		>
 			<span class={statusClass}>{status}</span>
 			{title}
@@ -321,7 +320,7 @@ function Summary({
  */
 function SummaryListItem({ report }) {
 	return (
-		<li data-job-index={report.workflowRun.jobIndex.toString()}>
+		<li data-job-index={report.actionInfo.job.index?.toString()}>
 			{report.summary}
 		</li>
 	);
@@ -432,10 +431,10 @@ function getCommentBody(inputs, report, commentBody, logger) {
 		if (report.isRunning) {
 			logger.info(`Adding status info to summary with id "${summaryId}"...`);
 			summaryStatus.set_content(report.status);
-		} else if (htmlRunNumber > report.workflowRun.runNumber) {
+		} else if (htmlRunNumber > report.actionInfo.run.number) {
 			logger.info(
 				`Existing summary is from a run (#${htmlRunNumber}) that is more recent than the` +
-					`current run (#${report.workflowRun.runNumber}). Not updating the results.`
+					`current run (#${report.actionInfo.run.number}). Not updating the results.`
 			);
 		} else {
 			logger.info(`Updating summary with id "${summaryId}"...`);
@@ -446,7 +445,7 @@ function getCommentBody(inputs, report, commentBody, logger) {
 		logger.info(`No summary found with id "${summaryId}" so adding new one.`);
 		insertNewBenchData(
 			summaryContainer,
-			report.workflowRun.jobIndex,
+			report.actionInfo.job.index,
 			<SummaryListItem report={report} />
 		);
 	}
@@ -458,10 +457,10 @@ function getCommentBody(inputs, report, commentBody, logger) {
 		if (report.isRunning) {
 			logger.info(`Adding status info to results with id "${resultsId}"...`);
 			resultStatus.set_content(report.status);
-		} else if (htmlRunNumber > report.workflowRun.runNumber) {
+		} else if (htmlRunNumber > report.actionInfo.run.number) {
 			logger.info(
 				`Existing results are from a run (#${htmlRunNumber}) that is more recent than the ` +
-					`current run (#${report.workflowRun.runNumber}). Not updating the results.`
+					`current run (#${report.actionInfo.run.number}). Not updating the results.`
 			);
 		} else {
 			logger.info(`Updating results with id "${resultsId}"...`);
@@ -479,7 +478,7 @@ function getCommentBody(inputs, report, commentBody, logger) {
 		logger.info(`No results found with id "${resultsId}" so adding new one.`);
 		insertNewBenchData(
 			resultsContainer,
-			report.workflowRun.jobIndex,
+			report.actionInfo.job.index,
 			<BenchmarkSection report={report} open={inputs.defaultOpen} />
 		);
 	}
