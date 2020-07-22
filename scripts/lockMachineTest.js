@@ -21,9 +21,9 @@ async function attemptAcquire() {
 
 	console.log("attemptAcquire:", lockAcquiredChance, lockAcquiredActual);
 	// Read lock
-	// if held by someone else, send WAIT
-	// if held by us, send HOLD
-	// if held by no one, write to lock and send HOLD
+	// if held by us, lockAquired = true
+	// if held by someone else, lockAcquired = false
+	// if held by no one, write to lock and lockAcquired = true
 
 	return [lockAquired, {}];
 }
@@ -38,8 +38,8 @@ async function checkHold(context) {
 
 	console.log("checkHold:", lockHeldChance, lockHeldActual);
 	// read lock
-	// if ours, send HOLD
-	// if not ours, send WAIT
+	// if ours, lockHeld = true
+	// if not ours, lockHeld = false
 
 	return [lockHeld, {}];
 }
@@ -239,4 +239,4 @@ async function run() {
 	console.log("Comment:", lastReadComment);
 }
 
-// run();
+run();
