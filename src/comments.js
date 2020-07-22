@@ -245,10 +245,6 @@ async function initiateCommentLock(github, context, getInitialBody, logger) {
  * @returns {Promise<import('./global').CommentData>}
  */
 async function acquireCommentLock(github, context, getInitialBody, logger) {
-	// TODO: Test this. Should it take read/write comment functions? But
-	// initiateCommentLock needs createComment and context.delayFactor. Everything
-	// needs context.lockId.
-
 	logger.startGroup("Acquiring comment lock...");
 
 	// Create comment if it doesn't already exist
@@ -495,45 +491,24 @@ async function postOrUpdateComment(github, context, getCommentBody, logger) {
 		logger
 	);
 
-	if (comment) {
-		context.commentId = comment.id;
-
-		try {
-			let updatedBody = getCommentBody(comment);
-			if (!updatedBody.includes(context.footer)) {
-				updatedBody = updatedBody + context.footer;
-			}
-
-			comment = await updateComment(
-				github,
-				context,
-				removeLockHtml(updatedBody),
-				logger
-			);
-		} catch (e) {
-			logger.info(`Error updating comment: ${e.message}`);
-			logger.debug(() => e.toString());
-			comment = null;
+	context.commentId = comment.id;
+	try {
+		let updatedBody = getCommentBody(comment);
+		if (!updatedBody.includes(context.footer)) {
+			updatedBody = updatedBody + context.footer;
 		}
+
+		comment = await updateComment(
+			github,
+			context,
+			removeLockHtml(updatedBody),
+			logger
+		);
+	} catch (e) {
+		logger.info(`Error updating comment: ${e.message}`);
+		logger.debug(() => e.toString());
 	}
 
-	// TODO: Will this ever get hit if acquireCommentLock always returns a comment
-	// since it'll create one if it can't find one?
-	if (!comment) {
-		try {
-			comment = await createComment(
-				github,
-				context,
-				getCommentBody(null) + context.footer,
-				logger
-			);
-		} catch (e) {
-			logger.info(`Error creating comment: ${e.message}`);
-			logger.debug(() => e.toString());
-		}
-	}
-
-	// logger.endGroup();
 	return comment;
 }
 
