@@ -11,18 +11,23 @@ const { defaultActionInfo } = require("./invokeBuildReport");
 const { pick } = require("./utils");
 
 const DEBUG = {
-	all: false,
+	allLogs: false,
+	testTrace: false,
 	states: false,
 };
 
 const htmlLockId = "tachometer-reporter-action-lock-id";
+
+const testWriterId = "test-lock-writer-id";
+const getLockHtml = (writerId = testWriterId) =>
+	`<div id="tachometer-reporter-action-lock-id" data-locked-by="${writerId}"></div>`;
 
 /**
  * @param {keyof DEBUG | null} namespace
  * @param {string} msg
  */
 function debug(namespace, msg) {
-	if (DEBUG.all || DEBUG[namespace]) {
+	if (DEBUG[namespace]) {
 		console.log(msg);
 	}
 }
@@ -72,7 +77,8 @@ function createGitHubClient({ comments = [] } = {}) {
 			throw new Error(`Could not find comment with id ${comment_id}`);
 		}
 
-		return { data: { ...comment, body } };
+		comment.body = body;
+		return { data: { ...comment } };
 	}
 
 	/**
@@ -152,13 +158,13 @@ function createTestLogger() {
 			}
 		},
 		info(msg) {
-			debug(null, msg);
+			debug("allLogs", msg);
 		},
 		warn(msg) {
 			throw new Error("Unexpected warning in test: " + msg);
 		},
 		startGroup(name) {
-			debug(null, name);
+			debug("allLogs", name);
 		},
 		endGroup() {},
 		getStates() {
@@ -198,6 +204,78 @@ async function invokePostorUpdateComment({
 	return [states, comment];
 }
 
+/** @returns {any} */
+function getFinalHoldingStates() {
+	return [
+		{
+			value: "holding",
+			context: { wait_time: 0, total_wait_time: 0, total_held_time: 0 },
+			actions: [],
+			changed: true,
+		},
+		{
+			value: "checking",
+			context: { wait_time: 0, total_wait_time: 0, total_held_time: 500 },
+			actions: [],
+			changed: true,
+		},
+		{
+			value: "holding",
+			context: { wait_time: 0, total_wait_time: 0, total_held_time: 500 },
+			actions: [],
+			changed: true,
+		},
+		{
+			value: "checking",
+			context: { wait_time: 0, total_wait_time: 0, total_held_time: 1000 },
+			actions: [],
+			changed: true,
+		},
+		{
+			value: "holding",
+			context: { wait_time: 0, total_wait_time: 0, total_held_time: 1000 },
+			actions: [],
+			changed: true,
+		},
+		{
+			value: "checking",
+			context: { wait_time: 0, total_wait_time: 0, total_held_time: 1500 },
+			actions: [],
+			changed: true,
+		},
+		{
+			value: "holding",
+			context: { wait_time: 0, total_wait_time: 0, total_held_time: 1500 },
+			actions: [],
+			changed: true,
+		},
+		{
+			value: "checking",
+			context: { wait_time: 0, total_wait_time: 0, total_held_time: 2000 },
+			actions: [],
+			changed: true,
+		},
+		{
+			value: "holding",
+			context: { wait_time: 0, total_wait_time: 0, total_held_time: 2000 },
+			actions: [],
+			changed: true,
+		},
+		{
+			value: "checking",
+			context: { wait_time: 0, total_wait_time: 0, total_held_time: 2500 },
+			actions: [],
+			changed: true,
+		},
+		{
+			value: "acquired",
+			context: { wait_time: 0, total_wait_time: 0, total_held_time: 2500 },
+			actions: [],
+			changed: true,
+		},
+	];
+}
+
 /**
  * @param {Comment} comment
  */
@@ -218,7 +296,8 @@ function validateStates(
 	expectedStates,
 	propsToCompare = ["value"]
 ) {
-	const expectedFixture = JSON.stringify(expectedStates, null, 2);
+	const pickedExpectStates = expectedStates.map((s) => pick(s, propsToCompare));
+	const expectedFixture = JSON.stringify(pickedExpectStates, null, 2);
 
 	const pickedActualStates = actualStates.map((s) => pick(s, propsToCompare));
 	const actualFixture = JSON.stringify(pickedActualStates, null, 2);
@@ -239,27 +318,115 @@ acquireLockSuite.after.each(() => {
 	clock.uninstall();
 });
 
-acquireLockSuite.only("Single benchmark", async () => {
+acquireLockSuite("Single benchmark", async () => {
 	const completion = invokePostorUpdateComment();
 
 	await clock.runAllAsync();
 	const [states, comment] = await completion;
 
 	validateFinalComment(comment);
+	validateStates(states, [{ value: "acquiring" }, ...getFinalHoldingStates()]);
+});
+
+acquireLockSuite("Benchmark that must first wait", async () => {
+	const context = createTestCommentContext();
+	const github = createGitHubClient();
+
+	debug("testTrace", "Initiate first job creating comment with lock...");
+	const { data: comment } = await github.issues.createComment({
+		body: `${getTestCommentBody(null)}\n${context.footer}\n${getLockHtml()}`,
+	});
+
+	debug("testTrace", "Start second job trying to update comment...");
+	const completion = invokePostorUpdateComment({ github });
+	await clock.nextAsync();
+
+	debug("testTrace", "Simulate first job completing...");
+	await github.issues.updateComment({
+		comment_id: comment.id,
+		body: `${getTestCommentBody(comment)}\n${context.footer}`,
+	});
+
+	debug("testTrace", "Wait for second job to complete");
+	await clock.runAllAsync();
+	const [states, finalComment] = await completion;
+
+	validateFinalComment(finalComment);
+	validateStates(states, [
+		{ value: "acquiring" },
+		{ value: "waiting" },
+		{ value: "acquiring" },
+		{ value: "waiting" },
+		{ value: "acquiring" },
+		...getFinalHoldingStates(),
+	]);
+});
+
+acquireLockSuite("Benchmark that loses a hold", async () => {
+	const context = createTestCommentContext();
+	const github = createGitHubClient();
+
+	debug("testTrace", "Initiate comment with no lock...");
+	const { data: comment } = await github.issues.createComment({
+		body: `${getTestCommentBody(null)}\n${context.footer}`,
+	});
+
+	debug("testTrace", "Start first job trying to update comment...");
+	const completion = invokePostorUpdateComment({ github });
+	await clock.nextAsync();
+
+	debug("testTrace", "Simulate second job overwriting first job's lock...");
+	await github.issues.updateComment({
+		comment_id: comment.id,
+		body: `${getTestCommentBody(comment)}\n${context.footer}\n${getLockHtml()}`,
+	});
+	await clock.nextAsync();
+
+	debug("testTrace", "Simulate second job releasing lock...");
+	await github.issues.updateComment({
+		comment_id: comment.id,
+		body: `${getTestCommentBody(comment)}\n${context.footer}`,
+	});
+	await clock.nextAsync();
+
+	debug("testTrace", "Wait for first job to complete");
+	await clock.runAllAsync();
+	const [states, finalComment] = await completion;
+
+	validateFinalComment(finalComment);
 	validateStates(states, [
 		{ value: "acquiring" },
 		{ value: "holding" },
 		{ value: "checking" },
 		{ value: "holding" },
 		{ value: "checking" },
-		{ value: "holding" },
-		{ value: "checking" },
-		{ value: "holding" },
-		{ value: "checking" },
-		{ value: "holding" },
-		{ value: "checking" },
-		{ value: "acquired" },
+		{ value: "waiting" },
+		{ value: "acquiring" },
+		...getFinalHoldingStates(),
 	]);
+});
+
+acquireLockSuite("Benchmark that times out", async () => {
+	const context = createTestCommentContext();
+	const github = createGitHubClient();
+
+	debug("testTrace", "Initiate comment with lock...");
+	await github.issues.createComment({
+		body: `${getTestCommentBody(null)}\n${context.footer}\n${getLockHtml()}`,
+	});
+
+	debug("testTrace", "Start job that times out waiting to update comment...");
+
+	/** @type {Error} */
+	let error;
+	invokePostorUpdateComment({ github }).catch((e) => (error = e));
+	await clock.runAllAsync();
+
+	assert.ok(error, "Expected error to be caught");
+	assert.ok(
+		error.message.includes("Timed out waiting to acquire lock"),
+		"Expected error to have time out message"
+	);
 });
 
 acquireLockSuite.run();

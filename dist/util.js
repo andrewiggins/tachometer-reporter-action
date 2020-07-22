@@ -9206,6 +9206,13 @@ async function acquireCommentLock(github, context, getInitialBody, logger) {
 	logger.debug(() => "Comment: " + JSON.stringify(lastReadComment, null, 2));
 	logger.endGroup();
 
+	if (service.state.value == "timed_out") {
+		const lastWriterId = getLockHolder(lastReadComment);
+		throw new Error(
+			`Timed out waiting to acquire lock to write comment. Last writer to hold lock was "${lastWriterId}"`
+		);
+	}
+
 	return lastReadComment;
 }
 
@@ -9327,7 +9334,7 @@ async function createComment(github, context, body, logger) {
  */
 async function postOrUpdateComment(github, context, getCommentBody, logger) {
 	// logger.startGroup(`Updating PR comment:`);
-	logger.info(`Updating PR comment:`);
+	logger.info(`Updating PR comment...`);
 
 	let comment = await acquireCommentLock(
 		github,
