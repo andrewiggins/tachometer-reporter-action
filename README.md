@@ -119,3 +119,20 @@ workflow run running the latest code.
 To prevent this situation, where older out-of-date results could override the
 latest results, only results that come from a workflow run with a run number
 equal or higher to the current run number in the comment will be written.
+
+### Cooperative comment locking
+
+If you action has multiple benchmarks running in different jobs, it is possible
+that the reporter-action will try to overwrite each other's results if both jobs
+read the comment before either has updated it with their results. In this
+situation, both jobs get a view of the comment with no results and only adds
+their results to the comment. The last job whose update is written would
+override the update of the other job.
+
+To mitigate this situation, this action implements a basic "locking" mechanism
+on the comment. Before any job can make significant changes to the comment, it
+must first write an empty `div` to the comment with an ID and wait a short time
+to ensure all other jobs have seen it's `div`, claiming the comment as locked.
+if another job sees that this div exists, it will wait a random amount of time
+before trying to acquire the comment lock for itself. This protocol is perfect,
+but it is likely good enough for our purposes.
