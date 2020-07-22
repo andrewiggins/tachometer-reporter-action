@@ -37,7 +37,27 @@ const getSummaryId = (id) =>
 const getSummaryListId = () => `tachometer-reporter-action--summaries`;
 const getResultsContainerId = () => `tachometer-reporter-action--results`;
 
+/**
+ * @template T
+ * @template K
+ * @param {T} obj
+ * @param {K} keys
+ * @returns {Pick<T, K>}
+ */
+function pick(obj, keys) {
+	let newObj = {};
+
+	// @ts-ignore
+	for (let key of keys) {
+		newObj[key] = obj[key];
+	}
+
+	// @ts-ignore
+	return newObj;
+}
+
 module.exports = {
+	pick,
 	testRoot,
 	copyTestResults,
 	formatHtml,

@@ -36,7 +36,8 @@ interface CommentContext {
 	owner: string;
 	repo: string;
 	issueNumber: number;
-	id: number | null;
+	commentId: number | null;
+	lockId: string;
 	footer: string;
 	footerRe: RegExp;
 	matches(comment: CommentData): boolean;
@@ -80,7 +81,6 @@ interface Report {
 	title: string;
 	prBenchName: string | null;
 	baseBenchName: string | null;
-	// TODO: Rename to actionInfo
 	actionInfo: ActionInfo | null;
 	isRunning: boolean;
 	// results: BenchmarkResult[];
@@ -101,6 +101,38 @@ interface Logger {
 	debug(getMsg: () => string): void;
 	startGroup(name: string): void;
 	endGroup(): void;
+}
+
+interface LockConfig {
+	/**
+	 * Minimum amount of time lock must be consistently held before safely
+	 * assuming it was successfully acquired. Default: 2500ms
+	 */
+	minHoldTimeMs: number; // milliseconds
+
+	/**
+	 * Time to sleep between checks to see if the lock is still held by writer
+	 * before actually updating comment. Defaults to 500ms or minHoldTimeMs/2 if
+	 * minHoldTimeMs < 500
+	 */
+	checkDelayMs: number; // milliseconds
+
+	/**
+	 * Minimum amount of time to wait before trying to acquire the lock again
+	 * after seeing it is held by another writer. Default: 1000ms
+	 */
+	minWaitTimeMs: number; // milliseconds
+
+	/**
+	 * Maximum amount of time to wait before trying to acquire the lock again
+	 * after seeing it is held by another writer. Default: 3000ms
+	 */
+	maxWaitTimeMs: number; // milliseconds
+
+	/**
+	 * How long to consecutively wait until giving up and failing to acquire lock
+	 */
+	waitTimeoutMs: number; // milliseconds
 }
 
 /**
