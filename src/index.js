@@ -183,6 +183,9 @@ async function reportTachResults(
 		getCommit(context, github),
 	]);
 
+	logger.debug(() => "Action Info: " + JSON.stringify(actionInfo, null, 2));
+	logger.debug(() => "Commit Info " + JSON.stringify(commitInfo, null, 2));
+
 	const report = buildReport(
 		commitInfo,
 		actionInfo,

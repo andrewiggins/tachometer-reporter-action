@@ -9366,6 +9366,7 @@ async function postOrUpdateComment(github, context, getCommentBody, logger) {
  * @returns {import('./global').CommentContext}
  */
 function createCommentContext(context, actionInfo) {
+	// TODO: Make comment lock more legible
 	const lockId = `${actionInfo.workflow.id}::${actionInfo.run.id}::${actionInfo.job.id}`;
 	const footer = `\n\n<sub><a href="https://github.com/andrewiggins/tachometer-reporter-action" target="_blank">tachometer-reporter-action</a> for <a href="${actionInfo.workflow.runsHtmlUrl}" target="_blank">${actionInfo.workflow.name}</a></sub>`;
 	const footerRe = new RegExp(escapeStringRegexp(footer.trim()));
@@ -9573,6 +9574,9 @@ async function reportTachResults(
 		getActionInfo$1(context, github, logger),
 		getCommit$1(context, github),
 	]);
+
+	logger.debug(() => "Action Info: " + JSON.stringify(actionInfo, null, 2));
+	logger.debug(() => "Commit Info " + JSON.stringify(commitInfo, null, 2));
 
 	const report = buildReport(
 		commitInfo,
