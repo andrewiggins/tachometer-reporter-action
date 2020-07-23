@@ -145,7 +145,7 @@ function getLockHolder(comment) {
  * @returns {string}
  */
 function addLockHtml(commentBody, writerId) {
-	return commentBody + "\n" + getLockHtml(writerId);
+	return commentBody + getLockHtml(writerId);
 }
 
 /**
@@ -522,7 +522,7 @@ function createCommentContext(context, actionInfo) {
 	const lockId = `{ run: {id: ${run.id}, name: ${run.name}}, job: {id: ${job.id}, name: ${job.name}}`;
 
 	const footer = `\n\n<sub><a href="https://github.com/andrewiggins/tachometer-reporter-action" target="_blank">tachometer-reporter-action</a> for <a href="${actionInfo.workflow.runsHtmlUrl}" target="_blank">${actionInfo.workflow.name}</a></sub>`;
-	const footerRe = new RegExp(escapeRe(footer.trim()));
+	const footerRe = new RegExp(escapeRe(footer));
 
 	return {
 		...context.repo,
