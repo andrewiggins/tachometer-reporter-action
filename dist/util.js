@@ -9065,13 +9065,19 @@ async function initiateCommentLock(
 	// comment.
 	let delay = context.delayFactor * lockConfig.checkDelayMs;
 
+	logger.debug(() => new Date().toISOString());
+
 	/** @type {import('./global').CommentData} */
 	let comment = await readComment(github, context, logger);
+	logger.debug(() => new Date().toISOString());
+
 	if (!comment) {
 		logger.info(`Comment not found. Waiting ${delay}ms before trying again...`);
 		await sleep(delay);
+		logger.debug(() => new Date().toISOString());
 
 		comment = await readComment(github, context, logger);
+		logger.debug(() => new Date().toISOString());
 
 		if (!comment) {
 			logger.info("After delay, comment not found. Creating comment...");
@@ -9088,6 +9094,7 @@ async function initiateCommentLock(
 		logger.info("Comment already initiated.");
 	}
 
+	logger.debug(() => new Date().toISOString());
 	context.commentId = comment.id;
 	return comment;
 }
@@ -9258,11 +9265,11 @@ async function readComment(github, context, logger) {
 			for (let i = comments.length; i--; ) {
 				const c = comments[i];
 
-				logger.debug(() => {
-					return `Testing if "${context.footerRe.toString()}" matches the following by "${
-						c.user.type
-					}":\n${c.body}\n\n`;
-				});
+				// logger.debug(() => {
+				// 	return `Testing if "${context.footerRe.toString()}" matches the following by "${
+				// 		c.user.type
+				// 	}":\n${c.body}\n\n`;
+				// });
 
 				if (context.matches(c)) {
 					comment = c;
