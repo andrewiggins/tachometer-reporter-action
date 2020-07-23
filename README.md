@@ -131,8 +131,8 @@ override the update of the other job.
 
 To mitigate this situation, this action implements a basic "locking" mechanism
 on the comment. Before any job can make significant changes to the comment, it
-must first write an empty `div` to the comment with an ID and wait a short time
-to ensure all other jobs have seen it's `div`, claiming the comment as locked.
-if another job sees that this div exists, it will wait a random amount of time
+must first write an empty `span` to the comment with an ID and wait a short time
+to ensure all other jobs have seen it's `span`, claiming the comment as locked.
+if another job sees that this `span` exists, it will wait a random amount of time
 before trying to acquire the comment lock for itself. This protocol is perfect,
 but it is likely good enough for our purposes.

@@ -20,7 +20,7 @@ const htmlLockId = "tachometer-reporter-action-lock-id";
 
 const testWriterId = "test-lock-writer-id";
 const getLockHtml = (writerId = testWriterId) =>
-	`<div id="tachometer-reporter-action-lock-id" data-locked-by="${writerId}"></div>`;
+	`<span id="tachometer-reporter-action-lock-id" data-locked-by="${writerId}"></span>`;
 
 /**
  * @param {keyof DEBUG | null} namespace

@@ -8853,8 +8853,8 @@ const randomInt = (min, max) => Math.floor(Math.random() * (max - min)) + min;
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 const getLockHtml = (writerId) =>
-	`<div id="tachometer-reporter-action-lock-id" data-locked-by="${writerId}"></div>`;
-const lockRe = /<div id="tachometer-reporter-action-lock-id" data-locked-by="(.*)"><\/div>/i;
+	`<span id="tachometer-reporter-action-lock-id" data-locked-by="${writerId}"></span>`;
+const lockRe = /<span id="tachometer-reporter-action-lock-id" data-locked-by="(.*)"><\/span>/i;
 const lockGlobalRe = new RegExp(lockRe, "gi");
 
 /** @type {import('./global').LockConfig} */
