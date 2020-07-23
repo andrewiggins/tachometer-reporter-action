@@ -198,17 +198,24 @@ async function checkHold(github, context, logger) {
 /**
  * @param {import('./global').GitHubActionClient} github
  * @param {import('./global').CommentContext} context
+ * @param {import('./global').LockConfig} lockConfig
  * @param {(c: null) => string} getInitialBody
  * @param {import('./global').Logger} logger
  * @returns {Promise<import('./global').CommentData>}
  */
-async function initiateCommentLock(github, context, getInitialBody, logger) {
+async function initiateCommentLock(
+	github,
+	context,
+	lockConfig,
+	getInitialBody,
+	logger
+) {
 	logger.info("Initiating comment lock...");
 
 	// Use the index of the job in the run to deterministically delay the
 	// potentially write of the comment so hopefully only the first job writes the
 	// comment.
-	let delay = context.delayFactor * 100; // (factor * 100) milliseconds
+	let delay = context.delayFactor * lockConfig.checkDelayMs;
 
 	/** @type {import('./global').CommentData} */
 	let comment = await readComment(github, context, logger);
@@ -247,15 +254,17 @@ async function initiateCommentLock(github, context, getInitialBody, logger) {
 async function acquireCommentLock(github, context, getInitialBody, logger) {
 	logger.startGroup("Acquiring comment lock...");
 
+	const config = defaultLockConfig;
+
 	// Create comment if it doesn't already exist
 	let lastReadComment = await initiateCommentLock(
 		github,
 		context,
+		config,
 		getInitialBody,
 		logger
 	);
 
-	const config = defaultLockConfig;
 	const service = interpret(createAcquireLockMachine(config));
 
 	service.subscribe(async (state) => {
