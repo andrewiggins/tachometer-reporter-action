@@ -51,6 +51,14 @@ async function createCheck(github, context) {
 	const inputs = getInputs(logger);
 	const octokit = util.github.getOctokit(token);
 
+	if (util.github.context.eventName !== "pull_request") {
+		logger.info(
+			"Not a pull request event. Skipping this action and doing nothing."
+		);
+		logger.info("Event name: " + util.github.context.eventName);
+		return;
+	}
+
 	let finish;
 	if (useCheck == "true") {
 		finish = await createCheck(octokit, util.github.context);

@@ -22,6 +22,12 @@ const { getLogger, getInputs } = require("./util");
 		);
 
 		return;
+	} else if (context.eventName !== "pull_request") {
+		logger.info(
+			"Not a pull request event. Skipping this action and doing nothing."
+		);
+		logger.info("Event name: " + github.context.eventName);
+		return;
 	}
 
 	const octokit = github.getOctokit(token);
