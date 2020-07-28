@@ -2,14 +2,9 @@
  * @param {import('../global').GitHubActionContext} context
  * @param {import('../global').GitHubActionClient} github
  * @param {import('../global').Logger} logger
- * @returns {Promise<import('../global').WorkflowRunInfo>}
+ * @returns {AsyncIterableIterator<import('../global').WorkflowRunJob>}
  */
-async function getWorkflowRunInfo(context, github, logger) {
-	const workflowRunName = `${context.workflow} #${context.runNumber}`;
-
-	/** @type {import('../global').WorkflowRunJob} */
-	let matchingJob;
-
+async function* getWorkflowJobs(context, github, logger) {
 	// https://docs.github.com/en/rest/reference/actions#list-jobs-for-a-workflow-run
 	/** @type {Record<string, string | number>} */
 	const params = { ...context.repo, run_id: context.runId };
@@ -18,39 +13,84 @@ async function getWorkflowRunInfo(context, github, logger) {
 
 	/** @type {import('../global').WorkflowRunJobsAsyncIterator} */
 	const iterator = github.paginate.iterator(endpoint);
-	paging: for await (const page of iterator) {
+	for await (const page of iterator) {
 		if (page.status > 299) {
 			throw new Error(
 				`Non-success error code returned for workflow runs: ${page.status}`
 			);
 		}
 
-		for (let job of page.data) {
-			if (job.name == context.job) {
-				matchingJob = job;
-				break paging;
-			}
+		yield* page.data;
+	}
+}
+
+/**
+ * @param {import('../global').GitHubActionContext} context
+ * @param {import('../global').GitHubActionClient} github
+ * @param {import('../global').Logger} logger
+ * @returns {Promise<import('../global').ActionInfo>}
+ */
+async function getActionInfo(context, github, logger) {
+	const run = (
+		await github.actions.getWorkflowRun({
+			...context.repo,
+			run_id: context.runId,
+		})
+	).data;
+
+	/** @type {import('@octokit/types').ActionsGetWorkflowResponseData} */
+	const workflow = (
+		await github.request({
+			url: run.workflow_url,
+		})
+	).data;
+
+	const e = encodeURIComponent;
+	const workflowRunsHtmlUrl = `https://github.com/${e(context.repo.owner)}/${e(
+		context.repo.repo
+	)}/actions?query=workflow%3A%22${e(workflow.name)}%22`;
+
+	/** @type {import('../global').WorkflowRunJob} */
+	let matchingJob;
+
+	/** @type {number} */
+	let jobIndex;
+
+	let i = 0;
+	for await (const job of getWorkflowJobs(context, github, logger)) {
+		if (job.name == context.job) {
+			matchingJob = job;
+			jobIndex = i;
+			break;
 		}
+
+		i++;
 	}
 
 	if (matchingJob == null) {
 		logger.warn(
 			`Could not find job matching the name ${context.job} for workflow run ${context.runId}.`
 		);
-		const run = await github.actions.getWorkflowRun({
-			...context.repo,
-			run_id: context.runId,
-		});
-
-		return {
-			workflowRunName,
-			jobHtmlUrl: run.data.html_url,
-		};
 	}
 
 	return {
-		workflowRunName,
-		jobHtmlUrl: matchingJob.html_url,
+		workflow: {
+			id: workflow.id,
+			name: workflow.name, // Also: context.workflow,
+			srcHtmlUrl: workflow.html_url,
+			runsHtmlUrl: workflowRunsHtmlUrl,
+		},
+		run: {
+			id: context.runId,
+			number: context.runNumber,
+			name: `${context.workflow} #${context.runNumber}`,
+		},
+		job: {
+			id: matchingJob?.id,
+			name: matchingJob?.name ?? context.job,
+			htmlUrl: matchingJob?.html_url,
+			index: jobIndex ?? -1,
+		},
 	};
 }
 
@@ -71,6 +111,6 @@ async function getCommit(context, github) {
 }
 
 module.exports = {
-	getWorkflowRunInfo,
+	getActionInfo,
 	getCommit,
 };

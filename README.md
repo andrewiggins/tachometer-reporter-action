@@ -48,6 +48,9 @@ results of comparing the results identified by the `pr-bench-name` vs. the
 results identified by the `base-bench-name` and put them at the top of the of
 the comment.
 
+By default, if `pr-bench-name` or `base-bench-name` are not provided, then the
+first two benchmarks in the tachometer results will be compared.
+
 ### In-progress benchmarks
 
 ![Picture of a PR comment with icons indicating in progress benchmarks](./docs/in-progress-comment-with-results.png)
@@ -94,3 +97,42 @@ field or "version" field) which represents the changes made in this PR.
 The benchmark or version (identified in Tachometer results by either the "name"
 field or "version" field) which serves as the base this PR is to be compared
 against (e.g. the latest published version of your library/website).
+
+## Notes
+
+### Sorting
+
+The results are inserted into the comment based on the index of the job that
+produced the results. So a workflow that has multiple jobs reporting results
+will show the results in the order the jobs are returned from the
+[list jobs for a workflow run API](https://docs.github.com/en/rest/reference/actions#list-jobs-for-a-workflow-run)
+
+A single job reporting multiple results will list them in the order they finish.
+
+### Only latest updates are shown
+
+If you quickly push to a PR, two different workflow runs could be triggered at
+close to the same time. Depending on how long the benchmarks take to run, the
+earlier workflow run running not the latest code could complete after the later
+workflow run running the latest code.
+
+To prevent this situation, where older out-of-date results could override the
+latest results, only results that come from a workflow run with a run number
+equal or higher to the current run number in the comment will be written.
+
+### Cooperative comment locking
+
+If you action has multiple benchmarks running in different jobs, it is possible
+that the reporter-action will try to overwrite each other's results if both jobs
+read the comment before either has updated it with their results. In this
+situation, both jobs get a view of the comment with no results and only adds
+their results to the comment. The last job whose update is written would
+override the update of the other job.
+
+To mitigate this situation, this action implements a basic "locking" mechanism
+on the comment. Before any job can make significant changes to the comment, it
+must first write an empty `span` to the comment with an ID and wait a short time
+to ensure all other jobs have seen it's `span`, claiming the comment as locked.
+if another job sees that this `span` exists, it will wait a random amount of time
+before trying to acquire the comment lock for itself. This protocol is perfect,
+but it is likely good enough for our purposes.
