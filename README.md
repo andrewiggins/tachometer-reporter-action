@@ -32,6 +32,7 @@ jobs:
         uses: andrewiggins/tachometer-reporter-action@v1
         with:
           path: results.json
+          report-id: benchmark1
 ```
 
 ## Features
@@ -81,11 +82,13 @@ actions don't collide with each other
 Pass `true` to this option to automatically open this actions benchmark results
 in the PR comment. By default, all results are collapsed.
 
+<!--
 #### keep-old-results
 
 Pass `true` to this option to keep old benchmarks results in the PR comment
 (collapsed under the latest results). By default, the action will override any
 existing benchmark results with the latest results.
+-->
 
 #### pr-bench-name
 
