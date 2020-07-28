@@ -8402,15 +8402,14 @@ function BenchmarkSection({ report, open }) {
  */
 function Status({ actionInfo, icon }) {
 	const label = `Currently running in ${actionInfo.run.name}…`;
-	return (
-		h('a', {
-			href: actionInfo.job.htmlUrl,
-			title: icon ? label : null,
-			'aria-label': icon ? label : null,}
-		
-, icon ? "⏱ " : label
-)
-	);
+	const tag = actionInfo.job.htmlUrl ? "a" : "span";
+	const props = {
+		href: tag === "a" ? actionInfo.job.htmlUrl : null,
+		title: icon ? label : null,
+		"aria-label": icon ? label : null,
+	};
+
+	return h(tag, props, icon ? "⏱ " : label);
 }
 
 /**
