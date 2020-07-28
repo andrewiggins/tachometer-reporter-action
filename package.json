@@ -10,7 +10,7 @@
     "build:index": "sucrase --production -t jsx --jsx-pragma h -d lib ./src",
     "build:action": "rollup -c ./rollup.config.js",
     "test": "uvu tests",
-    "test:coverage": "nyc --reporter=html --reporter=text npm test"
+    "test:coverage": "c8 --reporter=html --reporter=text npm test"
   },
   "repository": {
     "type": "git",
@@ -45,6 +45,7 @@
     "@rollup/plugin-node-resolve": "^8.1.0",
     "@rollup/plugin-sucrase": "^3.1.0",
     "@sinonjs/fake-timers": "^6.0.1",
+    "c8": "^7.2.1",
     "husky": "^4.2.5",
     "lint-staged": "^10.2.11",
     "nyc": "^15.1.0",
