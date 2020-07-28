@@ -8762,8 +8762,9 @@ async function getActionInfo(context, github, logger) {
 	}
 
 	if (matchingJob == null) {
-		logger.warn(
-			`Could not find job matching the name ${context.job} for workflow run ${context.runId}.`
+		logger.info(
+			`Could not find job matching the name "${context.job}" for workflow run ${context.runId}. ` +
+				`This happens when the job name is overridden in the workflow YAML file.`
 		);
 	}
 
@@ -13614,10 +13615,64 @@ function _nullishCoalesce$2(lhs, rhsFn) { if (lhs != null) { return lhs; } else 
 const randomInt = (min, max) => Math.floor(Math.random() * (max - min)) + min;
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
+/** @type {(actionInfo: import('./global').ActionInfo) => string} */
+const getFooter = (actionInfo) =>
+	`\n\n<sub><a href="https://github.com/andrewiggins/tachometer-reporter-action" target="_blank">tachometer-reporter-action</a> for <a href="${actionInfo.workflow.runsHtmlUrl}" target="_blank">${actionInfo.workflow.name}</a></sub>`;
+
+/** @type {(writerId: string) => string} */
 const getLockHtml = (writerId) =>
 	`<span id="tachometer-reporter-action-lock-id" data-locked-by="${writerId}"></span>`;
+
 const lockRe = /<span id="tachometer-reporter-action-lock-id" data-locked-by="(.*)"><\/span>/i;
 const lockGlobalRe = new RegExp(lockRe, "gi");
+
+/**
+ * @param {import('./global').CommentData} comment
+ * @returns {string | null}
+ */
+function getLockHolder(comment) {
+	const match = comment.body.match(lockRe);
+	if (match != null) {
+		return match[1];
+	} else {
+		return null;
+	}
+}
+
+/**
+ * @param {string} commentBody
+ * @param {string} writerId
+ * @returns {string}
+ */
+function addLockHtml(commentBody, writerId) {
+	return commentBody + getLockHtml(writerId);
+}
+
+/**
+ * @param {string} commentBody
+ * @returns {string}
+ */
+function removeLockHtml(commentBody) {
+	return commentBody.replace(lockGlobalRe, "");
+}
+
+/**
+ * @param {import('xstate').StateValue} state
+ * @returns {string}
+ */
+function getStateName(state) {
+	if (typeof state == "string") {
+		return state;
+	} else {
+		const keys = Object.keys(state);
+		if (keys.length !== 1) {
+			throw new Error(`Unexpected state shape object returned: ${state}`);
+		}
+
+		const key = keys[0];
+		return `${key}.${getStateName(state[key])}`;
+	}
+}
 
 /** @type {import('./global').LockConfig} */
 const defaultLockConfig = {
@@ -13813,54 +13868,6 @@ function createAcquireLockMachine(lockConfig) {
 			},
 		}
 	);
-}
-
-/**
- * @param {import('./global').CommentData} comment
- * @returns {string | null}
- */
-function getLockHolder(comment) {
-	const match = comment.body.match(lockRe);
-	if (match != null) {
-		return match[1];
-	} else {
-		return null;
-	}
-}
-
-/**
- * @param {string} commentBody
- * @param {string} writerId
- * @returns {string}
- */
-function addLockHtml(commentBody, writerId) {
-	return commentBody + getLockHtml(writerId);
-}
-
-/**
- * @param {string} commentBody
- * @returns {string}
- */
-function removeLockHtml(commentBody) {
-	return commentBody.replace(lockGlobalRe, "");
-}
-
-/**
- * @param {import('xstate').StateValue} state
- * @returns {string}
- */
-function getStateName(state) {
-	if (typeof state == "string") {
-		return state;
-	} else {
-		const keys = Object.keys(state);
-		if (keys.length !== 1) {
-			throw new Error(`Unexpected state shape object returned: ${state}`);
-		}
-
-		const key = keys[0];
-		return `${key}.${getStateName(state[key])}`;
-	}
 }
 
 /**
@@ -14212,7 +14219,7 @@ function createCommentContext(context, actionInfo) {
 	const { run, job } = actionInfo;
 	const lockId = `{ run: {id: ${run.id}, name: ${run.name}}, job: {id: ${job.id}, name: ${job.name}}`;
 
-	const footer = `\n\n<sub><a href="https://github.com/andrewiggins/tachometer-reporter-action" target="_blank">tachometer-reporter-action</a> for <a href="${actionInfo.workflow.runsHtmlUrl}" target="_blank">${actionInfo.workflow.name}</a></sub>`;
+	const footer = getFooter(actionInfo);
 	const footerRe = new RegExp(escapeStringRegexp(footer));
 
 	return {
