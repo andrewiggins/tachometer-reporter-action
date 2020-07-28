@@ -7,6 +7,7 @@ const {
 	formatHtml,
 	copyTestResults,
 	assertFixture,
+	shouldAssertFixtures,
 } = require("./utils");
 const { invokeBuildReport } = require("./invokeBuildReport");
 
@@ -168,8 +169,8 @@ buildReportSuite("Supports benchmarks with different names", () => {
 	const results = copyTestResults();
 	const otherBenchName = "other-bench";
 
-	results.benchmarks[1].name = otherBenchName;
-	const report = invokeBuildReport({ results });
+	results.benchmarks[2].name = otherBenchName;
+	const report = invokeBuildReport({ results, inputs: {} });
 	const bodyDoc =
 		report.body instanceof HTMLElement ? report.body : parse(report.body);
 	const summaryDoc =
@@ -177,7 +178,7 @@ buildReportSuite("Supports benchmarks with different names", () => {
 			? report.summary
 			: parse(report.summary);
 
-	// console.log(prettier.format(report.body, { parser: "html" }));
+	// console.log(formatHtml(report.body.toString()));
 
 	// Check row and columns include both bench name and version name
 	const rowLabels = bodyDoc
@@ -209,20 +210,23 @@ buildReportSuite("Supports benchmarks with different names", () => {
 	}
 
 	// Summary should use report title as label, and show both names in "vs." subtext
-	// console.log(prettier.format(summaryDoc.toString(), { parser: "html" }));
+	// console.log(formatHtml(summaryDoc.toString()));
 	const summaryText = summaryDoc.toString();
 	assert.ok(
 		summaryText.includes(report.title),
 		"Summary includes report title"
 	);
 	assert.ok(
-		summaryText.includes("-10% - +12%"),
-		"Summary includes expected diff"
-	);
-	assert.ok(
 		summaryText.includes("local-framework vs base-framework"),
 		"Summary includes 'vs.' text, still using versions if present"
 	);
+
+	if (shouldAssertFixtures) {
+		assert.ok(
+			summaryText.includes("-10% - +12%"),
+			"Summary includes expected diff"
+		);
+	}
 });
 
 buildReportSuite("Lists all browsers used in details", () => {
@@ -294,13 +298,16 @@ buildReportSuite("Lists all browsers used in details", () => {
 		"Summary includes report title"
 	);
 	assert.ok(
-		summaryText.includes("-10% - +12%"),
-		"Summary includes expected diff"
-	);
-	assert.ok(
 		summaryText.includes("local-framework vs base-framework"),
 		"Summary includes 'vs.' text, still using versions if present"
 	);
+
+	if (shouldAssertFixtures) {
+		assert.ok(
+			summaryText.includes("-10% - +12%"),
+			"Summary includes expected diff"
+		);
+	}
 });
 
 buildReportSuite(
@@ -359,7 +366,7 @@ buildReportSuite(
 		);
 		assert.ok(
 			summaryText.includes("Bench #1 vs Bench #2"),
-			"Summary includes 'vs.' text, still using versions if present"
+			"Summary includes 'vs.' text, falling back to benchmark names since versions are missing"
 		);
 	}
 );

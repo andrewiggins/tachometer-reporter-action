@@ -61,6 +61,7 @@ module.exports = {
 	testRoot,
 	copyTestResults,
 	formatHtml,
+	shouldAssertFixtures,
 	assertFixture,
 	getBenchmarkSectionId,
 	getSummaryId,
