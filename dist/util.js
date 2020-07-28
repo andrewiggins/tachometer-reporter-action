@@ -8764,7 +8764,8 @@ async function getActionInfo(context, github, logger) {
 	if (matchingJob == null) {
 		logger.info(
 			`Could not find job matching the name "${context.job}" for workflow run ${context.runId}. ` +
-				`This happens when the job name is overridden in the workflow YAML file.`
+				`This happens when the job name is overridden in the workflow YAML file. ` +
+				`Links to this job's logs will not be rendered.`
 		);
 	}
 
