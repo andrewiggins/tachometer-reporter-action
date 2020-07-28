@@ -9,7 +9,10 @@ declare global {
 	}
 }
 
-type GitHubActionClient = ReturnType<
+// WE MUST EXPORT A TYPE here in order for VSCode to see this a module. If we
+// don't export a type, then VSCode JSDoc intellisense will only include these
+// types when `global.d.ts` is opened in the editor.
+export type GitHubActionClient = ReturnType<
 	typeof import("@actions/github").getOctokit
 >;
 
@@ -73,8 +76,9 @@ interface Inputs {
 	defaultOpen?: boolean;
 }
 
-type TachResults = JsonOutputFile;
+type TachResults = import("tachometer/lib/json-output").JsonOutputFile;
 type BenchmarkResult = TachResults["benchmarks"][0];
+type ConfidenceInterval = TachResults["benchmarks"][0]["mean"];
 
 interface Report {
 	id: string;
@@ -149,54 +153,4 @@ interface Dimension {
 	label: string;
 	format: (r: BenchmarkResult) => string;
 	tableConfig?: { alignment?: "left" | "center" | "right" };
-}
-
-// Temporary until next version of Tachometer is released
-export interface BrowserConfig {
-	/** Name of the browser. */
-	name: BrowserName;
-	/** Whether to run in headless mode. */
-	headless: boolean;
-	/** A remote WebDriver server to launch the browser from. */
-	remoteUrl?: string;
-	/** Launch the browser window with these dimensions. */
-	windowSize: WindowSize;
-	/** Path to custom browser binary. */
-	binary?: string;
-	/** Additional binary arguments. */
-	addArguments?: string[];
-	/** WebDriver default binary arguments to omit. */
-	removeArguments?: string[];
-	/** CPU Throttling rate. (1 is no throttle, 2 is 2x slowdown, etc). */
-	cpuThrottlingRate?: number;
-	/** Advanced preferences usually set from the about:config page. */
-	preferences?: { [name: string]: string | number | boolean };
-}
-
-interface JsonOutputFile {
-	benchmarks: Benchmark[];
-}
-
-interface BrowserConfigResult extends BrowserConfig {
-	userAgent?: string;
-}
-
-interface Benchmark {
-	name: string;
-	bytesSent: number;
-	version?: string;
-	browser?: BrowserConfigResult;
-	mean: ConfidenceInterval;
-	differences: Array<Difference | null>;
-	samples: number[];
-}
-
-interface Difference {
-	absolute: ConfidenceInterval;
-	percentChange: ConfidenceInterval;
-}
-
-interface ConfidenceInterval {
-	low: number;
-	high: number;
 }
