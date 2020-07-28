@@ -11,7 +11,7 @@ const { defaultActionInfo } = require("./invokeBuildReport");
 const { pick } = require("./utils");
 
 const DEBUG = {
-	allLogs: false,
+	infoLogs: false,
 	testTrace: false,
 	states: false,
 };
@@ -147,24 +147,26 @@ function getTestCommentBody(comment) {
 function createTestLogger() {
 	/** @type {Array<import('xstate').Typestate<any>>} */
 	const states = [];
+	const stateEventMatcher = /\[.*\] state event: (.*)/i;
 
 	return {
 		debug(getMsg) {
 			const msg = getMsg();
-			if (msg.startsWith("state event: ")) {
-				const state = JSON.parse(msg.slice(13));
+			const match = msg.match(stateEventMatcher);
+			if (match) {
+				const state = JSON.parse(match[1]);
 				debug("states", state);
 				states.push(state);
 			}
 		},
 		info(msg) {
-			debug("allLogs", msg);
+			debug("infoLogs", msg);
 		},
 		warn(msg) {
 			throw new Error("Unexpected warning in test: " + msg);
 		},
 		startGroup(name) {
-			debug("allLogs", name);
+			debug("infoLogs", name);
 		},
 		endGroup() {},
 		getStates() {
@@ -267,7 +269,7 @@ function validateFinalComment(comment) {
 /**
  * @param {State[]} actualStates
  * @param {State[]} expectedStates
- * @param {Array<keyof import('xstate').Typestate<any>} [propsToCompare]
+ * @param {Array<keyof import('xstate').Typestate<any>>} [propsToCompare]
  */
 function validateStates(
 	actualStates,

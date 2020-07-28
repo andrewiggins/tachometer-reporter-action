@@ -269,14 +269,17 @@ async function acquireCommentLock(github, context, getInitialBody, logger) {
 	const service = interpret(createAcquireLockMachine(config));
 
 	service.subscribe(async (state) => {
-		logger.debug(
-			() =>
+		logger.debug(() => {
+			const date = new Date();
+			return (
+				`[${date.toISOString().split("T")[1]}] ` +
 				"state event: " +
 				JSON.stringify({
 					value: state.value,
 					context: state.context,
 				})
-		);
+			);
+		});
 	});
 
 	service.start();
