@@ -9,7 +9,8 @@
     "build": "npm run build:index && npm run build:action ",
     "build:index": "sucrase --production -t jsx --jsx-pragma h -d lib ./src",
     "build:action": "rollup -c ./rollup.config.js",
-    "test": "uvu tests"
+    "test": "uvu tests",
+    "test:coverage": "nyc --reporter=html --reporter=text npm test"
   },
   "repository": {
     "type": "git",
@@ -46,6 +47,7 @@
     "@sinonjs/fake-timers": "^6.0.1",
     "husky": "^4.2.5",
     "lint-staged": "^10.2.11",
+    "nyc": "^15.1.0",
     "prettier": "^2.0.5",
     "rollup": "^2.21.0",
     "rollup-plugin-node-externals": "^2.2.0",
