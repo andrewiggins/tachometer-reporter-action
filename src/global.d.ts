@@ -41,7 +41,7 @@ interface CommentContext {
 	footer: string;
 	footerRe: RegExp;
 	matches(comment: CommentData): boolean;
-	delayFactor: number;
+	createDelayFactor: number;
 }
 
 interface ActionInfo {
@@ -104,6 +104,13 @@ interface Logger {
 }
 
 interface LockConfig {
+	/**
+	 * Trying to find a comment in a list and creating comments takes a bit longer
+	 * than just reading comments when you have the ID. So creating gets its own
+	 * delay config to accommodate this.
+	 */
+	createDelayMs: number;
+
 	/**
 	 * Minimum amount of time lock must be consistently held before safely
 	 * assuming it was successfully acquired. Default: 2500ms

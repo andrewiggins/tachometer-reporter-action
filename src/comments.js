@@ -1,4 +1,4 @@
-const { createMachine, interpret, assign } = require("@xstate/fsm");
+const { createMachine, interpret, assign } = require("xstate");
 const escapeRe = require("escape-string-regexp");
 
 const randomInt = (min, max) => Math.floor(Math.random() * (max - min)) + min;
@@ -11,11 +11,12 @@ const lockGlobalRe = new RegExp(lockRe, "gi");
 
 /** @type {import('./global').LockConfig} */
 const defaultLockConfig = {
+	createDelayMs: 1000, // 1s
 	minHoldTimeMs: 2500, // 2.5s
 	checkDelayMs: 500, // 0.5s
 	minWaitTimeMs: 1000, // 1s
 	maxWaitTimeMs: 3000, // 3s
-	waitTimeoutMs: 60 * 1000, // 1 minute
+	waitTimeoutMs: 2 * 60 * 1000, // 2 minutes
 };
 
 const finalStates = ["acquired", "timed_out"];
@@ -29,11 +30,15 @@ const finalStates = ["acquired", "timed_out"];
 function createAcquireLockMachine(lockConfig) {
 	// Using https://npm.im/@xstate/fsm to track lock acquisition state
 	//
-	// Some prototype state diagrams modeling this flow:
+	// Some early prototype state diagrams modeling various iterations of this
+	// flow:
 	// - https://xstate.js.org/viz/?gist=33685dc6569747e6156af33503e77e26
 	// - https://xstate.js.org/viz/?gist=80c62c3012452b6c4ab96a9c9c995975
+	// - https://xstate.js.org/viz/?gist=8068f41fc441205e6b1506fb8186903c
+	// - https://xstate.js.org/viz/?gist=04c5a1e5a586bd75bb1e1aa946c89655
 	//
-	// XState Tutorial: https://egghead.io/courses/introduction-to-state-machines-using-xstate
+	// XState Tutorial:
+	// https://egghead.io/courses/introduction-to-state-machines-using-xstate
 	//
 	// Simplified general Idea:
 	//
@@ -46,66 +51,138 @@ function createAcquireLockMachine(lockConfig) {
 	// 7. if we have lock, continue
 	// 8. if we don't have lock, wait a random time and try again
 
-	// Based on https://xstate.js.org/viz/?gist=33685dc6569747e6156af33503e77e26
+	// Based on https://xstate.js.org/viz/?gist=04c5a1e5a586bd75bb1e1aa946c89655
 	return createMachine(
 		{
-			id: "AcquireLockMachine",
-			initial: "acquiring",
+			id: "CommentLockMachine",
+			initial: "initialRead",
+			strict: true,
 			context: {
-				wait_time: 0,
-				total_wait_time: 0,
-				total_held_time: 0,
+				waitTime: 0,
+				totalWaitTime: 0,
+				totalHeldTime: 0,
 			},
 			states: {
-				// Read lock and either keep waiting or write & hold
-				acquiring: {
+				initialRead: {
 					on: {
-						TIMEOUT: "timed_out",
-						HOLD: "holding",
-						WAIT: "waiting",
+						// comment doesn't exist
+						NOT_FOUND: "creating",
+						// comment exists, have hold
+						HELD: "holding",
+						// comment exists, and locked
+						LOCKED: "acquiring",
+						// comment exists, and not locked
+						AVAILABLE: "acquiring",
 					},
 				},
-				// Wait random time before attempting to acquire again
-				waiting: {
-					entry: ["resetTotalHeldTime", "setWaitTime"],
-					exit: "updateTotalWaitTime",
-					on: {
-						COMPLETE_WAIT: "acquiring",
+				creating: {
+					id: "creating",
+					initial: "waiting",
+					entry: "resetTotalWaitTime",
+					states: {
+						waiting: {
+							exit: "updateTotalWaitTime",
+							on: {
+								COMPLETE_WAIT: "searching",
+							},
+						},
+						searching: {
+							on: {
+								// comment doesn't exist, done waiting
+								CREATE: "creating",
+								// comment doesn't exist, need to wait
+								NOT_FOUND: "waiting",
+								// comment exists, try to acquire
+								LOCKED: "#acquiring",
+							},
+						},
+						creating: {
+							on: {
+								CREATED: "#acquired",
+							},
+						},
+					},
+				},
+				acquiring: {
+					id: "acquiring",
+					// We will only enter this state if the comment exists
+					// and it isn't ours so first wait
+					initial: "waiting",
+					entry: "resetTotalWaitTime",
+					states: {
+						// Wait random time before attempting to acquire again
+						waiting: {
+							entry: "setWaitTime",
+							exit: "updateTotalWaitTime",
+							on: {
+								COMPLETE_WAIT: "acquiring",
+							},
+						},
+						acquiring: {
+							on: {
+								// Comment exists, no one has lock
+								AVAILABLE: "writing",
+								// comment exists, is locked
+								LOCKED: "waiting",
+								// comment exists, wait timeout exceeded
+								TIMEOUT: "#timed_out",
+							},
+						},
+						writing: {
+							on: {
+								HELD: "#holding",
+							},
+						},
 					},
 				},
 				// Wait deterministic time before reading lock
 				holding: {
-					entry: "resetTotalWaitTime",
-					exit: "updateTotalHeldTime",
-					on: {
-						CHECK_HOLD: "checking",
+					id: "holding",
+					initial: "holding",
+					context: {
+						totalHeldTime: 0,
 					},
-				},
-				// read lock to see if we still have it
-				checking: {
-					on: {
-						ACQUIRED: "acquired",
-						HOLD: "holding",
-						WAIT: "waiting",
+					entry: "resetTotalHeldTime",
+					states: {
+						holding: {
+							exit: "updateTotalHeldTime",
+							on: {
+								CHECK_HOLD: "checking",
+							},
+						},
+						// read lock to see if we still have it
+						checking: {
+							on: {
+								ACQUIRED: "#acquired",
+								HELD: "holding",
+								LOCKED: "#acquiring",
+							},
+						},
 					},
 				},
 				// final states
-				acquired: {},
-				timed_out: {},
+				acquired: {
+					id: "acquired",
+					type: "final",
+				},
+				timed_out: {
+					id: "timed_out",
+					type: "final",
+				},
 			},
 		},
 		{
 			actions: {
 				resetTotalHeldTime: assign({
-					total_held_time: 0,
+					totalHeldTime: 0,
 				}),
 				updateTotalHeldTime: assign({
-					total_held_time: (ctx, evt) => {
-						return ctx.total_held_time + lockConfig.checkDelayMs;
+					totalHeldTime: (ctx, evt) => {
+						return ctx.totalHeldTime + lockConfig.checkDelayMs;
 					},
 				}),
 				setWaitTime: assign({
-					wait_time: () => {
+					waitTime: (ctx, evt) => {
 						return randomInt(
 							lockConfig.minWaitTimeMs,
 							lockConfig.maxWaitTimeMs
@@ -113,12 +190,16 @@ function createAcquireLockMachine(lockConfig) {
 					},
 				}),
 				resetTotalWaitTime: assign({
-					total_wait_time: 0,
+					totalWaitTime: 0,
 				}),
 				updateTotalWaitTime: assign({
-					wait_time: 0,
-					total_wait_time: (ctx, evt) => {
-						return ctx.total_wait_time + ctx.wait_time;
+					waitTime: 0,
+					totalWaitTime: (ctx, evt) => {
+						if (evt.waitTime != null) {
+							return ctx.totalWaitTime + evt.waitTime;
+						} else {
+							return ctx.totalWaitTime + ctx.waitTime;
+						}
 					},
 				}),
 			},
@@ -157,98 +238,21 @@ function removeLockHtml(commentBody) {
 }
 
 /**
- * @param {import('./global').GitHubActionClient} github
- * @param {import('./global').CommentContext} context
- * @param {import('./global').Logger} logger
- * @returns {Promise<[boolean, import('./global').CommentData]>}
+ * @param {import('xstate').StateValue} state
+ * @returns {string}
  */
-async function attemptAcquire(github, context, logger) {
-	logger.info("Attempting to acquire comment lock...");
-	let comment = await readComment(github, context, logger);
-
-	const lockHolder = getLockHolder(comment);
-
-	let lockHeld = false;
-	if (lockHolder === context.lockId) {
-		logger.info("Lock is already held by this job.");
-		lockHeld = true;
-	} else if (lockHolder == null) {
-		logger.info("No one is holding the lock. Updating comment with our ID...");
-		const newBody = addLockHtml(comment.body, context.lockId);
-		comment = await updateComment(github, context, newBody, logger);
-		lockHeld = true;
+function getStateName(state) {
+	if (typeof state == "string") {
+		return state;
 	} else {
-		logger.info(`Lock is held by "${lockHolder}".`);
-	}
-
-	return [lockHeld, comment];
-}
-
-/**
- * @param {import('./global').GitHubActionClient} github
- * @param {import('./global').CommentContext} context
- * @param {import('./global').Logger} logger
- * @returns {Promise<[boolean, import('./global').CommentData]>}
- */
-async function checkHold(github, context, logger) {
-	const comment = await readComment(github, context, logger);
-	return [getLockHolder(comment) === context.lockId, comment];
-}
-
-/**
- * @param {import('./global').GitHubActionClient} github
- * @param {import('./global').CommentContext} context
- * @param {import('./global').LockConfig} lockConfig
- * @param {(c: null) => string} getInitialBody
- * @param {import('./global').Logger} logger
- * @returns {Promise<import('./global').CommentData>}
- */
-async function initiateCommentLock(
-	github,
-	context,
-	lockConfig,
-	getInitialBody,
-	logger
-) {
-	logger.info("Initiating comment lock...");
-
-	// Use the index of the job in the run to deterministically delay the
-	// potentially write of the comment so hopefully only the first job writes the
-	// comment.
-	let delay = context.delayFactor * lockConfig.checkDelayMs;
-
-	logger.debug(() => new Date().toISOString());
-
-	/** @type {import('./global').CommentData} */
-	let comment = await readComment(github, context, logger);
-	logger.debug(() => new Date().toISOString());
-
-	if (!comment) {
-		logger.info(`Comment not found. Waiting ${delay}ms before trying again...`);
-		await sleep(delay);
-		logger.debug(() => new Date().toISOString());
-
-		comment = await readComment(github, context, logger);
-		logger.debug(() => new Date().toISOString());
-
-		if (!comment) {
-			logger.info("After delay, comment not found. Creating comment...");
-			comment = await createComment(
-				github,
-				context,
-				addLockHtml(getInitialBody(null), context.lockId),
-				logger
-			);
-		} else {
-			logger.info("Comment already initiated.");
+		const keys = Object.keys(state);
+		if (keys.length !== 1) {
+			throw new Error(`Unexpected state shape object returned: ${state}`);
 		}
-	} else {
-		logger.info("Comment already initiated.");
-	}
 
-	logger.debug(() => new Date().toISOString());
-	context.commentId = comment.id;
-	return comment;
+		const key = keys[0];
+		return `${key}.${getStateName(state[key])}`;
+	}
 }
 
 /**
@@ -262,70 +266,139 @@ async function acquireCommentLock(github, context, getInitialBody, logger) {
 	logger.startGroup("Acquiring comment lock...");
 
 	const config = defaultLockConfig;
-
-	// Create comment if it doesn't already exist
-	let lastReadComment = await initiateCommentLock(
-		github,
-		context,
-		config,
-		getInitialBody,
-		logger
-	);
-
 	const service = interpret(createAcquireLockMachine(config));
 
 	service.subscribe(async (state) => {
-		logger.debug(() => "state event: " + JSON.stringify(state));
+		logger.debug(
+			() =>
+				"state event: " +
+				JSON.stringify({
+					value: state.value,
+					context: state.context,
+				})
+		);
 	});
 
 	service.start();
 
-	loop: while (!finalStates.includes(service.state.value)) {
+	let comment;
+	while (!service.state.done) {
 		let nextEvent = null;
 
 		const state = service.state;
-		switch (state.value) {
-			case "acquiring": {
-				const [lockAcquired, comment] = await attemptAcquire(
-					github,
-					context,
-					logger
-				);
+		const stateName = getStateName(state.value);
+		const stateCtx = state.context;
 
-				lastReadComment = comment;
+		switch (stateName) {
+			case "initialRead": {
+				comment = await readComment(github, context, logger);
+				const lockHolder = comment ? getLockHolder(comment) : null;
 
-				if (lockAcquired) {
-					nextEvent = "HOLD";
-				} else if (state.context.total_wait_time > config.waitTimeoutMs) {
-					nextEvent = "TIMEOUT";
+				if (comment == null) {
+					logger.info("Comment not found.");
+					nextEvent = "NOT_FOUND";
+				} else if (lockHolder == context.lockId) {
+					logger.info(`Comment found and already held by us.`);
+					nextEvent = "HELD";
+				} else if (lockHolder != null) {
+					logger.info(`Comment found and locked by "${lockHolder}".`);
+					nextEvent = "LOCKED";
 				} else {
-					nextEvent = "WAIT";
+					logger.info(`Comment found and available.`);
+					nextEvent = "AVAILABLE";
 				}
 
 				break;
 			}
 
-			case "waiting":
+			case "creating.waiting":
 				logger.info(
-					`Waiting ${state.context.wait_time}ms before attempting to acquire the lock again.`
+					`Waiting ${config.createDelayMs}ms before searching for comment again.`
 				);
-				await sleep(state.context.wait_time);
+				await sleep(config.createDelayMs);
+				nextEvent = { type: "COMPLETE_WAIT", waitTime: config.createDelayMs };
+				break;
+
+			case "creating.searching": {
+				comment = await readComment(github, context, logger);
+				const lockHolder = comment ? getLockHolder(comment) : null;
+				const maxWaitingTime = config.createDelayMs * context.createDelayFactor;
+
+				if (comment != null) {
+					logger.info(`Comment found and locked by "${lockHolder}".`);
+					nextEvent = "LOCKED";
+				} else if (stateCtx.totalWaitTime < maxWaitingTime) {
+					logger.info(
+						`Comment not found and max waiting time (${stateCtx.totalWaitTime}/${maxWaitingTime}ms) not yet reached.`
+					);
+					nextEvent = "NOT_FOUND";
+				} else {
+					logger.info(
+						`Comment not found and max waiting time (${stateCtx.totalWaitTime}/${maxWaitingTime}ms) has been reached.`
+					);
+					nextEvent = "CREATE";
+				}
+
+				break;
+			}
+
+			case "creating.creating":
+				const newBody = addLockHtml(getInitialBody(null), context.lockId);
+				comment = await createComment(github, context, newBody, logger);
+				nextEvent = "CREATED";
+				break;
+
+			case "acquiring.waiting":
+				logger.info(
+					`Waiting ${stateCtx.waitTime}ms before attempting to acquire the lock again.`
+				);
+				await sleep(stateCtx.waitTime);
 				nextEvent = "COMPLETE_WAIT";
 				break;
 
-			case "holding":
+			case "acquiring.acquiring": {
+				logger.info("Attempting to acquire comment lock...");
+				comment = await readComment(github, context, logger);
+				const lockHolder = comment ? getLockHolder(comment) : null;
+
+				if (lockHolder == context.lockId) {
+					logger.info("Lock is already held by this job.");
+					nextEvent = "HELD";
+				} else if (lockHolder == null) {
+					logger.info("No one is holding the lock.");
+					nextEvent = "AVAILABLE";
+				} else if (stateCtx.totalWaitTime > config.waitTimeoutMs) {
+					nextEvent = "TIMEOUT";
+				} else {
+					logger.info(`Lock is held by "${lockHolder}".`);
+					nextEvent = "LOCKED";
+				}
+
+				break;
+			}
+
+			case "acquiring.writing":
+				logger.info(`Updating comment with our ID (${context.lockId})...`);
+				const updatedBody = addLockHtml(comment.body, context.lockId);
+				comment = await updateComment(github, context, updatedBody, logger);
+				nextEvent = "HELD";
+				break;
+
+			case "holding.holding":
 				logger.info(
 					`Waiting ${config.checkDelayMs}ms before checking if we still have the lock.`
 				);
 				await sleep(config.checkDelayMs);
 				nextEvent = "CHECK_HOLD";
+
 				break;
 
-			case "checking": {
-				const [lockHeld, comment] = await checkHold(github, context, logger);
-				lastReadComment = comment;
+			case "holding.checking": {
+				comment = await readComment(github, context, logger);
+				const lockHolder = getLockHolder(comment);
+				const lockHeld = lockHolder === context.lockId;
+				const totalHeldTime = stateCtx.totalHeldTime;
 
-				const totalHeldTime = state.context.total_held_time;
 				if (lockHeld) {
 					if (totalHeldTime >= config.minHoldTimeMs) {
 						logger.info("Minumum hold time reach. Lock acquired.");
@@ -334,28 +407,18 @@ async function acquireCommentLock(github, context, getInitialBody, logger) {
 						logger.info(
 							`We still have the lock but haven't reached the minimum hold time (${totalHeldTime}ms/${config.minHoldTimeMs}ms) so holding longer.`
 						);
-						nextEvent = "HOLD";
+						nextEvent = "HELD";
 					}
 				} else {
-					const lockHolder = getLockHolder(comment);
-					logger.info(
-						`We no longer hold the lock. Lock is now held by ${lockHolder}.`
-					);
-					nextEvent = "WAIT";
+					logger.info(`We lost the lock. Lock is now held by ${lockHolder}.`);
+					nextEvent = "LOCKED";
 				}
 
 				break;
 			}
 
-			case "acquired":
-			case "timed_out":
-				logger.info(
-					`Hmmm... Reach a final state (${state.value}) inside loop. This behavior is unexpected`
-				);
-				break loop;
-
 			default:
-				throw new Error(`Unexpected state in state machine: ${state.value}`);
+				throw new Error(`Unexpected stateName: ${JSON.stringify(stateName)}`);
 		}
 
 		service.send(nextEvent);
@@ -367,17 +430,17 @@ async function acquireCommentLock(github, context, getInitialBody, logger) {
 	logger.debug(
 		() => "Final state object: " + JSON.stringify(service.state, null, 2)
 	);
-	logger.debug(() => "Comment: " + JSON.stringify(lastReadComment, null, 2));
+	logger.debug(() => "Comment: " + JSON.stringify(comment, null, 2));
 	logger.endGroup();
 
 	if (service.state.value == "timed_out") {
-		const lastWriterId = getLockHolder(lastReadComment);
+		const lastWriterId = getLockHolder(comment);
 		throw new Error(
 			`Timed out waiting to acquire lock to write comment. Last writer to hold lock was "${lastWriterId}"`
 		);
 	}
 
-	return lastReadComment;
+	return comment;
 }
 
 /**
@@ -425,6 +488,7 @@ async function readComment(github, context, logger) {
 
 				if (context.matches(c)) {
 					comment = c;
+					context.commentId = c.id;
 					logger.info(`Found comment! (id: ${c.id})`);
 					logger.debug(() => `Found comment: ${JSON.stringify(c, null, 2)}`);
 					break;
@@ -448,7 +512,7 @@ async function readComment(github, context, logger) {
  */
 async function updateComment(github, context, body, logger) {
 	if (context.commentId == null) {
-		throw new Error(`Cannot update comment if "context.id" is null`);
+		throw new Error(`Cannot update comment if "context.commentId" is null`);
 	}
 
 	logger.info(`Updating comment body (id: ${context.commentId})...`);
@@ -550,7 +614,7 @@ function createCommentContext(context, actionInfo) {
 		matches(c) {
 			return c.user.type === "Bot" && footerRe.test(c.body);
 		},
-		delayFactor: actionInfo.job.index ?? 0,
+		createDelayFactor: actionInfo.job.index ?? 0,
 	};
 }
 

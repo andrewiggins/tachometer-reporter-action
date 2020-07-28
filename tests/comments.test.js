@@ -139,13 +139,13 @@ function getTestCommentBody(comment) {
 }
 
 /**
- * @typedef {DeepPartial<import('@xstate/fsm').Typestate<any>>} State
- * @typedef {{ getStates(): Array<import('@xstate/fsm').Typestate<any>> }} TestLoggerHelpers
+ * @typedef {DeepPartial<import('xstate').Typestate<any>>} State
+ * @typedef {{ getStates(): Array<import('xstate').Typestate<any>> }} TestLoggerHelpers
  * @typedef {import('../src/global').Logger & TestLoggerHelpers} TestLogger
  * @returns {TestLogger}
  */
 function createTestLogger() {
-	/** @type {Array<import('@xstate/fsm').Typestate<any>>} */
+	/** @type {Array<import('xstate').Typestate<any>>} */
 	const states = [];
 
 	return {
@@ -208,70 +208,48 @@ async function invokePostorUpdateComment({
 function getFinalHoldingStates() {
 	return [
 		{
-			value: "holding",
+			value: { holding: "holding" },
 			context: { wait_time: 0, total_wait_time: 0, total_held_time: 0 },
-			actions: [],
-			changed: true,
 		},
 		{
-			value: "checking",
+			value: { holding: "checking" },
 			context: { wait_time: 0, total_wait_time: 0, total_held_time: 500 },
-			actions: [],
-			changed: true,
 		},
 		{
-			value: "holding",
+			value: { holding: "holding" },
 			context: { wait_time: 0, total_wait_time: 0, total_held_time: 500 },
-			actions: [],
-			changed: true,
 		},
 		{
-			value: "checking",
+			value: { holding: "checking" },
 			context: { wait_time: 0, total_wait_time: 0, total_held_time: 1000 },
-			actions: [],
-			changed: true,
 		},
 		{
-			value: "holding",
+			value: { holding: "holding" },
 			context: { wait_time: 0, total_wait_time: 0, total_held_time: 1000 },
-			actions: [],
-			changed: true,
 		},
 		{
-			value: "checking",
+			value: { holding: "checking" },
 			context: { wait_time: 0, total_wait_time: 0, total_held_time: 1500 },
-			actions: [],
-			changed: true,
 		},
 		{
-			value: "holding",
+			value: { holding: "holding" },
 			context: { wait_time: 0, total_wait_time: 0, total_held_time: 1500 },
-			actions: [],
-			changed: true,
 		},
 		{
-			value: "checking",
+			value: { holding: "checking" },
 			context: { wait_time: 0, total_wait_time: 0, total_held_time: 2000 },
-			actions: [],
-			changed: true,
 		},
 		{
-			value: "holding",
+			value: { holding: "holding" },
 			context: { wait_time: 0, total_wait_time: 0, total_held_time: 2000 },
-			actions: [],
-			changed: true,
 		},
 		{
-			value: "checking",
+			value: { holding: "checking" },
 			context: { wait_time: 0, total_wait_time: 0, total_held_time: 2500 },
-			actions: [],
-			changed: true,
 		},
 		{
 			value: "acquired",
 			context: { wait_time: 0, total_wait_time: 0, total_held_time: 2500 },
-			actions: [],
-			changed: true,
 		},
 	];
 }
@@ -289,7 +267,7 @@ function validateFinalComment(comment) {
 /**
  * @param {State[]} actualStates
  * @param {State[]} expectedStates
- * @param {Array<keyof import('@xstate/fsm').StateMachine.State>} [propsToCompare]
+ * @param {Array<keyof import('xstate').Typestate<any>} [propsToCompare]
  */
 function validateStates(
 	actualStates,
@@ -318,101 +296,197 @@ acquireLockSuite.after.each(() => {
 	clock.uninstall();
 });
 
-acquireLockSuite("Single benchmark", async () => {
+acquireLockSuite("Single benchmark, create comment", async () => {
 	const completion = invokePostorUpdateComment();
 
 	await clock.runAllAsync();
 	const [states, comment] = await completion;
 
 	validateFinalComment(comment);
-	validateStates(states, [{ value: "acquiring" }, ...getFinalHoldingStates()]);
+	validateStates(states, [
+		{ value: "initialRead" },
+		{ value: { creating: "waiting" } },
+		{ value: { creating: "searching" } },
+		{ value: { creating: "waiting" } },
+		{ value: { creating: "searching" } },
+		{ value: { creating: "creating" } },
+		{ value: "acquired" },
+	]);
 });
 
-acquireLockSuite("Benchmark that must first wait", async () => {
-	const context = createTestCommentContext();
+acquireLockSuite("Single benchmark, update comment", async () => {
+	const { footer } = createTestCommentContext();
 	const github = createGitHubClient();
 
-	debug("testTrace", "Initiate first job creating comment with lock...");
-	const { data: comment } = await github.issues.createComment({
-		body: `${getTestCommentBody(null)}\n${context.footer}\n${getLockHtml()}`,
+	debug("testTrace", "Initiate comment with no lock...");
+	await github.issues.createComment({
+		body: `${getTestCommentBody(null)}\n${footer}`,
 	});
 
-	debug("testTrace", "Start second job trying to update comment...");
 	const completion = invokePostorUpdateComment({ github });
-	await clock.nextAsync();
 
-	debug("testTrace", "Simulate first job completing...");
-	await github.issues.updateComment({
-		comment_id: comment.id,
-		body: `${getTestCommentBody(comment)}\n${context.footer}`,
-	});
-
-	debug("testTrace", "Wait for second job to complete");
 	await clock.runAllAsync();
-	const [states, finalComment] = await completion;
+	const [states, comment] = await completion;
 
-	validateFinalComment(finalComment);
+	validateFinalComment(comment);
 	validateStates(states, [
-		{ value: "acquiring" },
-		{ value: "waiting" },
-		{ value: "acquiring" },
-		{ value: "waiting" },
-		{ value: "acquiring" },
+		{ value: "initialRead" },
+		{ value: { acquiring: "waiting" } },
+		{ value: { acquiring: "acquiring" } },
+		{ value: { acquiring: "writing" } },
 		...getFinalHoldingStates(),
 	]);
 });
 
-acquireLockSuite("Benchmark that loses a hold", async () => {
-	const context = createTestCommentContext();
+acquireLockSuite("Benchmark finds comment while creating", async () => {
+	const { footer } = createTestCommentContext();
 	const github = createGitHubClient();
 
-	debug("testTrace", "Initiate comment with no lock...");
-	const { data: comment } = await github.issues.createComment({
-		body: `${getTestCommentBody(null)}\n${context.footer}`,
-	});
-
-	debug("testTrace", "Start first job trying to update comment...");
+	debug("testTrace", "Start test job trying to create comment...");
 	const completion = invokePostorUpdateComment({ github });
 	await clock.nextAsync();
 
-	debug("testTrace", "Simulate second job overwriting first job's lock...");
-	await github.issues.updateComment({
-		comment_id: comment.id,
-		body: `${getTestCommentBody(comment)}\n${context.footer}\n${getLockHtml()}`,
+	debug("testTrace", "Simulate second job creating the comment...");
+	const { data: comment } = await github.issues.createComment({
+		body: `${getTestCommentBody(null)}\n${footer}\n${getLockHtml()}`,
 	});
 	await clock.nextAsync();
 
 	debug("testTrace", "Simulate second job releasing lock...");
 	await github.issues.updateComment({
 		comment_id: comment.id,
-		body: `${getTestCommentBody(comment)}\n${context.footer}`,
+		body: `${getTestCommentBody(comment)}\n${footer}`,
 	});
 	await clock.nextAsync();
 
-	debug("testTrace", "Wait for first job to complete");
+	debug("testTrace", "Wait for test job to complete");
 	await clock.runAllAsync();
 	const [states, finalComment] = await completion;
 
 	validateFinalComment(finalComment);
 	validateStates(states, [
-		{ value: "acquiring" },
-		{ value: "holding" },
-		{ value: "checking" },
-		{ value: "holding" },
-		{ value: "checking" },
-		{ value: "waiting" },
-		{ value: "acquiring" },
+		{ value: "initialRead" },
+		{ value: { creating: "waiting" } },
+		{ value: { creating: "searching" } },
+		{ value: { creating: "waiting" } },
+		{ value: { creating: "searching" } },
+		{ value: { acquiring: "waiting" } },
+		{ value: { acquiring: "acquiring" } },
+		{ value: { acquiring: "writing" } },
+		...getFinalHoldingStates(),
+	]);
+});
+
+acquireLockSuite("Benchmark recovers previously held lock", async () => {
+	const context = createTestCommentContext();
+	const github = createGitHubClient();
+
+	debug("testTrace", "Initiate comment with same lock as benchmark...");
+	const lockHtml = getLockHtml(context.lockId);
+	await github.issues.createComment({
+		body: `${getTestCommentBody(null)}\n${context.footer}\n${lockHtml}`,
+	});
+
+	const completion = invokePostorUpdateComment({ github, context });
+
+	await clock.runAllAsync();
+	const [states, comment] = await completion;
+
+	validateFinalComment(comment);
+	validateStates(states, [
+		{ value: "initialRead" },
+		...getFinalHoldingStates(),
+	]);
+});
+
+acquireLockSuite("Benchmark that must first wait", async () => {
+	const { footer } = createTestCommentContext();
+	const github = createGitHubClient();
+
+	debug("testTrace", "Initiate first job creating comment with lock...");
+	const { data: comment } = await github.issues.createComment({
+		body: `${getTestCommentBody(null)}\n${footer}\n${getLockHtml()}`,
+	});
+
+	debug("testTrace", "Start test job trying to update comment...");
+	const completion = invokePostorUpdateComment({ github });
+	await clock.nextAsync();
+
+	debug("testTrace", "Simulate first job completing...");
+	await github.issues.updateComment({
+		comment_id: comment.id,
+		body: `${getTestCommentBody(comment)}\n${footer}`,
+	});
+
+	debug("testTrace", "Wait for test job to complete");
+	await clock.runAllAsync();
+	const [states, finalComment] = await completion;
+
+	validateFinalComment(finalComment);
+	validateStates(states, [
+		{ value: "initialRead" },
+		{ value: { acquiring: "waiting" } },
+		{ value: { acquiring: "acquiring" } },
+		{ value: { acquiring: "waiting" } },
+		{ value: { acquiring: "acquiring" } },
+		{ value: { acquiring: "writing" } },
+		...getFinalHoldingStates(),
+	]);
+});
+
+acquireLockSuite("Benchmark that loses a hold", async () => {
+	const { footer } = createTestCommentContext();
+	const github = createGitHubClient();
+
+	debug("testTrace", "Initiate comment with no lock...");
+	const { data: comment } = await github.issues.createComment({
+		body: `${getTestCommentBody(null)}\n${footer}`,
+	});
+
+	debug("testTrace", "Start test job trying to update comment...");
+	const completion = invokePostorUpdateComment({ github });
+	await clock.nextAsync();
+
+	debug("testTrace", "Simulate second job overwriting first job's lock...");
+	await github.issues.updateComment({
+		comment_id: comment.id,
+		body: `${getTestCommentBody(comment)}\n${footer}\n${getLockHtml()}`,
+	});
+	await clock.nextAsync();
+
+	debug("testTrace", "Simulate second job releasing lock...");
+	await github.issues.updateComment({
+		comment_id: comment.id,
+		body: `${getTestCommentBody(comment)}\n${footer}`,
+	});
+	await clock.nextAsync();
+
+	debug("testTrace", "Wait for test job to complete");
+	await clock.runAllAsync();
+	const [states, finalComment] = await completion;
+
+	validateFinalComment(finalComment);
+	validateStates(states, [
+		{ value: "initialRead" },
+		{ value: { acquiring: "waiting" } },
+		{ value: { acquiring: "acquiring" } },
+		{ value: { acquiring: "writing" } },
+		{ value: { holding: "holding" } },
+		{ value: { holding: "checking" } },
+		{ value: { acquiring: "waiting" } },
+		{ value: { acquiring: "acquiring" } },
+		{ value: { acquiring: "writing" } },
 		...getFinalHoldingStates(),
 	]);
 });
 
 acquireLockSuite("Benchmark that times out", async () => {
-	const context = createTestCommentContext();
+	const { footer } = createTestCommentContext();
 	const github = createGitHubClient();
 
 	debug("testTrace", "Initiate comment with lock...");
 	await github.issues.createComment({
-		body: `${getTestCommentBody(null)}\n${context.footer}\n${getLockHtml()}`,
+		body: `${getTestCommentBody(null)}\n${footer}\n${getLockHtml()}`,
 	});
 
 	debug("testTrace", "Start job that times out waiting to update comment...");
