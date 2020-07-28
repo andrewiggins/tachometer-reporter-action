@@ -27,7 +27,7 @@ const { getLogger, getInputs } = util.util;
 
 	logger.debug(() => "Running pre tachometer-reporter-action...");
 	logger.debug(() => "Report ID: " + JSON.stringify(inputs.reportId));
-	// logger.debug("Context: " + JSON.stringify(github.context, undefined, 2));
+	logger.debug(() => "Context: " + JSON.stringify(util.github.context, null, 2));
 
 	if (!inputs.reportId) {
 		return logger.info(
