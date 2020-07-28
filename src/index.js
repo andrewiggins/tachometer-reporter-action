@@ -1,17 +1,14 @@
 const { readFile } = require("fs").promises;
 const crypto = require("crypto");
-const { parse } = require("node-html-parser");
 const {
 	h,
+	getCommentBody,
 	Summary,
-	SummaryStatus,
+	Status,
 	ResultsEntry,
-	getSummaryId,
-	getBenchmarkSectionId,
-	NewCommentBody,
-} = require("./utils/html");
-const { getWorkflowRunInfo, getCommit } = require("./utils/github");
-const { postOrUpdateComment } = require("./comments");
+} = require("./getCommentBody");
+const { getActionInfo, getCommit } = require("./utils/github");
+const { createCommentContext, postOrUpdateComment } = require("./comments");
 
 /**
  * @param {import('./global').BenchmarkResult[]} benchmarks
@@ -36,7 +33,7 @@ function getReportId(benchmarks) {
 
 /**
  * @param {import("./global").CommitInfo} commitInfo
- * @param {import('./global').WorkflowRunInfo} workflowRun
+ * @param {import('./global').ActionInfo} actionInfo
  * @param {Pick<import('./global').Inputs, 'prBenchName' | 'baseBenchName' | 'defaultOpen' | 'reportId'>} inputs
  * @param {import('./global').TachResults} tachResults
  * @param {boolean} [isRunning]
@@ -44,7 +41,7 @@ function getReportId(benchmarks) {
  */
 function buildReport(
 	commitInfo,
-	workflowRun,
+	actionInfo,
 	inputs,
 	tachResults,
 	isRunning = false
@@ -76,75 +73,30 @@ function buildReport(
 		title,
 		prBenchName: inputs.prBenchName,
 		baseBenchName: inputs.baseBenchName,
-		workflowRun,
+		actionInfo: actionInfo,
 		isRunning,
 		// results: benchmarks,
-		status: isRunning ? (
-			<SummaryStatus workflowRun={workflowRun} icon={true} />
-		) : null,
+		status: isRunning ? <Status actionInfo={actionInfo} icon={true} /> : null,
 		body: (
 			<ResultsEntry
 				reportId={reportId}
 				benchmarks={benchmarks}
-				workflowRun={workflowRun}
+				actionInfo={actionInfo}
 				commitInfo={commitInfo}
 			/>
 		),
-		summary:
-			inputs.baseBenchName && inputs.prBenchName ? (
-				<Summary
-					reportId={reportId}
-					title={title}
-					benchmarks={benchmarks}
-					prBenchName={inputs.prBenchName}
-					baseBenchName={inputs.baseBenchName}
-					workflowRun={workflowRun}
-					isRunning={isRunning}
-				/>
-			) : null,
+		summary: (
+			<Summary
+				reportId={reportId}
+				title={title}
+				benchmarks={benchmarks}
+				prBenchName={inputs.prBenchName}
+				baseBenchName={inputs.baseBenchName}
+				actionInfo={actionInfo}
+				isRunning={isRunning}
+			/>
+		),
 	};
-}
-
-/**
- * @param {import('./global').Inputs} inputs
- * @param {import('./global').Report} report
- * @param {string} commentBody
- * @param {import('./global').Logger} logger
- * @returns {string}
- */
-function getCommentBody(inputs, report, commentBody, logger) {
-	/** @type {JSX.Element} */
-	let result;
-
-	if (!commentBody) {
-		result = <NewCommentBody report={report} inputs={inputs} />;
-	} else if (report.isRunning) {
-		// If report is running, just update the status fields
-		const commentHtml = parse(commentBody);
-
-		const summaryId = getSummaryId(report.id);
-		const summaryStatus = commentHtml.querySelector(`#${summaryId} .status`);
-
-		const bodyId = getBenchmarkSectionId(report.id);
-		const bodyStatus = commentHtml.querySelector(`#${bodyId} .status`);
-
-		if (bodyStatus && summaryStatus) {
-			summaryStatus.set_content(report.status);
-			bodyStatus.set_content(report.status);
-		}
-
-		// If bodyStatus or summaryStatus doesn't exist, leave comment unmodified
-		result = commentHtml;
-	}
-
-	if (!result) {
-		// If something failed above, just generate a new comment
-
-		// TODO: Update comment body with new results to support multiple benchmarks
-		result = <NewCommentBody report={report} inputs={inputs} />;
-	}
-
-	return result.toString();
 }
 
 /** @type {import('./global').Logger} */
@@ -186,24 +138,18 @@ async function reportTachRunning(
 	inputs,
 	logger = defaultLogger
 ) {
-	/** @type {[ import('./global').WorkflowRunInfo, import('./global').CommitInfo ]} */
-	const [workflowRun, commitInfo] = await Promise.all([
-		getWorkflowRunInfo(context, github, logger),
+	/** @type {[ import('./global').ActionInfo, import('./global').CommitInfo ]} */
+	const [actionInfo, commitInfo] = await Promise.all([
+		getActionInfo(context, github, logger),
 		getCommit(context, github),
 	]);
 
-	const report = buildReport(commitInfo, workflowRun, inputs, null, true);
+	const report = buildReport(commitInfo, actionInfo, inputs, null, true);
 
 	await postOrUpdateComment(
 		github,
-		context,
-		(comment) => {
-			const body = getCommentBody(inputs, report, comment.body, logger);
-			logger.debug(
-				() => `${comment ? "Updated" : "New"} Comment Body: ${body}`
-			);
-			return body;
-		},
+		createCommentContext(context, actionInfo),
+		(comment) => getCommentBody(inputs, report, comment?.body, logger),
 		logger
 	);
 
@@ -230,16 +176,19 @@ async function reportTachResults(
 ) {
 	inputs = { ...defaultInputs, ...inputs };
 
-	/** @type {[ import('./global').TachResults, import('./global').WorkflowRunInfo, import('./global').CommitInfo ]} */
-	const [tachResults, workflowRun, commitInfo] = await Promise.all([
+	/** @type {[ import('./global').TachResults, import('./global').ActionInfo, import('./global').CommitInfo ]} */
+	const [tachResults, actionInfo, commitInfo] = await Promise.all([
 		readFile(inputs.path, "utf8").then((contents) => JSON.parse(contents)),
-		getWorkflowRunInfo(context, github, logger),
+		getActionInfo(context, github, logger),
 		getCommit(context, github),
 	]);
 
+	logger.debug(() => "Action Info: " + JSON.stringify(actionInfo, null, 2));
+	logger.debug(() => "Commit Info " + JSON.stringify(commitInfo, null, 2));
+
 	const report = buildReport(
 		commitInfo,
-		workflowRun,
+		actionInfo,
 		inputs,
 		tachResults,
 		false
@@ -247,14 +196,8 @@ async function reportTachResults(
 
 	await postOrUpdateComment(
 		github,
-		context,
-		(comment) => {
-			const body = getCommentBody(inputs, report, comment.body, logger);
-			logger.debug(
-				() => `${comment ? "Updated" : "New"} Comment Body: ${body}`
-			);
-			return body;
-		},
+		createCommentContext(context, actionInfo),
+		(comment) => getCommentBody(inputs, report, comment?.body, logger),
 		logger
 	);
 

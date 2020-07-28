@@ -48,7 +48,7 @@ async function createCheck(github, context) {
 	const useCheck = util.core.getInput("use-check", { required: true });
 
 	const logger = getLogger();
-	const inputs = getInputs();
+	const inputs = getInputs(logger);
 	const octokit = util.github.getOctokit(token);
 
 	let finish;
