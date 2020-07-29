@@ -196,6 +196,39 @@ newCommentSuite("Supports benchmarks with different names", () => {
 	assert.is(actualTitle, expectedTitle, "Title includes all bench names");
 });
 
+newCommentSuite(
+	"Still renders status even if job.html_url is falsey",
+	async () => {
+		const report = invokeBuildReport({
+			inputs: { reportId: testReportId },
+			actionInfo: {
+				...defaultActionInfo,
+				job: {
+					id: undefined,
+					index: -1,
+					htmlUrl: undefined,
+					name: defaultActionInfo.job.name,
+				},
+			},
+			results: null,
+			isRunning: true,
+		});
+
+		const bodyHtml = parse(invokeGetCommentBody({ report }));
+
+		const summaryId = getSummaryId(testReportId);
+		const summaryStatus = bodyHtml.querySelector(`#${summaryId} .status span`);
+
+		const resultId = getBenchmarkSectionId(testReportId);
+		const resultStatus = bodyHtml.querySelector(`#${resultId} .status span`);
+
+		assert.ok(summaryStatus, "Summary status span exists");
+		assert.ok(resultStatus, "Result status span exists");
+		assert.ok(summaryStatus.text.includes("⏱"), "Summary status span has text");
+		assert.ok(resultStatus.text.includes("⏱"), "Result status span has text");
+	}
+);
+
 //#endregion
 
 //#region Update Comment Suite
@@ -240,6 +273,47 @@ updateCommentSuite(
 		// 	formatHtml(bodyHtml.toString()),
 		// 	"utf-8"
 		// );
+	}
+);
+
+updateCommentSuite(
+	"Update status for existing comment when no job.html_url is present",
+	async () => {
+		const commentBodyPath = testRoot(
+			"fixtures/test-results-existing-comment.html"
+		);
+		const commentBody = await readFile(commentBodyPath, "utf-8");
+		const report = invokeBuildReport({
+			inputs: { reportId: testReportId },
+			actionInfo: {
+				...defaultActionInfo,
+				job: {
+					id: undefined,
+					index: -1,
+					htmlUrl: undefined,
+					name: defaultActionInfo.job.name,
+				},
+			},
+			results: null,
+			isRunning: true,
+		});
+
+		const bodyHtml = parse(invokeGetCommentBody({ report, commentBody }));
+
+		const summaryId = getSummaryId(testReportId);
+		const summaryStatus = bodyHtml.querySelector(`#${summaryId} .status span`);
+		const summaryData = bodyHtml.querySelector(`#${summaryId} em`);
+
+		const resultId = getBenchmarkSectionId(testReportId);
+		const resultStatus = bodyHtml.querySelector(`#${resultId} .status span`);
+		const resultData = bodyHtml.querySelector(`#${resultId} table`);
+
+		assert.ok(summaryStatus, "Summary status span exists");
+		assert.ok(resultStatus, "Result status span exists");
+		assert.ok(summaryStatus.text.includes("⏱"), "Summary status span has text");
+		assert.ok(resultStatus.text.includes("⏱"), "Result status span has text");
+		assert.ok(summaryData, "Summary data is still present");
+		assert.ok(resultData, "Result data is still present");
 	}
 );
 

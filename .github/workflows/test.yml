@@ -15,3 +15,23 @@ jobs:
           node-version: "14.x"
       - run: npm ci
       - run: npm test
+      - name: Report Tachometer Result
+        uses: ./
+        with:
+          path: tests/results/test-results.json
+          pr-bench-name: local-framework
+          base-bench-name: base-framework
+
+  master:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-node@v1
+        with:
+          node-version: "14.x"
+      - run: npm ci
+      - run: npm test
+      - name: Report Other Tachometer Result
+        uses: andrewiggins/tachometer-reporter-action@master
+        with:
+          path: tests/results/other-results.json

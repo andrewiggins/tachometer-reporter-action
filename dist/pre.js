@@ -24,20 +24,29 @@ const { getLogger, getInputs } = util.util;
 
 	const logger = getLogger();
 	const inputs = getInputs(logger);
+	const context = util.github.context;
 
 	logger.debug(() => "Running pre tachometer-reporter-action...");
 	logger.debug(() => "Report ID: " + JSON.stringify(inputs.reportId));
-	// logger.debug("Context: " + JSON.stringify(github.context, undefined, 2));
+	logger.debug(() => "Issue: " + JSON.stringify(context.issue, null, 2));
+	logger.debug(() => "Repo: " + JSON.stringify(context.repo, null, 2));
+	logger.debug(() => "Context: " + JSON.stringify(context, null, 2));
 
 	if (!inputs.reportId) {
-		return logger.info(
+		logger.info(
 			'No reportId provided. Skipping updating comment with "Running..." status.'
 		);
+
+		return;
+	} else if (context.eventName !== "pull_request") {
+		logger.info(
+			"Not a pull request event. Skipping this action and doing nothing."
+		);
+		logger.info("Event name: " + util.github.context.eventName);
+		return;
 	}
 
-	const context = util.github.context;
 	const octokit = util.github.getOctokit(token);
-
 	const report = await reportTachRunning(octokit, context, inputs, logger);
 
 	logger.debug(() => "Report: " + JSON.stringify(report, null, 2));
