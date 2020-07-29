@@ -60,7 +60,7 @@ async function getActionInfo(context, github, logger) {
 	/** @type {import('../global').WorkflowRunJob} */
 	let matchingJob;
 
-	/** @type {number} */
+	/** @type {number | undefined} */
 	let jobIndex;
 
 	let i = 0;

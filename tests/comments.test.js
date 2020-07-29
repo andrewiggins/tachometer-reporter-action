@@ -632,4 +632,63 @@ acquireLockSuite("Benchmark that times out", async () => {
 	);
 });
 
+acquireLockSuite("Comment update doesn't settle immediately", async () => {
+	// Once saw a case where a action updated a comment, but upon reading the
+	// comment again, it didn't see its update. However the next read for the
+	// comment did show its update. So simulating this behavior to ensure our
+	// state machine behaves as expected.
+
+	const context = createTestCommentContext();
+	const github = createGitHubClient();
+
+	debug("testTrace", "Initiate comment...");
+	const {
+		data: { id: comment_id },
+	} = await github.issues.createComment({
+		body: `${getTestCommentBody(null)}\n${context.footer}`,
+	});
+	const {
+		data: { body: origBody },
+	} = await github.issues.getComment({ comment_id });
+
+	debug("testTrace", "Start test job that locks comment...");
+	const completion = invokePostorUpdateComment({ github, context });
+	await clock.nextAsync();
+
+	debug("testTrace", "Simulate comment not settling yet");
+	const {
+		data: { body: newBody },
+	} = await github.issues.getComment({ comment_id });
+	await github.issues.updateComment({
+		comment_id,
+		body: origBody,
+	});
+
+	debug("testTrace", "Allow test job to see that comment has not settled");
+	await clock.nextAsync();
+
+	debug("testTrace", "Simulate comment settling and showing updated body");
+	await github.issues.updateComment({
+		comment_id,
+		body: newBody,
+	});
+
+	debug("testTrace", "Wait for test job to complete");
+	await clock.runAllAsync();
+	const [states, finalComment] = await completion;
+
+	validateFinalComment(finalComment);
+	validateStates(states, [
+		{ value: "initialRead" },
+		{ value: { acquiring: "waiting" } },
+		{ value: { acquiring: "acquiring" } },
+		{ value: { acquiring: "writing" } },
+		{ value: { holding: "holding" } },
+		{ value: { holding: "checking" } },
+		{ value: { acquiring: "waiting" } },
+		{ value: { acquiring: "acquiring" } },
+		...getFinalHoldingStates(),
+	]);
+});
+
 acquireLockSuite.run();

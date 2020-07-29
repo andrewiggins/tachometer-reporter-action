@@ -159,7 +159,7 @@ function BenchmarkSection({ report, open }) {
 		<div
 			id={getBenchmarkSectionId(report.id)}
 			data-run-number={report.actionInfo.run.number.toString()}
-			data-job-index={report.actionInfo.job.index?.toString()}
+			data-sort-key={report.title}
 		>
 			<details open={open ? "open" : null}>
 				<summary>
@@ -318,11 +318,7 @@ function Summary({
  * @param {{ report: import('./global').Report; }} props
  */
 function SummaryListItem({ report }) {
-	return (
-		<li data-job-index={report.actionInfo.job.index?.toString()}>
-			{report.summary}
-		</li>
-	);
+	return <li data-sort-key={report.title}>{report.summary}</li>;
 }
 
 /**
@@ -368,20 +364,18 @@ function Icon() {
 
 /**
  * @param {import('node-html-parser').HTMLElement} container
- * @param {number} jobIndex
+ * @param {string} newSortKey
  * @param {import('node-html-parser').HTMLElement} newNode
  */
-function insertNewBenchData(container, jobIndex, newNode) {
-	// TODO: Make this handle null jobIndex. Perhaps sort by report-id?
-
+function insertNewBenchData(container, newSortKey, newNode) {
 	let insertionIndex;
 	for (let i = 0; i < container.childNodes.length; i++) {
 		/** @type {import('node-html-parser').HTMLElement} */
-		// @ts-ignore - We should be abel to safely assume these are HTMLElements
+		// @ts-ignore - We should be able to safely assume these are HTMLElements
 		const child = container.childNodes[i];
 		if (child.nodeType == NodeType.ELEMENT_NODE) {
-			const childJobIndex = parseInt(child.getAttribute("data-job-index"), 10);
-			if (childJobIndex > jobIndex) {
+			const childSortKey = child.getAttribute("data-sort-key");
+			if (childSortKey > newSortKey) {
 				insertionIndex = i;
 				break;
 			}
@@ -446,7 +440,7 @@ function getCommentBody(inputs, report, commentBody, logger) {
 		logger.info(`No summary found with id "${summaryId}" so adding new one.`);
 		insertNewBenchData(
 			summaryContainer,
-			report.actionInfo.job.index,
+			report.title,
 			<SummaryListItem report={report} />
 		);
 	}
@@ -479,7 +473,7 @@ function getCommentBody(inputs, report, commentBody, logger) {
 		logger.info(`No results found with id "${resultsId}" so adding new one.`);
 		insertNewBenchData(
 			resultsContainer,
-			report.actionInfo.job.index,
+			report.title,
 			<BenchmarkSection report={report} open={inputs.defaultOpen} />
 		);
 	}

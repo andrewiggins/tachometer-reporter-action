@@ -60,10 +60,10 @@ interface ActionInfo {
 		name: string;
 	};
 	job: {
-		id: WorkflowRunJob["id"];
+		id?: WorkflowRunJob["id"];
 		name: WorkflowRunJob["name"];
-		htmlUrl: WorkflowRunJob["html_url"];
-		index: number;
+		htmlUrl?: WorkflowRunJob["html_url"];
+		index?: number;
 	};
 }
 

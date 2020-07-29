@@ -235,7 +235,7 @@ newCommentSuite(
 
 const updateCommentSuite = suite("getCommentBody (update)");
 const testReportId = "report-id";
-const otherReportId = "new-id";
+const otherReportId = "test-results-new-id";
 
 updateCommentSuite(
 	"Update status for existing comment with old results",
@@ -267,12 +267,18 @@ updateCommentSuite(
 		assert.ok(summaryData, "Summary data is still present");
 		assert.ok(resultData, "Result data is still present");
 
+		const fixturePath = testRoot("fixtures/test-results-existing-running.html");
+		const actualHtml = formatHtml(bodyHtml.toString());
+		const expectedHtml = await readFile(fixturePath, "utf-8");
+
 		// Uncomment to update fixture
-		// await writeFile(
-		// 	testRoot("fixtures/test-results-existing-running.html"),
-		// 	formatHtml(bodyHtml.toString()),
-		// 	"utf-8"
-		// );
+		// await writeFile(fixturePath, actualHtml, "utf-8");
+
+		assertFixture(
+			actualHtml,
+			expectedHtml,
+			"Updating status with results fixture"
+		);
 	}
 );
 
@@ -506,13 +512,6 @@ updateCommentSuite("Add new summary/results entry snapshot", async () => {
 	const report = invokeBuildReport({
 		inputs: { reportId: otherReportId },
 		results: newResults,
-		actionInfo: {
-			...defaultActionInfo,
-			job: {
-				...defaultActionInfo.job,
-				index: defaultActionInfo.job.index + 2,
-			},
-		},
 	});
 
 	const html = formatHtml(invokeGetCommentBody({ report, commentBody }));
@@ -539,13 +538,6 @@ updateCommentSuite(
 		const report = invokeBuildReport({
 			inputs: { reportId: newId },
 			results: newResults,
-			actionInfo: {
-				...defaultActionInfo,
-				job: {
-					...defaultActionInfo.job,
-					index: defaultActionInfo.job.index - 1,
-				},
-			},
 		});
 
 		const bodyHtml = parse(invokeGetCommentBody({ report, commentBody }));
@@ -594,76 +586,9 @@ updateCommentSuite(
 );
 
 updateCommentSuite(
-	"Insert a benchmark with the same job index at the end of the benchmarks with the same job index",
-	async () => {
-		const newId = "another-new-id";
-		const newResults = JSON.parse(
-			await readFile(testRoot("results/other-results.json"), "utf8")
-		);
-
-		const commentBodyPath = testRoot("fixtures/multiple-entries.html");
-		const commentBody = await readFile(commentBodyPath, "utf-8");
-		const report = invokeBuildReport({
-			inputs: { reportId: newId },
-			results: newResults,
-			actionInfo: {
-				...defaultActionInfo,
-				job: {
-					...defaultActionInfo.job,
-					index: defaultActionInfo.job.index,
-				},
-			},
-		});
-
-		const bodyHtml = parse(invokeGetCommentBody({ report, commentBody }));
-
-		const summaries = bodyHtml.querySelectorAll(
-			`#${getSummaryListId()} li div`
-		);
-		const results = bodyHtml.querySelectorAll(
-			`#${getResultsContainerId()} div`
-		);
-
-		// console.log(formatHtml(bodyHtml.toString()));
-
-		assert.equal(
-			summaries[0].getAttribute("id"),
-			getSummaryId(testReportId),
-			"First summary should be test results"
-		);
-		assert.equal(
-			summaries[1].getAttribute("id"),
-			getSummaryId(newId),
-			"Second summary should be new results"
-		);
-		assert.equal(
-			summaries[2].getAttribute("id"),
-			getSummaryId(otherReportId),
-			"Third summary should be other test results"
-		);
-
-		assert.equal(
-			results[0].getAttribute("id"),
-			getBenchmarkSectionId(testReportId),
-			"First result entry should be test results"
-		);
-		assert.equal(
-			results[1].getAttribute("id"),
-			getBenchmarkSectionId(newId),
-			"Second result entry should be new results"
-		);
-		assert.equal(
-			results[2].getAttribute("id"),
-			getBenchmarkSectionId(otherReportId),
-			"Third result entry should be other test results"
-		);
-	}
-);
-
-updateCommentSuite(
 	"Insert a benchmark with the higher job index at the end of the benchmarks",
 	async () => {
-		const newId = "another-new-id";
+		const newId = "zz-another-new-id";
 		const newResults = JSON.parse(
 			await readFile(testRoot("results/other-results.json"), "utf8")
 		);
