@@ -20,6 +20,13 @@ async function* getWorkflowJobs(context, github, logger) {
 			);
 		}
 
+		logger.debug(() => {
+			return (
+				`Workflow Jobs (run id: ${context.runId}): ` +
+				JSON.stringify(page.data, null, 2)
+			);
+		});
+
 		yield* page.data;
 	}
 }

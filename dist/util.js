@@ -8716,6 +8716,13 @@ async function* getWorkflowJobs(context, github, logger) {
 			);
 		}
 
+		logger.debug(() => {
+			return (
+				`Workflow Jobs (run id: ${context.runId}): ` +
+				JSON.stringify(page.data, null, 2)
+			);
+		});
+
 		yield* page.data;
 	}
 }
@@ -8753,7 +8760,7 @@ async function getActionInfo(context, github, logger) {
 	let jobIndex;
 
 	let i = 0;
-	for await (const job of getWorkflowJobs(context, github)) {
+	for await (const job of getWorkflowJobs(context, github, logger)) {
 		if (job.name == context.job) {
 			matchingJob = job;
 			jobIndex = i;
