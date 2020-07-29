@@ -35,5 +35,6 @@ jobs:
       - name: Report Other Tachometer Result
         uses: andrewiggins/tachometer-reporter-action@master
         with:
-          initialize: true
           path: tests/results/other-results.json
+          report-id: other-results
+          initialize: true
