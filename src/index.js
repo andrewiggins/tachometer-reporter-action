@@ -149,7 +149,7 @@ async function reportTachRunning(
 
 	await postOrUpdateComment(
 		github,
-		createCommentContext(context, actionInfo, inputs),
+		createCommentContext(context, actionInfo, report.id, inputs.initialize),
 		(comment) => getCommentBody(inputs, report, comment?.body, logger),
 		logger
 	);
@@ -197,7 +197,7 @@ async function reportTachResults(
 
 	await postOrUpdateComment(
 		github,
-		createCommentContext(context, actionInfo, inputs),
+		createCommentContext(context, actionInfo, report.id, inputs.initialize),
 		(comment) => getCommentBody(inputs, report, comment?.body, logger),
 		logger
 	);

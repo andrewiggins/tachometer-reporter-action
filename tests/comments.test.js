@@ -126,20 +126,17 @@ const fakeGitHubContext = {
  * @typedef CommentContextParams
  * @property {CommentGithubContext} context
  * @property {import('../src/global').ActionInfo} actionInfo
- * @property {Partial<import('../src/global').Inputs>} inputs
+ * @property {string} customId
+ * @property {boolean} initialize
  * @param {Partial<CommentContextParams>} params
  */
 function createTestCommentContext({
 	context = fakeGitHubContext,
 	actionInfo = defaultActionInfo,
-	inputs = null,
+	customId = null,
+	initialize = null,
 } = {}) {
-	const fullInputs = {
-		...defaultInputs,
-		...inputs,
-	};
-
-	return createCommentContext(context, actionInfo, fullInputs);
+	return createCommentContext(context, actionInfo, customId, initialize);
 }
 
 let updateNum = 0;
@@ -360,7 +357,7 @@ acquireLockSuite("Single benchmark, update comment", async () => {
 acquireLockSuite(
 	"Benchmark creates comment with initialize: true input",
 	async () => {
-		const context = createTestCommentContext({ inputs: { initialize: true } });
+		const context = createTestCommentContext({ initialize: true });
 		const github = createGitHubClient();
 
 		debug("testTrace", "Start test job trying to create comment...");
@@ -384,12 +381,8 @@ acquireLockSuite(
 	"Benchmark waits for other job to create comment with initialize: false input",
 	async () => {
 		const github = createGitHubClient();
-		const initializerCtx = createTestCommentContext({
-			inputs: { initialize: true },
-		});
-		const waiterCtx = createTestCommentContext({
-			inputs: { initialize: false },
-		});
+		const initializerCtx = createTestCommentContext({ initialize: true });
+		const waiterCtx = createTestCommentContext({ initialize: false });
 
 		debug("testTrace", "Start waiter job...");
 		const waiterCompletion = invokePostorUpdateComment({
@@ -442,7 +435,7 @@ acquireLockSuite(
 acquireLockSuite(
 	"Benchmark times out with initialize: false input",
 	async () => {
-		const context = createTestCommentContext({ inputs: { initialize: false } });
+		const context = createTestCommentContext({ initialize: false });
 		const logger = createTestLogger();
 
 		debug("testTrace", "Start waiter job trying to create comment...");

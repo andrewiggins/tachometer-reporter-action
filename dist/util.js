@@ -14235,23 +14235,23 @@ async function postOrUpdateComment(github, context, getCommentBody, logger) {
 /**
  * @param {Pick<import('./global').GitHubActionContext, "repo" | "issue">} context
  * @param {import('./global').ActionInfo} actionInfo
- * @param {Partial<Pick<import('./global').Inputs, "reportId" | "initialize">>} inputs
+ * @param {string | undefined} [customId]
+ * @param {boolean} [initialize]
  * @returns {import('./global').CommentContext}
  */
-function createCommentContext(context, actionInfo, inputs) {
+function createCommentContext(context, actionInfo, customId, initialize) {
 	const { run, job } = actionInfo;
 
-	// TODO: Add report-id to lockId
-	const lockId = `{ run: {id: ${run.id}, name: ${run.name}}, job: {id: ${job.id}, name: ${job.name}}`;
+	const lockId = `{ customId: ${customId}, run: {id: ${run.id}, name: ${run.name}}, job: {id: ${job.id}, name: ${job.name}}`;
 
 	const footer = getFooter(actionInfo);
 	const footerRe = new RegExp(escapeStringRegexp(footer));
 
 	/** @type {number} */
 	let createDelayFactor;
-	if (inputs.initialize === true) {
+	if (initialize === true) {
 		createDelayFactor = 0;
-	} else if (inputs.initialize === false) {
+	} else if (initialize === false) {
 		createDelayFactor = Infinity;
 	} else if (job.index != null) {
 		createDelayFactor = job.index;
@@ -14429,7 +14429,7 @@ async function reportTachRunning(
 
 	await postOrUpdateComment$1(
 		github,
-		createCommentContext$1(context, actionInfo, inputs),
+		createCommentContext$1(context, actionInfo, report.id, inputs.initialize),
 		(comment) => getCommentBody$1(inputs, report, _optionalChain$2([comment, 'optionalAccess', _2 => _2.body]), logger),
 		logger
 	);
@@ -14477,7 +14477,7 @@ async function reportTachResults(
 
 	await postOrUpdateComment$1(
 		github,
-		createCommentContext$1(context, actionInfo, inputs),
+		createCommentContext$1(context, actionInfo, report.id, inputs.initialize),
 		(comment) => getCommentBody$1(inputs, report, _optionalChain$2([comment, 'optionalAccess', _12 => _12.body]), logger),
 		logger
 	);
