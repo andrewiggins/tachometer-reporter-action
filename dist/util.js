@@ -14256,7 +14256,7 @@ function createCommentContext(context, actionInfo, customId, initialize) {
 	} else if (job.index != null) {
 		createDelayFactor = job.index;
 	} else {
-		createDelayFactor = randomInt(2, 8);
+		createDelayFactor = randomInt(3, 10);
 	}
 
 	return {
