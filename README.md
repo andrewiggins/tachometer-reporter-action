@@ -80,6 +80,8 @@ actions don't collide with each other
 
 #### initialize
 
+Use this option with `report-id`.
+
 Determines whether this action instance should initialize the comment to report
 results. Useful if multiple jobs are sharing the same comment. Pass in `true` if
 this job should always create the comment, `false` if this job should never

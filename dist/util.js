@@ -14546,14 +14546,20 @@ function getInputs(logger) {
 
 	if (inputs.prBenchName != null && inputs.baseBenchName == null) {
 		logger.warn(
-			`"pr-bench-name input provided without base-bench-name input. Please provide both.`
+			`pr-bench-name input provided without base-bench-name input. Please provide both.`
 		);
 		inputs.prBenchName = null;
 	} else if (inputs.prBenchName == null && inputs.baseBenchName != null) {
 		logger.warn(
-			`"base-bench-name input provided without pr-bench-name input. Please provide both.`
+			`base-bench-name input provided without pr-bench-name input. Please provide both.`
 		);
 		inputs.baseBenchName = null;
+	}
+
+	if (inputs.initialize == true && inputs.reportId == null) {
+		throw new Error(
+			`"initialize" input was set to true without providing a "report-id". Please provide both on this action.`
+		);
 	}
 
 	return inputs;
