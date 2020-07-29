@@ -159,7 +159,7 @@ function BenchmarkSection({ report, open }) {
 		<div
 			id={getBenchmarkSectionId(report.id)}
 			data-run-number={report.actionInfo.run.number.toString()}
-			data-sort-key={report.id}
+			data-sort-key={report.title}
 		>
 			<details open={open ? "open" : null}>
 				<summary>
@@ -318,7 +318,7 @@ function Summary({
  * @param {{ report: import('./global').Report; }} props
  */
 function SummaryListItem({ report }) {
-	return <li data-sort-key={report.id}>{report.summary}</li>;
+	return <li data-sort-key={report.title}>{report.summary}</li>;
 }
 
 /**
@@ -440,7 +440,7 @@ function getCommentBody(inputs, report, commentBody, logger) {
 		logger.info(`No summary found with id "${summaryId}" so adding new one.`);
 		insertNewBenchData(
 			summaryContainer,
-			report.id,
+			report.title,
 			<SummaryListItem report={report} />
 		);
 	}
@@ -473,7 +473,7 @@ function getCommentBody(inputs, report, commentBody, logger) {
 		logger.info(`No results found with id "${resultsId}" so adding new one.`);
 		insertNewBenchData(
 			resultsContainer,
-			report.id,
+			report.title,
 			<BenchmarkSection report={report} open={inputs.defaultOpen} />
 		);
 	}
