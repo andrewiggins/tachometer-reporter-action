@@ -414,8 +414,6 @@ acquireLockSuite(
 			{ value: { creating: "searching" } },
 			{ value: { creating: "waiting" } },
 			{ value: { creating: "searching" } },
-			{ value: { creating: "waiting" } },
-			{ value: { creating: "searching" } },
 			{ value: { acquiring: "waiting" } },
 			{ value: { acquiring: "acquiring" } },
 			{ value: { acquiring: "writing" } },
