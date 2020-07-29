@@ -21,14 +21,17 @@ jobs:
           # Could use this to simulate benchmark running for random number of seconds
           echo $((($RANDOM%(5000-1000))+1000))
       - name: Report Tachometer Result
-        uses: andrewiggins/tachometer-reporter-action@master
+        uses: andrewiggins/tachometer-reporter-action@initialize-option
         with:
           path: tests/results/test-results.json
           report-id: test-bench
+          initialize: true
           pr-bench-name: local-framework
           base-bench-name: base-framework
 
   bench_2:
+    # Give this job a custom name to demonstrate how it won't find a job index
+    name: Bench 2
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
@@ -40,7 +43,8 @@ jobs:
         env:
           TACH_REPORTER_SKIP_SNAPSHOT_TESTS: "true"
       - name: Report Other Tachometer Result
-        uses: andrewiggins/tachometer-reporter-action@master
+        uses: andrewiggins/tachometer-reporter-action@initialize-option
         with:
-          report-id: test-bench-2
           path: tests/results/other-results.json
+          report-id: test-bench-2
+          initialize: false
