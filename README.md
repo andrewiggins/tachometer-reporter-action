@@ -106,12 +106,10 @@ against (e.g. the latest published version of your library/website).
 
 ### Sorting
 
-The results are inserted into the comment based on the index of the job that
+The results are inserted into the comment based on the ID of the report that
 produced the results. So a workflow that has multiple jobs reporting results
-will show the results in the order the jobs are returned from the
-[list jobs for a workflow run API](https://docs.github.com/en/rest/reference/actions#list-jobs-for-a-workflow-run)
-
-A single job reporting multiple results will list them in the order they finish.
+will show the results in the lexical order of their `report-id` inputs. If no
+`report-id` is provided, one is generated for them.
 
 ### Only latest updates are shown
 
