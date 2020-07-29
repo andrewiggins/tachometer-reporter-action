@@ -13780,6 +13780,8 @@ function createAcquireLockMachine(lockConfig) {
 						},
 						acquiring: {
 							on: {
+								// Comment exists, no one
+								HELD: "#holding",
 								// Comment exists, no one has lock
 								AVAILABLE: "writing",
 								// comment exists, is locked
