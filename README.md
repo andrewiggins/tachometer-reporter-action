@@ -78,6 +78,20 @@ instances of tachometer-reporter action. If you have multiple jobs or steps all
 running tachometer-reporter action for the same PR, use this field so that the
 actions don't collide with each other
 
+#### initialize
+
+Determines whether this action instance should initialize the comment to report
+results. Useful if multiple jobs are sharing the same comment. Pass in `true` if
+this job should always create the comment, `false` if this job should never
+create the comment, or leave empty if the default behavior is desired (wait a
+random time before creating comment if it doesn't exist).
+
+Generally this option is only necessary if you are running multiple jobs in the
+same workflow with this action. If so, choose one job to be the "initializer"
+and set `initialize: true` for that `tachometer-reporter-action` instance. Then
+pass `initialize: false` for all other instances in that workflow of
+`tachometer-reporter-action`.
+
 #### default-open
 
 Pass `true` to this option to automatically open this actions benchmark results
@@ -103,6 +117,19 @@ field or "version" field) which serves as the base this PR is to be compared
 against (e.g. the latest published version of your library/website).
 
 ## Notes
+
+### Multiple comments
+
+This action will create one comment per workflow that uses it. So if you have
+two workflows that each run two jobs that use this action (a total of 4
+instances of this action), you should have two comments in your PR.
+
+By default, `tachometer-reporter-action` relies on a timing heuristic so that
+multiple jobs don't try to create multiple comments at the same time. However
+this timing heuristic doesn't work for all workflow configurations. To
+workaround this use the [`initialize`](#initialize) option to instruct only one
+`tachometer-reporter-action` instance in a workflow to initialize the comment
+all other `tachometer-reporter-action`s will share.
 
 ### Sorting
 

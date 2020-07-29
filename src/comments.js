@@ -1,7 +1,10 @@
 const { createMachine, interpret, assign } = require("xstate");
 const escapeRe = require("escape-string-regexp");
 
+/** @type {(min: number, max: number) => number} */
 const randomInt = (min, max) => Math.floor(Math.random() * (max - min)) + min;
+
+/** @type {(ms: number) => Promise<void>} */
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 /** @type {(actionInfo: import('./global').ActionInfo) => string} */
@@ -144,6 +147,8 @@ function createAcquireLockMachine(lockConfig) {
 								CREATE: "creating",
 								// comment doesn't exist, need to wait
 								NOT_FOUND: "waiting",
+								// comment doesn't exist, time out
+								TIMEOUT: "#timed_out",
 								// comment exists, try to acquire
 								LOCKED: "#acquiring",
 							},
@@ -334,6 +339,14 @@ async function acquireCommentLock(github, context, getInitialBody, logger) {
 				if (comment != null) {
 					logger.info(`Comment found and locked by "${lockHolder}".`);
 					nextEvent = "LOCKED";
+				} else if (
+					maxWaitingTime === Infinity &&
+					stateCtx.totalWaitTime > config.waitTimeoutMs
+				) {
+					logger.info(
+						`Comment not found, max waiting time is Infinity, and wait time out (${config.waitTimeoutMs}) has been reached.`
+					);
+					nextEvent = "TIMEOUT";
 				} else if (stateCtx.totalWaitTime < maxWaitingTime) {
 					logger.info(
 						`Comment not found and max waiting time (${stateCtx.totalWaitTime}/${maxWaitingTime}ms) not yet reached.`
@@ -441,10 +454,16 @@ async function acquireCommentLock(github, context, getInitialBody, logger) {
 	logger.endGroup();
 
 	if (service.state.value == "timed_out") {
-		const lastWriterId = getLockHolder(comment);
-		throw new Error(
-			`Timed out waiting to acquire lock to write comment. Last writer to hold lock was "${lastWriterId}"`
-		);
+		if (comment) {
+			const lastWriterId = getLockHolder(comment);
+			throw new Error(
+				`Timed out waiting to acquire lock to write comment. Last writer to hold lock was "${lastWriterId}"`
+			);
+		} else {
+			throw new Error(
+				`Timed out waiting for comment to be created. Is there at least one job in this workflow with initialize set to true?`
+			);
+		}
 	}
 
 	return comment;
@@ -602,14 +621,29 @@ async function postOrUpdateComment(github, context, getCommentBody, logger) {
 /**
  * @param {Pick<import('./global').GitHubActionContext, "repo" | "issue">} context
  * @param {import('./global').ActionInfo} actionInfo
+ * @param {Partial<Pick<import('./global').Inputs, "reportId" | "initialize">>} inputs
  * @returns {import('./global').CommentContext}
  */
-function createCommentContext(context, actionInfo) {
+function createCommentContext(context, actionInfo, inputs) {
 	const { run, job } = actionInfo;
+
+	// TODO: Add report-id to lockId
 	const lockId = `{ run: {id: ${run.id}, name: ${run.name}}, job: {id: ${job.id}, name: ${job.name}}`;
 
 	const footer = getFooter(actionInfo);
 	const footerRe = new RegExp(escapeRe(footer));
+
+	/** @type {number} */
+	let createDelayFactor;
+	if (inputs.initialize === true) {
+		createDelayFactor = 0;
+	} else if (inputs.initialize === false) {
+		createDelayFactor = Infinity;
+	} else if (job.index != null) {
+		createDelayFactor = job.index;
+	} else {
+		createDelayFactor = randomInt(2, 8);
+	}
 
 	return {
 		...context.repo,
@@ -621,7 +655,7 @@ function createCommentContext(context, actionInfo) {
 		matches(c) {
 			return c.user.type === "Bot" && footerRe.test(c.body);
 		},
-		createDelayFactor: actionInfo.job.index ?? 0,
+		createDelayFactor,
 	};
 }
 

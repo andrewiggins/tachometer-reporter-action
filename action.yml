@@ -11,6 +11,9 @@ inputs:
   report-id:
     description: "A string to uniquely identify this report between other instances of tachometer-reporter-action running in this job or other jobs in the same PR"
     require: false
+  initialize:
+    description: "Whether this action should initialize the comment to report results. Useful if multiple jobs are sharing the same comment. Pass in 'true' if this job should always create the comment, 'false' if this job should never create the comment, or leave empty if the default behavior is desired (wait a random time before creating comment if it doesn't exist)."
+    require: false
   default-open:
     description: "Whether to open this action's results table by default"
     required: false

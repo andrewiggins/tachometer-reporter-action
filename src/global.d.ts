@@ -69,9 +69,10 @@ interface ActionInfo {
 
 interface Inputs {
 	path: string;
+	reportId?: string;
+	initialize?: boolean;
 	prBenchName?: string;
 	baseBenchName: ?string;
-	reportId?: string;
 	keepOldResults?: boolean;
 	defaultOpen?: boolean;
 }

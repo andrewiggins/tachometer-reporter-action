@@ -30,6 +30,7 @@ function getLogger() {
 function getInputs(logger) {
 	const path = core.getInput("path", { required: true });
 	const reportId = core.getInput("report-id", { required: false });
+	const initialize = core.getInput("initialize", { required: false });
 	const keepOldResults = core.getInput("keep-old-results", { required: false });
 	const defaultOpen = core.getInput("default-open", { required: false });
 	const prBenchName = core.getInput("pr-bench-name", { required: false });
@@ -38,6 +39,7 @@ function getInputs(logger) {
 	/** @type {import('../global').Inputs} */
 	const inputs = {
 		path,
+		initialize: initialize ? initialize == "true" : null,
 		reportId: reportId ? reportId : null,
 		keepOldResults: keepOldResults != "false",
 		defaultOpen: defaultOpen !== "false",

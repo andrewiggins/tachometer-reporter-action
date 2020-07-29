@@ -8571,6 +8571,8 @@ function NewCommentBody({ inputs, report }) {
  * @param {import('node-html-parser').HTMLElement} newNode
  */
 function insertNewBenchData(container, jobIndex, newNode) {
+	// TODO: Make this handle null jobIndex. Perhaps sort by report-id?
+
 	let insertionIndex;
 	for (let i = 0; i < container.childNodes.length; i++) {
 		/** @type {import('node-html-parser').HTMLElement} */
@@ -8785,7 +8787,7 @@ async function getActionInfo(context, github, logger) {
 			id: _optionalChain$1([matchingJob, 'optionalAccess', _ => _.id]),
 			name: _nullishCoalesce$1(_optionalChain$1([matchingJob, 'optionalAccess', _2 => _2.name]), () => ( context.job)),
 			htmlUrl: _optionalChain$1([matchingJob, 'optionalAccess', _3 => _3.html_url]),
-			index: _nullishCoalesce$1(jobIndex, () => ( -1)),
+			index: jobIndex,
 		},
 	};
 }
@@ -13610,10 +13612,13 @@ var escapeStringRegexp = string => {
 		.replace(/-/g, '\\x2d');
 };
 
-function _nullishCoalesce$2(lhs, rhsFn) { if (lhs != null) { return lhs; } else { return rhsFn(); } }const { createMachine: createMachine$1, interpret: interpret$1, assign: assign$2 } = es;
+const { createMachine: createMachine$1, interpret: interpret$1, assign: assign$2 } = es;
 
 
+/** @type {(min: number, max: number) => number} */
 const randomInt = (min, max) => Math.floor(Math.random() * (max - min)) + min;
+
+/** @type {(ms: number) => Promise<void>} */
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 /** @type {(actionInfo: import('./global').ActionInfo) => string} */
@@ -13756,6 +13761,8 @@ function createAcquireLockMachine(lockConfig) {
 								CREATE: "creating",
 								// comment doesn't exist, need to wait
 								NOT_FOUND: "waiting",
+								// comment doesn't exist, time out
+								TIMEOUT: "#timed_out",
 								// comment exists, try to acquire
 								LOCKED: "#acquiring",
 							},
@@ -13946,6 +13953,14 @@ async function acquireCommentLock(github, context, getInitialBody, logger) {
 				if (comment != null) {
 					logger.info(`Comment found and locked by "${lockHolder}".`);
 					nextEvent = "LOCKED";
+				} else if (
+					maxWaitingTime === Infinity &&
+					stateCtx.totalWaitTime > config.waitTimeoutMs
+				) {
+					logger.info(
+						`Comment not found, max waiting time is Infinity, and wait time out (${config.waitTimeoutMs}) has been reached.`
+					);
+					nextEvent = "TIMEOUT";
 				} else if (stateCtx.totalWaitTime < maxWaitingTime) {
 					logger.info(
 						`Comment not found and max waiting time (${stateCtx.totalWaitTime}/${maxWaitingTime}ms) not yet reached.`
@@ -14053,10 +14068,16 @@ async function acquireCommentLock(github, context, getInitialBody, logger) {
 	logger.endGroup();
 
 	if (service.state.value == "timed_out") {
-		const lastWriterId = getLockHolder(comment);
-		throw new Error(
-			`Timed out waiting to acquire lock to write comment. Last writer to hold lock was "${lastWriterId}"`
-		);
+		if (comment) {
+			const lastWriterId = getLockHolder(comment);
+			throw new Error(
+				`Timed out waiting to acquire lock to write comment. Last writer to hold lock was "${lastWriterId}"`
+			);
+		} else {
+			throw new Error(
+				`Timed out waiting for comment to be created. Is there at least one job in this workflow with initialize set to true?`
+			);
+		}
 	}
 
 	return comment;
@@ -14214,14 +14235,29 @@ async function postOrUpdateComment(github, context, getCommentBody, logger) {
 /**
  * @param {Pick<import('./global').GitHubActionContext, "repo" | "issue">} context
  * @param {import('./global').ActionInfo} actionInfo
+ * @param {Partial<Pick<import('./global').Inputs, "reportId" | "initialize">>} inputs
  * @returns {import('./global').CommentContext}
  */
-function createCommentContext(context, actionInfo) {
+function createCommentContext(context, actionInfo, inputs) {
 	const { run, job } = actionInfo;
+
+	// TODO: Add report-id to lockId
 	const lockId = `{ run: {id: ${run.id}, name: ${run.name}}, job: {id: ${job.id}, name: ${job.name}}`;
 
 	const footer = getFooter(actionInfo);
 	const footerRe = new RegExp(escapeStringRegexp(footer));
+
+	/** @type {number} */
+	let createDelayFactor;
+	if (inputs.initialize === true) {
+		createDelayFactor = 0;
+	} else if (inputs.initialize === false) {
+		createDelayFactor = Infinity;
+	} else if (job.index != null) {
+		createDelayFactor = job.index;
+	} else {
+		createDelayFactor = randomInt(2, 8);
+	}
 
 	return {
 		...context.repo,
@@ -14233,7 +14269,7 @@ function createCommentContext(context, actionInfo) {
 		matches(c) {
 			return c.user.type === "Bot" && footerRe.test(c.body);
 		},
-		createDelayFactor: _nullishCoalesce$2(actionInfo.job.index, () => ( 0)),
+		createDelayFactor,
 	};
 }
 
@@ -14362,9 +14398,10 @@ const defaultLogger = {
 
 /** @type {Partial<import('./global').Inputs>} */
 const defaultInputs = {
+	reportId: null,
+	initialize: null,
 	prBenchName: null,
 	baseBenchName: null,
-	reportId: null,
 	keepOldResults: false,
 	defaultOpen: false,
 };
@@ -14392,7 +14429,7 @@ async function reportTachRunning(
 
 	await postOrUpdateComment$1(
 		github,
-		createCommentContext$1(context, actionInfo),
+		createCommentContext$1(context, actionInfo, inputs),
 		(comment) => getCommentBody$1(inputs, report, _optionalChain$2([comment, 'optionalAccess', _2 => _2.body]), logger),
 		logger
 	);
@@ -14440,7 +14477,7 @@ async function reportTachResults(
 
 	await postOrUpdateComment$1(
 		github,
-		createCommentContext$1(context, actionInfo),
+		createCommentContext$1(context, actionInfo, inputs),
 		(comment) => getCommentBody$1(inputs, report, _optionalChain$2([comment, 'optionalAccess', _12 => _12.body]), logger),
 		logger
 	);
@@ -14490,6 +14527,7 @@ function getLogger() {
 function getInputs(logger) {
 	const path = core.getInput("path", { required: true });
 	const reportId = core.getInput("report-id", { required: false });
+	const initialize = core.getInput("initialize", { required: false });
 	const keepOldResults = core.getInput("keep-old-results", { required: false });
 	const defaultOpen = core.getInput("default-open", { required: false });
 	const prBenchName = core.getInput("pr-bench-name", { required: false });
@@ -14498,6 +14536,7 @@ function getInputs(logger) {
 	/** @type {import('../global').Inputs} */
 	const inputs = {
 		path,
+		initialize: initialize ? initialize == "true" : null,
 		reportId: reportId ? reportId : null,
 		keepOldResults: keepOldResults != "false",
 		defaultOpen: defaultOpen !== "false",

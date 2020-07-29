@@ -372,6 +372,8 @@ function Icon() {
  * @param {import('node-html-parser').HTMLElement} newNode
  */
 function insertNewBenchData(container, jobIndex, newNode) {
+	// TODO: Make this handle null jobIndex. Perhaps sort by report-id?
+
 	let insertionIndex;
 	for (let i = 0; i < container.childNodes.length; i++) {
 		/** @type {import('node-html-parser').HTMLElement} */

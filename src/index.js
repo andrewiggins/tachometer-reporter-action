@@ -118,9 +118,10 @@ const defaultLogger = {
 
 /** @type {Partial<import('./global').Inputs>} */
 const defaultInputs = {
+	reportId: null,
+	initialize: null,
 	prBenchName: null,
 	baseBenchName: null,
-	reportId: null,
 	keepOldResults: false,
 	defaultOpen: false,
 };
@@ -148,7 +149,7 @@ async function reportTachRunning(
 
 	await postOrUpdateComment(
 		github,
-		createCommentContext(context, actionInfo),
+		createCommentContext(context, actionInfo, inputs),
 		(comment) => getCommentBody(inputs, report, comment?.body, logger),
 		logger
 	);
@@ -196,7 +197,7 @@ async function reportTachResults(
 
 	await postOrUpdateComment(
 		github,
-		createCommentContext(context, actionInfo),
+		createCommentContext(context, actionInfo, inputs),
 		(comment) => getCommentBody(inputs, report, comment?.body, logger),
 		logger
 	);

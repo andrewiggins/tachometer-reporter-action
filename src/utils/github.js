@@ -91,7 +91,7 @@ async function getActionInfo(context, github, logger) {
 			id: matchingJob?.id,
 			name: matchingJob?.name ?? context.job,
 			htmlUrl: matchingJob?.html_url,
-			index: jobIndex ?? -1,
+			index: jobIndex,
 		},
 	};
 }

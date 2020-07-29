@@ -1,5 +1,3 @@
-const { readFileSync } = require("fs");
-const { readFile, writeFile } = require("fs").promises;
 const { suite } = require("uvu");
 const assert = require("uvu/assert");
 const fakeTimers = require("@sinonjs/fake-timers");
@@ -7,7 +5,7 @@ const {
 	postOrUpdateComment,
 	createCommentContext,
 } = require("../lib/comments");
-const { defaultActionInfo } = require("./invokeBuildReport");
+const { defaultActionInfo, defaultInputs } = require("./invokeBuildReport");
 const { pick } = require("./utils");
 
 const DEBUG = {
@@ -108,21 +106,40 @@ function createGitHubClient({ comments = [] } = {}) {
 	};
 }
 
-function createTestCommentContext() {
-	/** @type {Pick<import('../src/global').GitHubActionContext, "repo" | "issue">} */
-	const fakeGitHubContext = {
-		repo: {
-			owner: "andrewiggins",
-			repo: "tachometer-reporter-action",
-		},
-		issue: {
-			owner: "andrewiggins",
-			repo: "tachometer-reporter-action",
-			number: 5,
-		},
+/**
+ * @typedef {Pick<import('../src/global').GitHubActionContext, "repo" | "issue">} CommentGithubContext
+ * @type {CommentGithubContext}
+ */
+const fakeGitHubContext = {
+	repo: {
+		owner: "andrewiggins",
+		repo: "tachometer-reporter-action",
+	},
+	issue: {
+		owner: "andrewiggins",
+		repo: "tachometer-reporter-action",
+		number: 5,
+	},
+};
+
+/**
+ * @typedef CommentContextParams
+ * @property {CommentGithubContext} context
+ * @property {import('../src/global').ActionInfo} actionInfo
+ * @property {Partial<import('../src/global').Inputs>} inputs
+ * @param {Partial<CommentContextParams>} params
+ */
+function createTestCommentContext({
+	context = fakeGitHubContext,
+	actionInfo = defaultActionInfo,
+	inputs = null,
+} = {}) {
+	const fullInputs = {
+		...defaultInputs,
+		...inputs,
 	};
 
-	return createCommentContext(fakeGitHubContext, defaultActionInfo);
+	return createCommentContext(context, actionInfo, fullInputs);
 }
 
 let updateNum = 0;
@@ -339,6 +356,123 @@ acquireLockSuite("Single benchmark, update comment", async () => {
 		...getFinalHoldingStates(),
 	]);
 });
+
+acquireLockSuite(
+	"Benchmark creates comment with initialize: true input",
+	async () => {
+		const context = createTestCommentContext({ inputs: { initialize: true } });
+		const github = createGitHubClient();
+
+		debug("testTrace", "Start test job trying to create comment...");
+		const completion = invokePostorUpdateComment({ github, context });
+		await clock.runAllAsync();
+
+		const [states, finalComment] = await completion;
+
+		validateFinalComment(finalComment);
+		validateStates(states, [
+			{ value: "initialRead" },
+			{ value: { creating: "waiting" } },
+			{ value: { creating: "searching" } },
+			{ value: { creating: "creating" } },
+			{ value: "acquired" },
+		]);
+	}
+);
+
+acquireLockSuite(
+	"Benchmark waits for other job to create comment with initialize: false input",
+	async () => {
+		const github = createGitHubClient();
+		const initializerCtx = createTestCommentContext({
+			inputs: { initialize: true },
+		});
+		const waiterCtx = createTestCommentContext({
+			inputs: { initialize: false },
+		});
+
+		debug("testTrace", "Start waiter job...");
+		const waiterCompletion = invokePostorUpdateComment({
+			github,
+			context: waiterCtx,
+		});
+		await clock.nextAsync();
+
+		debug("testTrace", "Start initializer job...");
+		const initializeCompletion = invokePostorUpdateComment({
+			github,
+			context: initializerCtx,
+		});
+
+		await clock.runAllAsync();
+
+		const [waiterStates, waiterFinalComment] = await waiterCompletion;
+		const [
+			initializerStates,
+			initializerFinalComment,
+		] = await initializeCompletion;
+
+		validateFinalComment(waiterFinalComment);
+		validateFinalComment(initializerFinalComment);
+
+		validateStates(waiterStates, [
+			{ value: "initialRead" },
+			{ value: { creating: "waiting" } },
+			{ value: { creating: "searching" } },
+			{ value: { creating: "waiting" } },
+			{ value: { creating: "searching" } },
+			{ value: { creating: "waiting" } },
+			{ value: { creating: "searching" } },
+			{ value: { acquiring: "waiting" } },
+			{ value: { acquiring: "acquiring" } },
+			{ value: { acquiring: "writing" } },
+			...getFinalHoldingStates(),
+		]);
+
+		validateStates(initializerStates, [
+			{ value: "initialRead" },
+			{ value: { creating: "waiting" } },
+			{ value: { creating: "searching" } },
+			{ value: { creating: "creating" } },
+			{ value: "acquired" },
+		]);
+	}
+);
+
+acquireLockSuite(
+	"Benchmark times out with initialize: false input",
+	async () => {
+		const context = createTestCommentContext({ inputs: { initialize: false } });
+		const logger = createTestLogger();
+
+		debug("testTrace", "Start waiter job trying to create comment...");
+
+		/** @type {Error} */
+		let error;
+		const completion = invokePostorUpdateComment({ context, logger }).catch(
+			(e) => (error = e)
+		);
+
+		await clock.runAllAsync();
+		const states = logger.getStates();
+
+		assert.ok(error, "Expected error to be caught");
+		assert.ok(
+			error.message.includes("Timed out waiting for comment to be created"),
+			"Expected error to have time out message"
+		);
+
+		validateStates(states, [
+			{ value: "initialRead" },
+			// (120 + 1) seconds of waiting
+			...Array.from(new Array(121), () => [
+				{ value: { creating: "waiting" } },
+				{ value: { creating: "searching" } },
+			]).flat(),
+			{ value: "timed_out" },
+		]);
+	}
+);
 
 acquireLockSuite("Benchmark finds comment while creating", async () => {
 	const { footer } = createTestCommentContext();
