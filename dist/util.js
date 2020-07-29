@@ -13931,11 +13931,19 @@ async function acquireCommentLock(github, context, getInitialBody, logger) {
 			}
 
 			case "creating.waiting":
-				logger.info(
-					`Waiting ${config.createDelayMs}ms before searching for comment again.`
-				);
-				await sleep(config.createDelayMs);
-				nextEvent = { type: "COMPLETE_WAIT", waitTime: config.createDelayMs };
+				if (context.createDelayFactor === 0) {
+					logger.info(
+						`This job's createDelayFactor is 0 so skipping create wait.`
+					);
+					nextEvent = { type: "COMPLETE_WAIT", waitTime: 1 };
+				} else {
+					logger.info(
+						`Waiting ${config.createDelayMs}ms before searching for comment again.`
+					);
+					await sleep(config.createDelayMs);
+					nextEvent = { type: "COMPLETE_WAIT", waitTime: config.createDelayMs };
+				}
+
 				break;
 
 			case "creating.searching": {
