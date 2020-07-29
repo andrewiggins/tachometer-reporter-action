@@ -8380,7 +8380,7 @@ function BenchmarkSection({ report, open }) {
 		h('div', {
 			id: getBenchmarkSectionId(report.id),
 			'data-run-number': report.actionInfo.run.number.toString(),
-			'data-job-index': _optionalChain([report, 'access', _ => _.actionInfo, 'access', _2 => _2.job, 'access', _3 => _3.index, 'optionalAccess', _4 => _4.toString, 'call', _5 => _5()]),}
+			'data-sort-key': report.id,}
 		
 , h('details', { open: open ? "open" : null,}
 , h('summary', null
@@ -8454,7 +8454,7 @@ function Summary({
 			);
 		} else {
 			baseIndex = 0;
-			baseBenchName = _nullishCoalesce(_optionalChain([benchmarks, 'access', _6 => _6[0], 'optionalAccess', _7 => _7.version]), () => ( benchmarks[0].name));
+			baseBenchName = _nullishCoalesce(_optionalChain([benchmarks, 'access', _ => _[0], 'optionalAccess', _2 => _2.version]), () => ( benchmarks[0].name));
 		}
 
 		let localIndex, localResults;
@@ -8466,7 +8466,7 @@ function Summary({
 		} else {
 			let localIndex = (baseIndex + 1) % benchLength;
 			localResults = benchmarks[localIndex];
-			prBenchName = _nullishCoalesce(_optionalChain([localResults, 'optionalAccess', _8 => _8.version]), () => ( localResults.name));
+			prBenchName = _nullishCoalesce(_optionalChain([localResults, 'optionalAccess', _3 => _3.version]), () => ( localResults.name));
 		}
 
 		showDiff = true;
@@ -8539,11 +8539,7 @@ function Summary({
  * @param {{ report: import('./global').Report; }} props
  */
 function SummaryListItem({ report }) {
-	return (
-		h('li', { 'data-job-index': _optionalChain([report, 'access', _9 => _9.actionInfo, 'access', _10 => _10.job, 'access', _11 => _11.index, 'optionalAccess', _12 => _12.toString, 'call', _13 => _13()]),}
-, report.summary
-)
-	);
+	return h('li', { 'data-sort-key': report.id,}, report.summary);
 }
 
 /**
@@ -8567,18 +8563,18 @@ function NewCommentBody({ inputs, report }) {
 
 /**
  * @param {import('node-html-parser').HTMLElement} container
- * @param {number} jobIndex
+ * @param {string} newSortKey
  * @param {import('node-html-parser').HTMLElement} newNode
  */
-function insertNewBenchData(container, jobIndex, newNode) {
+function insertNewBenchData(container, newSortKey, newNode) {
 	let insertionIndex;
 	for (let i = 0; i < container.childNodes.length; i++) {
 		/** @type {import('node-html-parser').HTMLElement} */
-		// @ts-ignore - We should be abel to safely assume these are HTMLElements
+		// @ts-ignore - We should be able to safely assume these are HTMLElements
 		const child = container.childNodes[i];
 		if (child.nodeType == NodeType.ELEMENT_NODE) {
-			const childJobIndex = parseInt(child.getAttribute("data-job-index"), 10);
-			if (childJobIndex > jobIndex) {
+			const childSortKey = child.getAttribute("data-sort-key");
+			if (childSortKey > newSortKey) {
 				insertionIndex = i;
 				break;
 			}
@@ -8619,8 +8615,8 @@ function getCommentBody(inputs, report, commentBody, logger) {
 	const resultsId = getBenchmarkSectionId(report.id);
 	const results = commentHtml.querySelector(`#${resultsId}`);
 
-	const summaryStatus = _optionalChain([summary, 'optionalAccess', _14 => _14.querySelector, 'call', _15 => _15(`.${statusClass}`)]);
-	const resultStatus = _optionalChain([results, 'optionalAccess', _16 => _16.querySelector, 'call', _17 => _17(`.${statusClass}`)]);
+	const summaryStatus = _optionalChain([summary, 'optionalAccess', _4 => _4.querySelector, 'call', _5 => _5(`.${statusClass}`)]);
+	const resultStatus = _optionalChain([results, 'optionalAccess', _6 => _6.querySelector, 'call', _7 => _7(`.${statusClass}`)]);
 
 	// Update summary
 	if (summary) {
@@ -8643,7 +8639,7 @@ function getCommentBody(inputs, report, commentBody, logger) {
 		logger.info(`No summary found with id "${summaryId}" so adding new one.`);
 		insertNewBenchData(
 			summaryContainer,
-			report.actionInfo.job.index,
+			report.id,
 			h(SummaryListItem, { report: report,} )
 		);
 	}
@@ -8676,7 +8672,7 @@ function getCommentBody(inputs, report, commentBody, logger) {
 		logger.info(`No results found with id "${resultsId}" so adding new one.`);
 		insertNewBenchData(
 			resultsContainer,
-			report.actionInfo.job.index,
+			report.id,
 			h(BenchmarkSection, { report: report, open: inputs.defaultOpen,} )
 		);
 	}
@@ -8747,7 +8743,7 @@ async function getActionInfo(context, github, logger) {
 	/** @type {import('../global').WorkflowRunJob} */
 	let matchingJob;
 
-	/** @type {number} */
+	/** @type {number | undefined} */
 	let jobIndex;
 
 	let i = 0;

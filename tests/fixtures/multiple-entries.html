@@ -2,7 +2,7 @@
 	<h2>📊 Tachometer Benchmark Results</h2>
 	<h3>Summary</h3>
 	<ul id="tachometer-reporter-action--summaries">
-		<li data-job-index="2">
+		<li data-sort-key="test-results">
 			<div
 				id="tachometer-reporter-action--summary-report-id"
 				data-run-number="50"
@@ -13,9 +13,12 @@
 				><br /><sup>local-framework vs base-framework</sup>
 			</div>
 		</li>
-		<li data-job-index="4">
-			<div id="tachometer-reporter-action--summary-new-id" data-run-number="50">
-				<span class="status"></span>new-id<span
+		<li data-sort-key="test-results-new-id">
+			<div
+				id="tachometer-reporter-action--summary-test-results-new-id"
+				data-run-number="50"
+			>
+				<span class="status"></span>test-results-new-id<span
 					>: <strong>unsure 🔍</strong>
 					<em>-21% - +2% (-10.34ms - +1.15ms)</em></span
 				><br /><sup>local-framework vs base-framework</sup>
@@ -27,7 +30,7 @@
 		<div
 			id="tachometer-reporter-action--results-report-id"
 			data-run-number="50"
-			data-job-index="2"
+			data-sort-key="test-results"
 		>
 			<details
 				><summary
@@ -104,12 +107,15 @@
 			>
 		</div>
 		<div
-			id="tachometer-reporter-action--results-new-id"
+			id="tachometer-reporter-action--results-test-results-new-id"
 			data-run-number="50"
-			data-job-index="4"
+			data-sort-key="test-results-new-id"
 		>
 			<details
-				><summary><span class="status"></span><strong>new-id</strong></summary>
+				><summary
+					><span class="status"></span
+					><strong>test-results-new-id</strong></summary
+				>
 				<div class="result-entry">
 					<ul>
 						<li>Browser: chrome-headless 83.0.4103.116</li>
