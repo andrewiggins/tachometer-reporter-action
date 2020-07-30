@@ -18,7 +18,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Initialize tachometer comment
-        uses: andrewiggins/tachometer-reporter-action@initialize-option
+        uses: andrewiggins/tachometer-reporter-action@master
         with:
           initialize: true
 
@@ -32,7 +32,7 @@ jobs:
           # Could use this to simulate benchmark running for random number of seconds
           echo $((($RANDOM%(5000-1000))+1000))
       - name: Report Tachometer Result
-        uses: andrewiggins/tachometer-reporter-action@initialize-option
+        uses: andrewiggins/tachometer-reporter-action@master
         with:
           path: tests/results/test-results.json
           pr-bench-name: local-framework
@@ -45,6 +45,6 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - name: Report Other Tachometer Result
-        uses: andrewiggins/tachometer-reporter-action@initialize-option
+        uses: andrewiggins/tachometer-reporter-action@master
         with:
           path: tests/results/other-results.json
