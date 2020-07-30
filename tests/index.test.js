@@ -10,7 +10,7 @@ const { createCommentContext } = require("../lib/comments");
 
 const DEBUG = {
 	debug: false,
-	info: true,
+	info: false,
 	testTrace: false,
 };
 
