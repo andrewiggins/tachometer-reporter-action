@@ -222,51 +222,6 @@ newCommentSuite(
 	}
 );
 
-newCommentSuite(
-	"Still renders status with run.html_url as fallback even if job.html_url is falsey",
-	async () => {
-		const report = invokeBuildReport({
-			inputs: { reportId: testReportId },
-			actionInfo: {
-				...defaultActionInfo,
-				job: {
-					id: undefined,
-					index: undefined,
-					htmlUrl: undefined,
-					name: defaultActionInfo.job.name,
-				},
-			},
-			results: null,
-			isRunning: true,
-		});
-
-		const bodyHtml = parse(invokeGetCommentBody({ report }));
-
-		const summaryId = getSummaryId(testReportId);
-		const summaryStatus = bodyHtml.querySelector(`#${summaryId} .status a`);
-
-		const resultId = getBenchmarkSectionId(testReportId);
-		const resultStatus = bodyHtml.querySelector(`#${resultId} .status a`);
-
-		assert.ok(summaryStatus, "Summary status link exists");
-		assert.ok(resultStatus, "Result status link exists");
-
-		assert.is(
-			summaryStatus.getAttribute("href"),
-			defaultActionInfo.run.htmlUrl,
-			"Summary status links to run htmlUrl"
-		);
-		assert.is(
-			resultStatus.getAttribute("href"),
-			defaultActionInfo.run.htmlUrl,
-			"Result status links to run htmlUrl"
-		);
-
-		assert.ok(summaryStatus.text.includes("⏱"), "Summary status span has text");
-		assert.ok(resultStatus.text.includes("⏱"), "Result status span has text");
-	}
-);
-
 newCommentSuite("Renders generic comment body if report is null", async () => {
 	const body = invokeGetCommentBody({ report: null });
 	const html = formatHtml(body.toString());
@@ -370,60 +325,6 @@ updateCommentSuite(
 		assert.ok(resultStatus, "Result status span exists");
 		assert.ok(summaryStatus.text.includes("⏱"), "Summary status span has text");
 		assert.ok(resultStatus.text.includes("⏱"), "Result status span has text");
-		assert.ok(summaryData, "Summary data is still present");
-		assert.ok(resultData, "Result data is still present");
-	}
-);
-
-updateCommentSuite(
-	"Update status for existing comment falling back to run.html_url when job.html_url is not present",
-	async () => {
-		const commentBodyPath = testRoot(
-			"fixtures/test-results-existing-comment.html"
-		);
-		const commentBody = await readFile(commentBodyPath, "utf-8");
-		const report = invokeBuildReport({
-			inputs: { reportId: testReportId },
-			actionInfo: {
-				...defaultActionInfo,
-				job: {
-					id: undefined,
-					index: undefined,
-					htmlUrl: undefined,
-					name: defaultActionInfo.job.name,
-				},
-			},
-			results: null,
-			isRunning: true,
-		});
-
-		const bodyHtml = parse(invokeGetCommentBody({ report, commentBody }));
-
-		const summaryId = getSummaryId(testReportId);
-		const summaryStatus = bodyHtml.querySelector(`#${summaryId} .status a`);
-		const summaryData = bodyHtml.querySelector(`#${summaryId} em`);
-
-		const resultId = getBenchmarkSectionId(testReportId);
-		const resultStatus = bodyHtml.querySelector(`#${resultId} .status a`);
-		const resultData = bodyHtml.querySelector(`#${resultId} table`);
-
-		assert.ok(summaryStatus, "Summary status link exists");
-		assert.ok(resultStatus, "Result status link exists");
-
-		assert.is(
-			summaryStatus.getAttribute("href"),
-			defaultActionInfo.run.htmlUrl,
-			"Summary status links to run htmlUrl"
-		);
-		assert.is(
-			resultStatus.getAttribute("href"),
-			defaultActionInfo.run.htmlUrl,
-			"Result status links to run htmlUrl"
-		);
-
-		assert.ok(summaryStatus.text.includes("⏱"), "Summary status link has text");
-		assert.ok(resultStatus.text.includes("⏱"), "Result status link has text");
-
 		assert.ok(summaryData, "Summary data is still present");
 		assert.ok(resultData, "Result data is still present");
 	}
