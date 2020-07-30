@@ -93,6 +93,7 @@ async function getActionInfo(context, github, logger) {
 			id: context.runId,
 			number: context.runNumber,
 			name: `${context.workflow} #${context.runNumber}`,
+			htmlUrl: run.html_url,
 		},
 		job: {
 			id: matchingJob?.id,
