@@ -54,7 +54,7 @@
     "rollup-plugin-node-externals": "^2.2.0",
     "sucrase": "^3.15.0",
     "tachometer": "^0.4.21",
-    "uvu": "^0.2.2",
+    "uvu": "^0.3.0",
     "watch": "^1.0.2"
   },
   "dependencies": {

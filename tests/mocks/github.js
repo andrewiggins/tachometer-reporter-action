@@ -425,6 +425,7 @@ const defaultActionInfo = {
 		id: workflowRun.id,
 		number: workflowRun.run_number,
 		name: "Pull Request Test #50",
+		htmlUrl: workflowRun.html_url,
 	},
 	job: {
 		id: defaultJobInfo.id,

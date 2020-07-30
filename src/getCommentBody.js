@@ -120,9 +120,11 @@ function ResultsEntry({ reportId, benchmarks, actionInfo, commitInfo }) {
 					);
 				})}
 				<li>Commit: {commitHtml}</li>
-				<li>
-					Built by: <a href={actionInfo.job.htmlUrl}>{actionInfo.run.name}</a>
-				</li>
+				{actionInfo.job.htmlUrl && (
+					<li>
+						Built by: <a href={actionInfo.job.htmlUrl}>{actionInfo.run.name}</a>
+					</li>
+				)}
 			</ul>
 			<table>
 				<thead>
@@ -181,10 +183,11 @@ function BenchmarkSection({ report, open }) {
  * @param {{ actionInfo: import('./global').ActionInfo; icon: boolean; }} props
  */
 function Status({ actionInfo, icon }) {
+	const href = actionInfo.job.htmlUrl;
 	const label = `Currently running in ${actionInfo.run.name}…`;
-	const tag = actionInfo.job.htmlUrl ? "a" : "span";
+	const tag = href ? "a" : "span";
 	const props = {
-		href: tag === "a" ? actionInfo.job.htmlUrl : null,
+		href,
 		title: icon ? label : null,
 		"aria-label": icon ? label : null,
 	};

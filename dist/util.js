@@ -8341,9 +8341,11 @@ function ResultsEntry({ reportId, benchmarks, actionInfo, commitInfo }) {
 					);
 				})
 , h('li', null, "Commit: " , commitHtml)
-, h('li', null, "Built by: "
+, actionInfo.job.htmlUrl && (
+					h('li', null, "Built by: "
   , h('a', { href: actionInfo.job.htmlUrl,}, actionInfo.run.name)
 )
+				)
 )
 , h('table', null
 , h('thead', null
@@ -8402,10 +8404,11 @@ function BenchmarkSection({ report, open }) {
  * @param {{ actionInfo: import('./global').ActionInfo; icon: boolean; }} props
  */
 function Status({ actionInfo, icon }) {
+	const href = actionInfo.job.htmlUrl;
 	const label = `Currently running in ${actionInfo.run.name}…`;
-	const tag = actionInfo.job.htmlUrl ? "a" : "span";
+	const tag = href ? "a" : "span";
 	const props = {
-		href: tag === "a" ? actionInfo.job.htmlUrl : null,
+		href,
 		title: icon ? label : null,
 		"aria-label": icon ? label : null,
 	};
@@ -8804,11 +8807,12 @@ async function getActionInfo(context, github, logger) {
 			id: context.runId,
 			number: context.runNumber,
 			name: `${context.workflow} #${context.runNumber}`,
+			htmlUrl: run.html_url,
 		},
 		job: {
 			id: _optionalChain$1([matchingJob, 'optionalAccess', _ => _.id]),
 			name: _nullishCoalesce$1(_optionalChain$1([matchingJob, 'optionalAccess', _2 => _2.name]), () => ( context.job)),
-			htmlUrl: _optionalChain$1([matchingJob, 'optionalAccess', _3 => _3.html_url]),
+			htmlUrl: _nullishCoalesce$1(_optionalChain$1([matchingJob, 'optionalAccess', _3 => _3.html_url]), () => ( run.html_url)),
 			index: jobIndex,
 		},
 	};

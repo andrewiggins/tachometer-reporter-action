@@ -59,6 +59,7 @@ interface ActionInfo {
 		id: WorkflowRun["id"];
 		number: WorkflowRun["run_number"];
 		name: string;
+		htmlUrl: string;
 	};
 	job: {
 		id?: WorkflowRunJob["id"];
