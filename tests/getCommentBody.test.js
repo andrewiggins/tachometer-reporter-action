@@ -12,21 +12,10 @@ const {
 	getSummaryListId,
 	getResultsContainerId,
 } = require("./utils");
-const {
-	defaultInputs,
-	defaultActionInfo,
-	invokeBuildReport,
-} = require("./invokeBuildReport");
+const { invokeBuildReport } = require("./invokeBuildReport");
+const { defaultInputs, testLogger } = require("./mocks/actions");
+const { defaultActionInfo } = require("./mocks/github");
 const { getCommentBody } = require("../lib/getCommentBody");
-
-/** @type {import('../src/global').Logger} */
-const testLogger = {
-	debug() {},
-	info() {},
-	warn() {},
-	startGroup() {},
-	endGroup() {},
-};
 
 function generateNewTestResults() {
 	var results = copyTestResults();

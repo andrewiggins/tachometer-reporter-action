@@ -5,8 +5,11 @@ const {
 	postOrUpdateComment,
 	createCommentContext,
 } = require("../lib/comments");
-const { defaultActionInfo, defaultInputs } = require("./invokeBuildReport");
+const { fakeGitHubContext } = require("./mocks/actions");
+const { defaultActionInfo, createGitHubClient } = require("./mocks/github");
 const { pick } = require("./utils");
+
+/** @typedef {import('./mocks/github').Comment} Comment */
 
 const DEBUG = {
 	infoLogs: false,
@@ -31,100 +34,8 @@ function debug(namespace, msg) {
 }
 
 /**
- * @template T
- * @typedef {Partial<import('../src/global').OctokitResponse<T>>} OctokitResponse
- */
-
-/**
- * Modified from https://stackoverflow.com/a/49936686/2303091 to work with JSDoc
- * @template T
- * @typedef {{ [P in keyof T]?: DeepPartial<T[P]> }} DeepPartial
- */
-
-/**
- * @typedef {DeepPartial<import('../src/global').CommentData>} Comment
- */
-
-/**
- * @param {{ comments?: Comment[] }} [options]
- */
-function createGitHubClient({ comments = [] } = {}) {
-	// From the log found in import('./invokeBuildReport').defaultActionInfo.job.htmlUrl
-	let id = 656984357;
-
-	/**
-	 * @param {{ comment_id: number }} params
-	 * @returns {Promise<OctokitResponse<Comment>>}
-	 */
-	async function getComment({ comment_id }) {
-		const comment = comments.find((c) => c.id == comment_id);
-		if (!comment) {
-			throw new Error(`Could not find comment with id ${comment_id}`);
-		}
-
-		return { data: { ...comment } };
-	}
-
-	/**
-	 * @param {{ comment_id: number; body: string}} params
-	 * @returns {Promise<OctokitResponse<Comment>>}
-	 */
-	async function updateComment({ comment_id, body }) {
-		const comment = comments.find((c) => c.id == comment_id);
-		if (!comment) {
-			throw new Error(`Could not find comment with id ${comment_id}`);
-		}
-
-		comment.body = body;
-		return { data: { ...comment } };
-	}
-
-	/**
-	 * @param {{ body: string }} params
-	 * @returns {Promise<OctokitResponse<Comment>>}
-	 */
-	async function createComment({ body }) {
-		const comment = { id: id++, body, user: { type: "Bot" } };
-		comments.push(comment);
-		return { data: { ...comment } };
-	}
-
-	/**
-	 * @returns {Promise<OctokitResponse<Comment[]>>}
-	 */
-	async function listComments() {
-		return { data: [...comments.map((c) => ({ ...c }))] };
-	}
-
-	return {
-		issues: {
-			listComments,
-			createComment,
-			getComment,
-			updateComment,
-		},
-	};
-}
-
-/**
- * @typedef {Pick<import('../src/global').GitHubActionContext, "repo" | "issue">} CommentGithubContext
- * @type {CommentGithubContext}
- */
-const fakeGitHubContext = {
-	repo: {
-		owner: "andrewiggins",
-		repo: "tachometer-reporter-action",
-	},
-	issue: {
-		owner: "andrewiggins",
-		repo: "tachometer-reporter-action",
-		number: 5,
-	},
-};
-
-/**
  * @typedef CommentContextParams
- * @property {CommentGithubContext} context
+ * @property {Pick<import('../src/global').GitHubActionContext, "repo" | "issue">} context
  * @property {import('../src/global').ActionInfo} actionInfo
  * @property {string} customId
  * @property {boolean} initialize
@@ -153,7 +64,7 @@ function getTestCommentBody(comment) {
 }
 
 /**
- * @typedef {DeepPartial<import('xstate').Typestate<any>>} State
+ * @typedef {Partial<import('xstate').Typestate<any>>} State
  * @typedef {{ getStates(): Array<import('xstate').Typestate<any>> }} TestLoggerHelpers
  * @typedef {import('../src/global').Logger & TestLoggerHelpers} TestLogger
  * @returns {TestLogger}
