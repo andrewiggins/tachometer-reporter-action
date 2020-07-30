@@ -57,7 +57,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Initialize tachometer comment
-      - uses: andrewiggins/tachometer-reporter-action@v1
+        uses: andrewiggins/tachometer-reporter-action@v1
         with:
           initialize: true
 
