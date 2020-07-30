@@ -65,12 +65,6 @@ function getInputs(logger) {
 		);
 	}
 
-	if (inputs.initialize == true && inputs.reportId == null) {
-		throw new Error(
-			`"initialize" input was set to true without providing a "report-id". Please provide both on this action.`
-		);
-	}
-
 	return inputs;
 }
 
