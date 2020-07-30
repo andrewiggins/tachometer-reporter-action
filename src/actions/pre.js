@@ -16,13 +16,7 @@ const { getLogger, getInputs } = require("./util");
 	logger.debug(() => "Repo: " + JSON.stringify(context.repo, null, 2));
 	logger.debug(() => "Context: " + JSON.stringify(context, null, 2));
 
-	if (!inputs.reportId) {
-		logger.info(
-			'No reportId provided. Skipping updating comment with "Running..." status.'
-		);
-
-		return;
-	} else if (context.eventName !== "pull_request") {
+	if (context.eventName !== "pull_request") {
 		logger.info(
 			"Not a pull request event. Skipping this action and doing nothing."
 		);

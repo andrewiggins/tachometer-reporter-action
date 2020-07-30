@@ -28,7 +28,7 @@ function getLogger() {
  * @returns {import('../global').Inputs}
  */
 function getInputs(logger) {
-	const path = core.getInput("path", { required: true });
+	const path = core.getInput("path", { required: false });
 	const reportId = core.getInput("report-id", { required: false });
 	const initialize = core.getInput("initialize", { required: false });
 	const keepOldResults = core.getInput("keep-old-results", { required: false });
@@ -57,6 +57,12 @@ function getInputs(logger) {
 			`base-bench-name input provided without pr-bench-name input. Please provide both.`
 		);
 		inputs.baseBenchName = null;
+	}
+
+	if (inputs.initialize == null && inputs.path == null) {
+		throw new Error(
+			`Either the initialize option or the path option must be provided. Neither was provided.`
+		);
 	}
 
 	if (inputs.initialize == true && inputs.reportId == null) {

@@ -8229,6 +8229,7 @@ const {
 	runtimeConfidenceIntervalDimension: runtimeConfidenceIntervalDimension$1,
 } = tachometer;
 
+const globalStatusClass = "global-status";
 const statusClass = "status";
 const resultEntryClass = "result-entry";
 
@@ -8550,12 +8551,22 @@ function NewCommentBody({ inputs, report }) {
 		h('div', null
 , h('h2', null, "📊 Tachometer Benchmark Results"   )
 , h('h3', null, "Summary")
+, h('p', { class: globalStatusClass,}
+, report == null &&
+					"A summary of the benchmark results will show here once they finish."
+)
 , h('ul', { id: getSummaryListId(),}
-, h(SummaryListItem, { report: report,} )
+, report != null && h(SummaryListItem, { report: report,} )
 )
 , h('h3', null, "Results")
+, h('p', { class: globalStatusClass,}
+, report == null &&
+					"The full results of your benchmarks will show here once they finish."
+)
 , h('div', { id: getResultsContainerId(),}
-, h(BenchmarkSection, { report: report, open: inputs.defaultOpen,} )
+, report != null && (
+					h(BenchmarkSection, { report: report, open: inputs.defaultOpen,} )
+				)
 )
 )
 	);
@@ -8600,6 +8611,11 @@ function getCommentBody(inputs, report, commentBody, logger) {
 		logger.info("Generating new comment body...");
 		const newHtml = h(NewCommentBody, { report: report, inputs: inputs,} );
 		return newHtml.toString();
+	} else if (!report) {
+		logger.info(
+			"Comment exists but there is no report to update with so doing nothing."
+		);
+		return commentBody;
 	}
 
 	logger.info("Parsing existing comment...");
@@ -8617,6 +8633,11 @@ function getCommentBody(inputs, report, commentBody, logger) {
 
 	const summaryStatus = _optionalChain([summary, 'optionalAccess', _4 => _4.querySelector, 'call', _5 => _5(`.${statusClass}`)]);
 	const resultStatus = _optionalChain([results, 'optionalAccess', _6 => _6.querySelector, 'call', _7 => _7(`.${statusClass}`)]);
+
+	// Clear global status messages
+	commentHtml
+		.querySelectorAll(`.${globalStatusClass}`)
+		.forEach((el) => el.set_content(""));
 
 	// Update summary
 	if (summary) {
@@ -14436,20 +14457,29 @@ async function reportTachRunning(
 		getCommit$1(context, github),
 	]);
 
-	const report = buildReport(commitInfo, actionInfo, inputs, null, true);
+	let report;
+	if (inputs.reportId) {
+		report = buildReport(commitInfo, actionInfo, inputs, null, true);
+	} else if (inputs.initialize !== true) {
+		logger.info(
+			'No reportId provided and initialize is not set to true. Skipping updating comment with "Running..." status.'
+		);
+
+		return;
+	}
 
 	await postOrUpdateComment$1(
 		github,
-		createCommentContext$1(context, actionInfo, report.id, inputs.initialize),
-		(comment) => getCommentBody$1(inputs, report, _optionalChain$2([comment, 'optionalAccess', _2 => _2.body]), logger),
+		createCommentContext$1(context, actionInfo, _optionalChain$2([report, 'optionalAccess', _2 => _2.id]), inputs.initialize),
+		(comment) => getCommentBody$1(inputs, report, _optionalChain$2([comment, 'optionalAccess', _3 => _3.body]), logger),
 		logger
 	);
 
 	return {
 		...report,
-		status: _optionalChain$2([report, 'access', _3 => _3.status, 'optionalAccess', _4 => _4.toString, 'call', _5 => _5()]),
-		body: _optionalChain$2([report, 'access', _6 => _6.body, 'optionalAccess', _7 => _7.toString, 'call', _8 => _8()]),
-		summary: _optionalChain$2([report, 'access', _9 => _9.summary, 'optionalAccess', _10 => _10.toString, 'call', _11 => _11()]),
+		status: _optionalChain$2([report, 'access', _4 => _4.status, 'optionalAccess', _5 => _5.toString, 'call', _6 => _6()]),
+		body: _optionalChain$2([report, 'access', _7 => _7.body, 'optionalAccess', _8 => _8.toString, 'call', _9 => _9()]),
+		summary: _optionalChain$2([report, 'access', _10 => _10.summary, 'optionalAccess', _11 => _11.toString, 'call', _12 => _12()]),
 	};
 }
 
@@ -14467,6 +14497,19 @@ async function reportTachResults(
 	logger = defaultLogger
 ) {
 	inputs = { ...defaultInputs, ...inputs };
+
+	if (inputs.path == null) {
+		if (inputs.initialize == true) {
+			logger.info(
+				`No path option was provided and initialize was set to true. Nothing to do at this stage (comment was initialized in "pre" stage).`
+			);
+			return;
+		} else {
+			throw new Error(
+				`Either a path option must be provided or initialize must be set to "true". Path option was not provided and initialize was not set to true.`
+			);
+		}
+	}
 
 	/** @type {[ import('./global').TachResults, import('./global').ActionInfo, import('./global').CommitInfo ]} */
 	const [tachResults, actionInfo, commitInfo] = await Promise.all([
@@ -14489,21 +14532,20 @@ async function reportTachResults(
 	await postOrUpdateComment$1(
 		github,
 		createCommentContext$1(context, actionInfo, report.id, inputs.initialize),
-		(comment) => getCommentBody$1(inputs, report, _optionalChain$2([comment, 'optionalAccess', _12 => _12.body]), logger),
+		(comment) => getCommentBody$1(inputs, report, _optionalChain$2([comment, 'optionalAccess', _13 => _13.body]), logger),
 		logger
 	);
 
 	return {
 		...report,
-		status: _optionalChain$2([report, 'access', _13 => _13.status, 'optionalAccess', _14 => _14.toString, 'call', _15 => _15()]),
-		body: _optionalChain$2([report, 'access', _16 => _16.body, 'optionalAccess', _17 => _17.toString, 'call', _18 => _18()]),
-		summary: _optionalChain$2([report, 'access', _19 => _19.summary, 'optionalAccess', _20 => _20.toString, 'call', _21 => _21()]),
+		status: _optionalChain$2([report, 'access', _14 => _14.status, 'optionalAccess', _15 => _15.toString, 'call', _16 => _16()]),
+		body: _optionalChain$2([report, 'access', _17 => _17.body, 'optionalAccess', _18 => _18.toString, 'call', _19 => _19()]),
+		summary: _optionalChain$2([report, 'access', _20 => _20.summary, 'optionalAccess', _21 => _21.toString, 'call', _22 => _22()]),
 	};
 }
 
 var src = {
 	buildReport,
-	getCommentBody: getCommentBody$1,
 	reportTachRunning,
 	reportTachResults,
 };
@@ -14536,7 +14578,7 @@ function getLogger() {
  * @returns {import('../global').Inputs}
  */
 function getInputs(logger) {
-	const path = core.getInput("path", { required: true });
+	const path = core.getInput("path", { required: false });
 	const reportId = core.getInput("report-id", { required: false });
 	const initialize = core.getInput("initialize", { required: false });
 	const keepOldResults = core.getInput("keep-old-results", { required: false });
@@ -14565,6 +14607,12 @@ function getInputs(logger) {
 			`base-bench-name input provided without pr-bench-name input. Please provide both.`
 		);
 		inputs.baseBenchName = null;
+	}
+
+	if (inputs.initialize == null && inputs.path == null) {
+		throw new Error(
+			`Either the initialize option or the path option must be provided. Neither was provided.`
+		);
 	}
 
 	if (inputs.initialize == true && inputs.reportId == null) {

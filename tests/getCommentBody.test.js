@@ -17,7 +17,7 @@ const {
 	defaultActionInfo,
 	invokeBuildReport,
 } = require("./invokeBuildReport");
-const { getCommentBody } = require("../lib/index");
+const { getCommentBody } = require("../lib/getCommentBody");
 
 /** @type {import('../src/global').Logger} */
 const testLogger = {
@@ -61,7 +61,7 @@ function generateNewTestResults() {
  */
 function invokeGetCommentBody({
 	inputs = null,
-	report = null,
+	report = undefined,
 	commentBody = null,
 } = {}) {
 	const fullInputs = {
@@ -69,7 +69,7 @@ function invokeGetCommentBody({
 		...inputs,
 	};
 
-	if (!report) {
+	if (report === undefined) {
 		report = invokeBuildReport({ inputs: fullInputs });
 	}
 
@@ -228,6 +228,16 @@ newCommentSuite(
 		assert.ok(resultStatus.text.includes("⏱"), "Result status span has text");
 	}
 );
+
+newCommentSuite("Renders generic comment body if report is null", async () => {
+	const body = invokeGetCommentBody({ report: null });
+	const html = formatHtml(body.toString());
+
+	const fixturePath = testRoot("fixtures/new-comment-initialized.html");
+	const fixture = await readFile(fixturePath, "utf-8");
+
+	assertFixture(html, fixture, "Report body matches fixture");
+});
 
 //#endregion
 
@@ -750,6 +760,37 @@ updateCommentSuite(
 		);
 	}
 );
+
+updateCommentSuite(
+	"Renders unmodified comment body report is null",
+	async () => {
+		const commentBodyPath = testRoot(
+			"fixtures/test-results-existing-comment.html"
+		);
+		const commentBody = await readFile(commentBodyPath, "utf-8");
+
+		const body = invokeGetCommentBody({
+			commentBody,
+			report: null,
+		});
+		const html = formatHtml(body.toString());
+
+		assertFixture(html, commentBody, "Report body matches fixture");
+	}
+);
+
+updateCommentSuite("Clears global status when results come in", async () => {
+	const commentBodyPath = testRoot("fixtures/new-comment-initialized.html");
+	const commentBody = await readFile(commentBodyPath, "utf-8");
+
+	const body = invokeGetCommentBody({ commentBody });
+	const html = formatHtml(body.toString());
+
+	const fixturePath = testRoot("fixtures/test-results-new-comment.html");
+	const fixture = await readFile(fixturePath, "utf-8");
+
+	assertFixture(html, fixture, "Report body matches fixture");
+});
 
 // keep-old-results option
 // updateCommentSuite(

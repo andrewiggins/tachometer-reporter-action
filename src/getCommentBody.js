@@ -8,6 +8,7 @@ const {
 	runtimeConfidenceIntervalDimension,
 } = require("./utils/tachometer");
 
+const globalStatusClass = "global-status";
 const statusClass = "status";
 const resultEntryClass = "result-entry";
 
@@ -329,12 +330,22 @@ function NewCommentBody({ inputs, report }) {
 		<div>
 			<h2>📊 Tachometer Benchmark Results</h2>
 			<h3>Summary</h3>
+			<p class={globalStatusClass}>
+				{report == null &&
+					"A summary of the benchmark results will show here once they finish."}
+			</p>
 			<ul id={getSummaryListId()}>
-				<SummaryListItem report={report} />
+				{report != null && <SummaryListItem report={report} />}
 			</ul>
 			<h3>Results</h3>
+			<p class={globalStatusClass}>
+				{report == null &&
+					"The full results of your benchmarks will show here once they finish."}
+			</p>
 			<div id={getResultsContainerId()}>
-				<BenchmarkSection report={report} open={inputs.defaultOpen} />
+				{report != null && (
+					<BenchmarkSection report={report} open={inputs.defaultOpen} />
+				)}
 			</div>
 		</div>
 	);
@@ -401,6 +412,11 @@ function getCommentBody(inputs, report, commentBody, logger) {
 		logger.info("Generating new comment body...");
 		const newHtml = <NewCommentBody report={report} inputs={inputs} />;
 		return newHtml.toString();
+	} else if (!report) {
+		logger.info(
+			"Comment exists but there is no report to update with so doing nothing."
+		);
+		return commentBody;
 	}
 
 	logger.info("Parsing existing comment...");
@@ -418,6 +434,11 @@ function getCommentBody(inputs, report, commentBody, logger) {
 
 	const summaryStatus = summary?.querySelector(`.${statusClass}`);
 	const resultStatus = results?.querySelector(`.${statusClass}`);
+
+	// Clear global status messages
+	commentHtml
+		.querySelectorAll(`.${globalStatusClass}`)
+		.forEach((el) => el.set_content(""));
 
 	// Update summary
 	if (summary) {

@@ -145,11 +145,20 @@ async function reportTachRunning(
 		getCommit(context, github),
 	]);
 
-	const report = buildReport(commitInfo, actionInfo, inputs, null, true);
+	let report;
+	if (inputs.reportId) {
+		report = buildReport(commitInfo, actionInfo, inputs, null, true);
+	} else if (inputs.initialize !== true) {
+		logger.info(
+			'No reportId provided and initialize is not set to true. Skipping updating comment with "Running..." status.'
+		);
+
+		return;
+	}
 
 	await postOrUpdateComment(
 		github,
-		createCommentContext(context, actionInfo, report.id, inputs.initialize),
+		createCommentContext(context, actionInfo, report?.id, inputs.initialize),
 		(comment) => getCommentBody(inputs, report, comment?.body, logger),
 		logger
 	);
@@ -176,6 +185,19 @@ async function reportTachResults(
 	logger = defaultLogger
 ) {
 	inputs = { ...defaultInputs, ...inputs };
+
+	if (inputs.path == null) {
+		if (inputs.initialize == true) {
+			logger.info(
+				`No path option was provided and initialize was set to true. Nothing to do at this stage (comment was initialized in "pre" stage).`
+			);
+			return;
+		} else {
+			throw new Error(
+				`Either a path option must be provided or initialize must be set to "true". Path option was not provided and initialize was not set to true.`
+			);
+		}
+	}
 
 	/** @type {[ import('./global').TachResults, import('./global').ActionInfo, import('./global').CommitInfo ]} */
 	const [tachResults, actionInfo, commitInfo] = await Promise.all([
@@ -212,7 +234,6 @@ async function reportTachResults(
 
 module.exports = {
 	buildReport,
-	getCommentBody,
 	reportTachRunning,
 	reportTachResults,
 };
