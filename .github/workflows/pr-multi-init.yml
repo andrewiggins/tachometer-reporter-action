@@ -1,27 +1,29 @@
-name: Pull Request Test
+name: PR Multi Init Flow
 
 on:
   pull_request:
     branches:
       - "**"
 
+# Demo how to use the multi init flow
+#
+# In this flow, a workflow must specify which tachometer-reporter-action will
+# initialize the comment by setting initialize to true for one action and
+# initialize to false for all other actions.
+
 jobs:
-  pr_test:
+  bench_1:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-      - uses: actions/setup-node@v1
-        with:
-          node-version: "14.x"
-      - run: npm ci
-      - run: npm test
       - run: |
           # Could use this to simulate benchmark running for random number of seconds
           echo $((($RANDOM%(5000-1000))+1000))
       - name: Report Tachometer Result
-        uses: ./
+        uses: andrewiggins/tachometer-reporter-action@initialize-option
         with:
           path: tests/results/test-results.json
+          initialize: true
           pr-bench-name: local-framework
           base-bench-name: base-framework
 
@@ -29,12 +31,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-      - uses: actions/setup-node@v1
-        with:
-          node-version: "14.x"
-      - run: npm ci
-      - run: npm test
       - name: Report Other Tachometer Result
-        uses: ./
+        uses: andrewiggins/tachometer-reporter-action@initialize-option
         with:
           path: tests/results/other-results.json
+          initialize: false

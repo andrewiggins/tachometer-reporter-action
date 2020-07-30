@@ -1,0 +1,26 @@
+name: PR Single Job
+
+on:
+  pull_request:
+    branches:
+      - "**"
+
+jobs:
+  pr_test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-node@v1
+        with:
+          node-version: "14.x"
+      - run: npm ci
+      - run: npm test
+      - run: |
+          # Could use this to simulate benchmark running for random number of seconds
+          echo $((($RANDOM%(5000-1000))+1000))
+      - name: Report Tachometer Result
+        uses: ./
+        with:
+          path: tests/results/test-results.json
+          pr-bench-name: local-framework
+          base-bench-name: base-framework

@@ -19,6 +19,7 @@ jobs:
         uses: ./
         with:
           path: tests/results/test-results.json
+          initialize: false
           pr-bench-name: local-framework
           base-bench-name: base-framework
 
@@ -35,3 +36,5 @@ jobs:
         uses: andrewiggins/tachometer-reporter-action@master
         with:
           path: tests/results/other-results.json
+          report-id: other-results
+          initialize: true

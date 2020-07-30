@@ -20,6 +20,13 @@ async function* getWorkflowJobs(context, github, logger) {
 			);
 		}
 
+		logger.debug(() => {
+			return (
+				`Workflow Jobs (run id: ${context.runId}): ` +
+				JSON.stringify(page.data, null, 2)
+			);
+		});
+
 		yield* page.data;
 	}
 }
@@ -91,7 +98,7 @@ async function getActionInfo(context, github, logger) {
 			id: matchingJob?.id,
 			name: matchingJob?.name ?? context.job,
 			htmlUrl: matchingJob?.html_url,
-			index: jobIndex ?? -1,
+			index: jobIndex,
 		},
 	};
 }

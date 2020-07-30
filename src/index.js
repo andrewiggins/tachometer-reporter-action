@@ -118,9 +118,10 @@ const defaultLogger = {
 
 /** @type {Partial<import('./global').Inputs>} */
 const defaultInputs = {
+	reportId: null,
+	initialize: null,
 	prBenchName: null,
 	baseBenchName: null,
-	reportId: null,
 	keepOldResults: false,
 	defaultOpen: false,
 };
@@ -130,7 +131,7 @@ const defaultInputs = {
  * @param {import('./global').GitHubActionContext} context
  * @param {import('./global').Inputs} inputs
  * @param {import('./global').Logger} [logger]
- * @returns {Promise<import('./global').SerializedReport>}
+ * @returns {Promise<import('./global').SerializedReport | null>}
  */
 async function reportTachRunning(
 	github,
@@ -144,21 +145,34 @@ async function reportTachRunning(
 		getCommit(context, github),
 	]);
 
-	const report = buildReport(commitInfo, actionInfo, inputs, null, true);
+	let report;
+	if (inputs.reportId) {
+		report = buildReport(commitInfo, actionInfo, inputs, null, true);
+	} else if (inputs.initialize !== true) {
+		logger.info(
+			'No report-id provided and initialize is not set to true. Skipping updating comment with "Running..." status.'
+		);
+
+		return null;
+	}
 
 	await postOrUpdateComment(
 		github,
-		createCommentContext(context, actionInfo),
+		createCommentContext(context, actionInfo, report?.id, inputs.initialize),
 		(comment) => getCommentBody(inputs, report, comment?.body, logger),
 		logger
 	);
 
-	return {
-		...report,
-		status: report.status?.toString(),
-		body: report.body?.toString(),
-		summary: report.summary?.toString(),
-	};
+	if (report) {
+		return {
+			...report,
+			status: report.status?.toString(),
+			body: report.body?.toString(),
+			summary: report.summary?.toString(),
+		};
+	} else {
+		return null;
+	}
 }
 
 /**
@@ -166,7 +180,7 @@ async function reportTachRunning(
  * @param {import('./global').GitHubActionContext} context
  * @param {import('./global').Inputs} inputs
  * @param {import('./global').Logger} [logger]
- * @returns {Promise<import('./global').SerializedReport>}
+ * @returns {Promise<import('./global').SerializedReport | null>}
  */
 async function reportTachResults(
 	github,
@@ -175,6 +189,19 @@ async function reportTachResults(
 	logger = defaultLogger
 ) {
 	inputs = { ...defaultInputs, ...inputs };
+
+	if (inputs.path == null) {
+		if (inputs.initialize == true) {
+			logger.info(
+				`No path option was provided and initialize was set to true. Nothing to do at this stage (comment was initialized in "pre" stage).`
+			);
+			return null;
+		} else {
+			throw new Error(
+				`Either a path option must be provided or initialize must be set to "true". Path option was not provided and initialize was not set to true.`
+			);
+		}
+	}
 
 	/** @type {[ import('./global').TachResults, import('./global').ActionInfo, import('./global').CommitInfo ]} */
 	const [tachResults, actionInfo, commitInfo] = await Promise.all([
@@ -196,7 +223,7 @@ async function reportTachResults(
 
 	await postOrUpdateComment(
 		github,
-		createCommentContext(context, actionInfo),
+		createCommentContext(context, actionInfo, report.id, inputs.initialize),
 		(comment) => getCommentBody(inputs, report, comment?.body, logger),
 		logger
 	);
@@ -211,7 +238,6 @@ async function reportTachResults(
 
 module.exports = {
 	buildReport,
-	getCommentBody,
 	reportTachRunning,
 	reportTachResults,
 };

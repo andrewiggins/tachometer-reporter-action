@@ -7,9 +7,12 @@ branding:
 inputs:
   path:
     description: "The path to the results JSON file of running tachometer"
-    required: true
+    required: false
   report-id:
     description: "A string to uniquely identify this report between other instances of tachometer-reporter-action running in this job or other jobs in the same PR"
+    require: false
+  initialize:
+    description: "Whether this action should initialize the comment to report results. Use this option with report-id. Useful if multiple jobs are sharing the same comment. Pass in 'true' if this job should always create the comment"
     require: false
   default-open:
     description: "Whether to open this action's results table by default"

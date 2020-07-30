@@ -1,5 +1,3 @@
-const { readFileSync } = require("fs");
-const { readFile, writeFile } = require("fs").promises;
 const { suite } = require("uvu");
 const assert = require("uvu/assert");
 const fakeTimers = require("@sinonjs/fake-timers");
@@ -7,8 +5,11 @@ const {
 	postOrUpdateComment,
 	createCommentContext,
 } = require("../lib/comments");
-const { defaultActionInfo } = require("./invokeBuildReport");
+const { fakeGitHubContext } = require("./mocks/actions");
+const { defaultActionInfo, createGitHubClient } = require("./mocks/github");
 const { pick } = require("./utils");
+
+/** @typedef {import('./mocks/github').Comment} Comment */
 
 const DEBUG = {
 	infoLogs: false,
@@ -33,96 +34,20 @@ function debug(namespace, msg) {
 }
 
 /**
- * @template T
- * @typedef {Partial<import('../src/global').OctokitResponse<T>>} OctokitResponse
+ * @typedef CommentContextParams
+ * @property {Pick<import('../src/global').GitHubActionContext, "repo" | "issue">} context
+ * @property {import('../src/global').ActionInfo} actionInfo
+ * @property {string} customId
+ * @property {boolean} initialize
+ * @param {Partial<CommentContextParams>} params
  */
-
-/**
- * Modified from https://stackoverflow.com/a/49936686/2303091 to work with JSDoc
- * @template T
- * @typedef {{ [P in keyof T]?: DeepPartial<T[P]> }} DeepPartial
- */
-
-/**
- * @typedef {DeepPartial<import('../src/global').CommentData>} Comment
- */
-
-/**
- * @param {{ comments?: Comment[] }} [options]
- */
-function createGitHubClient({ comments = [] } = {}) {
-	// From the log found in import('./invokeBuildReport').defaultActionInfo.job.htmlUrl
-	let id = 656984357;
-
-	/**
-	 * @param {{ comment_id: number }} params
-	 * @returns {Promise<OctokitResponse<Comment>>}
-	 */
-	async function getComment({ comment_id }) {
-		const comment = comments.find((c) => c.id == comment_id);
-		if (!comment) {
-			throw new Error(`Could not find comment with id ${comment_id}`);
-		}
-
-		return { data: { ...comment } };
-	}
-
-	/**
-	 * @param {{ comment_id: number; body: string}} params
-	 * @returns {Promise<OctokitResponse<Comment>>}
-	 */
-	async function updateComment({ comment_id, body }) {
-		const comment = comments.find((c) => c.id == comment_id);
-		if (!comment) {
-			throw new Error(`Could not find comment with id ${comment_id}`);
-		}
-
-		comment.body = body;
-		return { data: { ...comment } };
-	}
-
-	/**
-	 * @param {{ body: string }} params
-	 * @returns {Promise<OctokitResponse<Comment>>}
-	 */
-	async function createComment({ body }) {
-		const comment = { id: id++, body, user: { type: "Bot" } };
-		comments.push(comment);
-		return { data: { ...comment } };
-	}
-
-	/**
-	 * @returns {Promise<OctokitResponse<Comment[]>>}
-	 */
-	async function listComments() {
-		return { data: [...comments.map((c) => ({ ...c }))] };
-	}
-
-	return {
-		issues: {
-			listComments,
-			createComment,
-			getComment,
-			updateComment,
-		},
-	};
-}
-
-function createTestCommentContext() {
-	/** @type {Pick<import('../src/global').GitHubActionContext, "repo" | "issue">} */
-	const fakeGitHubContext = {
-		repo: {
-			owner: "andrewiggins",
-			repo: "tachometer-reporter-action",
-		},
-		issue: {
-			owner: "andrewiggins",
-			repo: "tachometer-reporter-action",
-			number: 5,
-		},
-	};
-
-	return createCommentContext(fakeGitHubContext, defaultActionInfo);
+function createTestCommentContext({
+	context = fakeGitHubContext,
+	actionInfo = defaultActionInfo,
+	customId = null,
+	initialize = null,
+} = {}) {
+	return createCommentContext(context, actionInfo, customId, initialize);
 }
 
 let updateNum = 0;
@@ -139,7 +64,7 @@ function getTestCommentBody(comment) {
 }
 
 /**
- * @typedef {DeepPartial<import('xstate').Typestate<any>>} State
+ * @typedef {Partial<import('xstate').Typestate<any>>} State
  * @typedef {{ getStates(): Array<import('xstate').Typestate<any>> }} TestLoggerHelpers
  * @typedef {import('../src/global').Logger & TestLoggerHelpers} TestLogger
  * @returns {TestLogger}
@@ -339,6 +264,121 @@ acquireLockSuite("Single benchmark, update comment", async () => {
 		...getFinalHoldingStates(),
 	]);
 });
+
+acquireLockSuite(
+	"Benchmark creates comment with initialize: true input",
+	async () => {
+		const context = createTestCommentContext({ initialize: true });
+		const github = createGitHubClient();
+
+		debug("testTrace", "Start test job trying to create comment...");
+		const completion = invokePostorUpdateComment({ github, context });
+		await clock.runAllAsync();
+
+		const [states, finalComment] = await completion;
+
+		validateFinalComment(finalComment);
+		validateStates(states, [
+			{ value: "initialRead" },
+			{ value: { creating: "waiting" } },
+			{ value: { creating: "searching" } },
+			{ value: { creating: "creating" } },
+			{ value: "acquired" },
+		]);
+	}
+);
+
+acquireLockSuite(
+	"Benchmark waits for other job to create comment with initialize: false input",
+	async () => {
+		const github = createGitHubClient();
+		const initializerCtx = createTestCommentContext({ initialize: true });
+		const waiterCtx = createTestCommentContext({ initialize: false });
+
+		debug("testTrace", "Start waiter job...");
+		const waiterCompletion = invokePostorUpdateComment({
+			github,
+			context: waiterCtx,
+		});
+		await clock.nextAsync();
+
+		debug("testTrace", "Start initializer job...");
+		const initializeCompletion = invokePostorUpdateComment({
+			github,
+			context: initializerCtx,
+		});
+
+		debug("testTrace", "Let initializer job finish");
+		await clock.nextAsync();
+		const [
+			initializerStates,
+			initializerFinalComment,
+		] = await initializeCompletion;
+
+		debug("testTrace", "Let waiter job finish");
+		await clock.runAllAsync();
+		const [waiterStates, waiterFinalComment] = await waiterCompletion;
+
+		validateFinalComment(waiterFinalComment);
+		validateFinalComment(initializerFinalComment);
+
+		validateStates(waiterStates, [
+			{ value: "initialRead" },
+			{ value: { creating: "waiting" } },
+			{ value: { creating: "searching" } },
+			{ value: { creating: "waiting" } },
+			{ value: { creating: "searching" } },
+			{ value: { acquiring: "waiting" } },
+			{ value: { acquiring: "acquiring" } },
+			{ value: { acquiring: "writing" } },
+			...getFinalHoldingStates(),
+		]);
+
+		validateStates(initializerStates, [
+			{ value: "initialRead" },
+			{ value: { creating: "waiting" } },
+			{ value: { creating: "searching" } },
+			{ value: { creating: "creating" } },
+			{ value: "acquired" },
+		]);
+	}
+);
+
+acquireLockSuite(
+	"Benchmark times out with initialize: false input",
+	async () => {
+		const context = createTestCommentContext({ initialize: false });
+		const logger = createTestLogger();
+
+		debug("testTrace", "Start waiter job trying to create comment...");
+
+		/** @type {Error} */
+		let error;
+		const completion = invokePostorUpdateComment({ context, logger }).catch(
+			(e) => (error = e)
+		);
+
+		await clock.runAllAsync();
+		const states = logger.getStates();
+
+		assert.ok(error, "Expected error to be caught");
+		assert.ok(
+			error.message.includes("Timed out waiting for comment to be created"),
+			"Expected error to have time out message"
+		);
+
+		validateStates(states, [
+			{ value: "initialRead" },
+			// (120 + 1) seconds of waiting
+			...Array.from(new Array(121), () => [
+				{ value: { creating: "waiting" } },
+				{ value: { creating: "searching" } },
+				// @ts-ignore
+			]).flat(),
+			{ value: "timed_out" },
+		]);
+	}
+);
 
 acquireLockSuite("Benchmark finds comment while creating", async () => {
 	const { footer } = createTestCommentContext();

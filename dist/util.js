@@ -8229,6 +8229,7 @@ const {
 	runtimeConfidenceIntervalDimension: runtimeConfidenceIntervalDimension$1,
 } = tachometer;
 
+const globalStatusClass = "global-status";
 const statusClass = "status";
 const resultEntryClass = "result-entry";
 
@@ -8550,12 +8551,22 @@ function NewCommentBody({ inputs, report }) {
 		h('div', null
 , h('h2', null, "📊 Tachometer Benchmark Results"   )
 , h('h3', null, "Summary")
+, h('p', { class: globalStatusClass,}
+, report == null &&
+					"A summary of the benchmark results will show here once they finish."
+)
 , h('ul', { id: getSummaryListId(),}
-, h(SummaryListItem, { report: report,} )
+, report != null && h(SummaryListItem, { report: report,} )
 )
 , h('h3', null, "Results")
+, h('p', { class: globalStatusClass,}
+, report == null &&
+					"The full results of your benchmarks will show here once they finish."
+)
 , h('div', { id: getResultsContainerId(),}
-, h(BenchmarkSection, { report: report, open: inputs.defaultOpen,} )
+, report != null && (
+					h(BenchmarkSection, { report: report, open: inputs.defaultOpen,} )
+				)
 )
 )
 	);
@@ -8600,6 +8611,11 @@ function getCommentBody(inputs, report, commentBody, logger) {
 		logger.info("Generating new comment body...");
 		const newHtml = h(NewCommentBody, { report: report, inputs: inputs,} );
 		return newHtml.toString();
+	} else if (!report) {
+		logger.info(
+			"Comment exists but there is no report to update with so doing nothing."
+		);
+		return commentBody;
 	}
 
 	logger.info("Parsing existing comment...");
@@ -8617,6 +8633,11 @@ function getCommentBody(inputs, report, commentBody, logger) {
 
 	const summaryStatus = _optionalChain([summary, 'optionalAccess', _4 => _4.querySelector, 'call', _5 => _5(`.${statusClass}`)]);
 	const resultStatus = _optionalChain([results, 'optionalAccess', _6 => _6.querySelector, 'call', _7 => _7(`.${statusClass}`)]);
+
+	// Clear global status messages
+	commentHtml
+		.querySelectorAll(`.${globalStatusClass}`)
+		.forEach((el) => el.set_content(""));
 
 	// Update summary
 	if (summary) {
@@ -8710,6 +8731,13 @@ async function* getWorkflowJobs(context, github, logger) {
 			);
 		}
 
+		logger.debug(() => {
+			return (
+				`Workflow Jobs (run id: ${context.runId}): ` +
+				JSON.stringify(page.data, null, 2)
+			);
+		});
+
 		yield* page.data;
 	}
 }
@@ -8747,7 +8775,7 @@ async function getActionInfo(context, github, logger) {
 	let jobIndex;
 
 	let i = 0;
-	for await (const job of getWorkflowJobs(context, github)) {
+	for await (const job of getWorkflowJobs(context, github, logger)) {
 		if (job.name == context.job) {
 			matchingJob = job;
 			jobIndex = i;
@@ -8781,7 +8809,7 @@ async function getActionInfo(context, github, logger) {
 			id: _optionalChain$1([matchingJob, 'optionalAccess', _ => _.id]),
 			name: _nullishCoalesce$1(_optionalChain$1([matchingJob, 'optionalAccess', _2 => _2.name]), () => ( context.job)),
 			htmlUrl: _optionalChain$1([matchingJob, 'optionalAccess', _3 => _3.html_url]),
-			index: _nullishCoalesce$1(jobIndex, () => ( -1)),
+			index: jobIndex,
 		},
 	};
 }
@@ -13606,10 +13634,13 @@ var escapeStringRegexp = string => {
 		.replace(/-/g, '\\x2d');
 };
 
-function _nullishCoalesce$2(lhs, rhsFn) { if (lhs != null) { return lhs; } else { return rhsFn(); } }const { createMachine: createMachine$1, interpret: interpret$1, assign: assign$2 } = es;
+const { createMachine: createMachine$1, interpret: interpret$1, assign: assign$2 } = es;
 
 
+/** @type {(min: number, max: number) => number} */
 const randomInt = (min, max) => Math.floor(Math.random() * (max - min)) + min;
+
+/** @type {(ms: number) => Promise<void>} */
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 /** @type {(actionInfo: import('./global').ActionInfo) => string} */
@@ -13752,6 +13783,8 @@ function createAcquireLockMachine(lockConfig) {
 								CREATE: "creating",
 								// comment doesn't exist, need to wait
 								NOT_FOUND: "waiting",
+								// comment doesn't exist, time out
+								TIMEOUT: "#timed_out",
 								// comment exists, try to acquire
 								LOCKED: "#acquiring",
 							},
@@ -13952,6 +13985,14 @@ async function acquireCommentLock(github, context, getInitialBody, logger) {
 				if (comment != null) {
 					logger.info(`Comment found and locked by "${lockHolder}".`);
 					nextEvent = "LOCKED";
+				} else if (
+					maxWaitingTime === Infinity &&
+					stateCtx.totalWaitTime > config.waitTimeoutMs
+				) {
+					logger.info(
+						`Comment not found, max waiting time is Infinity, and wait time out (${config.waitTimeoutMs}) has been reached.`
+					);
+					nextEvent = "TIMEOUT";
 				} else if (stateCtx.totalWaitTime < maxWaitingTime) {
 					logger.info(
 						`Comment not found and max waiting time (${stateCtx.totalWaitTime}/${maxWaitingTime}ms) not yet reached.`
@@ -13968,8 +14009,14 @@ async function acquireCommentLock(github, context, getInitialBody, logger) {
 			}
 
 			case "creating.creating":
-				const newBody = addLockHtml(getInitialBody(null), context.lockId);
+				// TODO: this flow is kinda weird... Can we improve it? It's weird cuz
+				// when creating the comment we need to do what the body of
+				// postOrUpdateComment does but inside of the acquireLock loop... Is
+				// there some way we could push this outside of the acquire lock loop?
+				// Or maybe move the real update inside the machine?
+				const newBody = getFinalBody(context, getInitialBody, null);
 				comment = await createComment(github, context, newBody, logger);
+				context.created = true;
 				nextEvent = "CREATED";
 				break;
 
@@ -14059,10 +14106,16 @@ async function acquireCommentLock(github, context, getInitialBody, logger) {
 	logger.endGroup();
 
 	if (service.state.value == "timed_out") {
-		const lastWriterId = getLockHolder(comment);
-		throw new Error(
-			`Timed out waiting to acquire lock to write comment. Last writer to hold lock was "${lastWriterId}"`
-		);
+		if (comment) {
+			const lastWriterId = getLockHolder(comment);
+			throw new Error(
+				`Timed out waiting to acquire lock to write comment. Last writer to hold lock was "${lastWriterId}"`
+			);
+		} else {
+			throw new Error(
+				`Timed out waiting for comment to be created. Is there at least one job in this workflow with initialize set to true?`
+			);
+		}
 	}
 
 	return comment;
@@ -14178,6 +14231,21 @@ async function createComment(github, context, body, logger) {
 }
 
 /**
+ * @param {import('./global').CommentContext} context
+ * @param {(comment: import('./global').CommentData | null) => string} getCommentBody
+ * @param {import('./global').CommentData | null} comment
+ * @returns {string}
+ */
+function getFinalBody(context, getCommentBody, comment) {
+	let updatedBody = getCommentBody(comment);
+	if (!updatedBody.includes(context.footer)) {
+		updatedBody = updatedBody + context.footer;
+	}
+
+	return removeLockHtml(updatedBody);
+}
+
+/**
  * Create a PR comment, or update one if it already exists
  * @param {import('./global').GitHubActionClient} github
  * @param {import('./global').CommentContext} context
@@ -14196,19 +14264,16 @@ async function postOrUpdateComment(github, context, getCommentBody, logger) {
 		logger
 	);
 
+	if (context.created) {
+		// If this job created the comment, no need to do further updating
+		logger.info(`Comment was created. (id: ${comment.id})`);
+		return comment;
+	}
+
 	context.commentId = comment.id;
 	try {
-		let updatedBody = getCommentBody(comment);
-		if (!updatedBody.includes(context.footer)) {
-			updatedBody = updatedBody + context.footer;
-		}
-
-		comment = await updateComment(
-			github,
-			context,
-			removeLockHtml(updatedBody),
-			logger
-		);
+		const body = getFinalBody(context, getCommentBody, comment);
+		comment = await updateComment(github, context, body, logger);
 	} catch (e) {
 		logger.info(`Error updating comment: ${e.message}`);
 		logger.debug(() => e.toString());
@@ -14220,14 +14285,29 @@ async function postOrUpdateComment(github, context, getCommentBody, logger) {
 /**
  * @param {Pick<import('./global').GitHubActionContext, "repo" | "issue">} context
  * @param {import('./global').ActionInfo} actionInfo
+ * @param {string | undefined} [customId]
+ * @param {boolean} [initialize]
  * @returns {import('./global').CommentContext}
  */
-function createCommentContext(context, actionInfo) {
+function createCommentContext(context, actionInfo, customId, initialize) {
 	const { run, job } = actionInfo;
-	const lockId = `{ run: {id: ${run.id}, name: ${run.name}}, job: {id: ${job.id}, name: ${job.name}}`;
+
+	const lockId = `{ customId: ${customId}, run: {id: ${run.id}, name: ${run.name}}, job: {id: ${job.id}, name: ${job.name}}`;
 
 	const footer = getFooter(actionInfo);
 	const footerRe = new RegExp(escapeStringRegexp(footer));
+
+	/** @type {number} */
+	let createDelayFactor;
+	if (initialize === true) {
+		createDelayFactor = 0;
+	} else if (initialize === false) {
+		createDelayFactor = Infinity;
+	} else if (job.index != null) {
+		createDelayFactor = job.index;
+	} else {
+		createDelayFactor = randomInt(3, 10);
+	}
 
 	return {
 		...context.repo,
@@ -14239,7 +14319,8 @@ function createCommentContext(context, actionInfo) {
 		matches(c) {
 			return c.user.type === "Bot" && footerRe.test(c.body);
 		},
-		createDelayFactor: _nullishCoalesce$2(actionInfo.job.index, () => ( 0)),
+		createDelayFactor,
+		created: false,
 	};
 }
 
@@ -14368,9 +14449,10 @@ const defaultLogger = {
 
 /** @type {Partial<import('./global').Inputs>} */
 const defaultInputs = {
+	reportId: null,
+	initialize: null,
 	prBenchName: null,
 	baseBenchName: null,
-	reportId: null,
 	keepOldResults: false,
 	defaultOpen: false,
 };
@@ -14380,7 +14462,7 @@ const defaultInputs = {
  * @param {import('./global').GitHubActionContext} context
  * @param {import('./global').Inputs} inputs
  * @param {import('./global').Logger} [logger]
- * @returns {Promise<import('./global').SerializedReport>}
+ * @returns {Promise<import('./global').SerializedReport | null>}
  */
 async function reportTachRunning(
 	github,
@@ -14394,21 +14476,34 @@ async function reportTachRunning(
 		getCommit$1(context, github),
 	]);
 
-	const report = buildReport(commitInfo, actionInfo, inputs, null, true);
+	let report;
+	if (inputs.reportId) {
+		report = buildReport(commitInfo, actionInfo, inputs, null, true);
+	} else if (inputs.initialize !== true) {
+		logger.info(
+			'No report-id provided and initialize is not set to true. Skipping updating comment with "Running..." status.'
+		);
+
+		return null;
+	}
 
 	await postOrUpdateComment$1(
 		github,
-		createCommentContext$1(context, actionInfo),
-		(comment) => getCommentBody$1(inputs, report, _optionalChain$2([comment, 'optionalAccess', _2 => _2.body]), logger),
+		createCommentContext$1(context, actionInfo, _optionalChain$2([report, 'optionalAccess', _2 => _2.id]), inputs.initialize),
+		(comment) => getCommentBody$1(inputs, report, _optionalChain$2([comment, 'optionalAccess', _3 => _3.body]), logger),
 		logger
 	);
 
-	return {
-		...report,
-		status: _optionalChain$2([report, 'access', _3 => _3.status, 'optionalAccess', _4 => _4.toString, 'call', _5 => _5()]),
-		body: _optionalChain$2([report, 'access', _6 => _6.body, 'optionalAccess', _7 => _7.toString, 'call', _8 => _8()]),
-		summary: _optionalChain$2([report, 'access', _9 => _9.summary, 'optionalAccess', _10 => _10.toString, 'call', _11 => _11()]),
-	};
+	if (report) {
+		return {
+			...report,
+			status: _optionalChain$2([report, 'access', _4 => _4.status, 'optionalAccess', _5 => _5.toString, 'call', _6 => _6()]),
+			body: _optionalChain$2([report, 'access', _7 => _7.body, 'optionalAccess', _8 => _8.toString, 'call', _9 => _9()]),
+			summary: _optionalChain$2([report, 'access', _10 => _10.summary, 'optionalAccess', _11 => _11.toString, 'call', _12 => _12()]),
+		};
+	} else {
+		return null;
+	}
 }
 
 /**
@@ -14416,7 +14511,7 @@ async function reportTachRunning(
  * @param {import('./global').GitHubActionContext} context
  * @param {import('./global').Inputs} inputs
  * @param {import('./global').Logger} [logger]
- * @returns {Promise<import('./global').SerializedReport>}
+ * @returns {Promise<import('./global').SerializedReport | null>}
  */
 async function reportTachResults(
 	github,
@@ -14425,6 +14520,19 @@ async function reportTachResults(
 	logger = defaultLogger
 ) {
 	inputs = { ...defaultInputs, ...inputs };
+
+	if (inputs.path == null) {
+		if (inputs.initialize == true) {
+			logger.info(
+				`No path option was provided and initialize was set to true. Nothing to do at this stage (comment was initialized in "pre" stage).`
+			);
+			return null;
+		} else {
+			throw new Error(
+				`Either a path option must be provided or initialize must be set to "true". Path option was not provided and initialize was not set to true.`
+			);
+		}
+	}
 
 	/** @type {[ import('./global').TachResults, import('./global').ActionInfo, import('./global').CommitInfo ]} */
 	const [tachResults, actionInfo, commitInfo] = await Promise.all([
@@ -14446,22 +14554,21 @@ async function reportTachResults(
 
 	await postOrUpdateComment$1(
 		github,
-		createCommentContext$1(context, actionInfo),
-		(comment) => getCommentBody$1(inputs, report, _optionalChain$2([comment, 'optionalAccess', _12 => _12.body]), logger),
+		createCommentContext$1(context, actionInfo, report.id, inputs.initialize),
+		(comment) => getCommentBody$1(inputs, report, _optionalChain$2([comment, 'optionalAccess', _13 => _13.body]), logger),
 		logger
 	);
 
 	return {
 		...report,
-		status: _optionalChain$2([report, 'access', _13 => _13.status, 'optionalAccess', _14 => _14.toString, 'call', _15 => _15()]),
-		body: _optionalChain$2([report, 'access', _16 => _16.body, 'optionalAccess', _17 => _17.toString, 'call', _18 => _18()]),
-		summary: _optionalChain$2([report, 'access', _19 => _19.summary, 'optionalAccess', _20 => _20.toString, 'call', _21 => _21()]),
+		status: _optionalChain$2([report, 'access', _14 => _14.status, 'optionalAccess', _15 => _15.toString, 'call', _16 => _16()]),
+		body: _optionalChain$2([report, 'access', _17 => _17.body, 'optionalAccess', _18 => _18.toString, 'call', _19 => _19()]),
+		summary: _optionalChain$2([report, 'access', _20 => _20.summary, 'optionalAccess', _21 => _21.toString, 'call', _22 => _22()]),
 	};
 }
 
 var src = {
 	buildReport,
-	getCommentBody: getCommentBody$1,
 	reportTachRunning,
 	reportTachResults,
 };
@@ -14494,8 +14601,9 @@ function getLogger() {
  * @returns {import('../global').Inputs}
  */
 function getInputs(logger) {
-	const path = core.getInput("path", { required: true });
+	const path = core.getInput("path", { required: false });
 	const reportId = core.getInput("report-id", { required: false });
+	const initialize = core.getInput("initialize", { required: false });
 	const keepOldResults = core.getInput("keep-old-results", { required: false });
 	const defaultOpen = core.getInput("default-open", { required: false });
 	const prBenchName = core.getInput("pr-bench-name", { required: false });
@@ -14503,7 +14611,8 @@ function getInputs(logger) {
 
 	/** @type {import('../global').Inputs} */
 	const inputs = {
-		path,
+		path: path ? path : null,
+		initialize: initialize ? initialize == "true" : null,
 		reportId: reportId ? reportId : null,
 		keepOldResults: keepOldResults != "false",
 		defaultOpen: defaultOpen !== "false",
@@ -14513,14 +14622,20 @@ function getInputs(logger) {
 
 	if (inputs.prBenchName != null && inputs.baseBenchName == null) {
 		logger.warn(
-			`"pr-bench-name input provided without base-bench-name input. Please provide both.`
+			`pr-bench-name input provided without base-bench-name input. Please provide both.`
 		);
 		inputs.prBenchName = null;
 	} else if (inputs.prBenchName == null && inputs.baseBenchName != null) {
 		logger.warn(
-			`"base-bench-name input provided without pr-bench-name input. Please provide both.`
+			`base-bench-name input provided without pr-bench-name input. Please provide both.`
 		);
 		inputs.baseBenchName = null;
+	}
+
+	if (inputs.initialize == null && inputs.path == null) {
+		throw new Error(
+			`Either the initialize option or the path option must be provided. Neither was provided.`
+		);
 	}
 
 	return inputs;

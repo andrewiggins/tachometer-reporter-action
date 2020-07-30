@@ -8,6 +8,8 @@ Pull Requests.
 
 ## Usage
 
+### Single benchmark job
+
 ```yaml
 name: Pull Request Test
 
@@ -33,6 +35,69 @@ jobs:
         with:
           path: results.json
           report-id: benchmark1
+```
+
+### Multiple benchmark jobs
+
+```yaml
+name: PR Setup Job Flow
+
+on: [pull_request]
+
+# Demo how to use the setup job flow
+#
+# In this flow, a workflow must create a separate "setup" job that initializes
+# the comment by passing initialize: true. Then each other job that actually
+# reports benchmark results must declare the "setup" job as a dependency in its
+# "needs" array.
+
+jobs:
+  setup:
+    name: Setup Tachometer Reporting
+    runs-on: ubuntu-latest
+    steps:
+      - name: Initialize tachometer comment
+        uses: andrewiggins/tachometer-reporter-action@v1
+        with:
+          initialize: true
+
+  bench_1:
+    name: First Bench Job
+    # Wait for setup job to complete before running this job
+    needs: [setup]
+    runs-on: ubuntu-latest
+    steps:
+      # Setup repo to run benchmarks
+      - uses: actions/checkout@v2
+      - uses: actions/setup-node@v1
+      - run: npm ci
+
+      # Run benchmarks
+      - name: Run tachometer and generate results file
+      - run: npm run tach --config benchmarks.json --json-file results.json
+
+      # Read results and post comment
+      - name: Report Tachometer Result
+        uses: andrewiggins/tachometer-reporter-action@v1
+        with:
+          path: results.json
+          report-id: benchmark1
+
+  bench_2:
+    name: Second Bench Job
+    # Wait for setup job to complete before running this job
+    needs: [setup]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+
+      # Add other tasks similar to bench_1 job to run the second benchmark
+
+      # Report second benchmark results
+      - name: Report Other Tachometer Result
+        uses: andrewiggins/tachometer-reporter-action@v1
+        with:
+          path: tests/results/other-results.json
 ```
 
 ## Features
@@ -78,6 +143,25 @@ instances of tachometer-reporter action. If you have multiple jobs or steps all
 running tachometer-reporter action for the same PR, use this field so that the
 actions don't collide with each other
 
+#### initialize
+
+Use this option with `report-id`.
+
+Determines whether this action instance should initialize the comment to report
+results. Useful if multiple jobs are sharing the same comment. Pass in `true` if
+this job should always create the comment, `false` if this job should never
+create the comment, or leave empty if the default behavior is desired (wait a
+random time before creating comment if it doesn't exist. Due to race conditions,
+this could lead to duplicate comments and is not recommended if your workflow
+has multiple jobs using this action).
+
+Generally this option is only necessary if you are running multiple jobs in the
+same workflow with this action. If so, create a "setup" job to that initializes
+the comment by passing initialize: true. Then each other job that actually
+reports benchmark results must declare the "setup" job as a dependency in its
+"needs" array. See the [Multiple benchmark jobs](#multiple-benchmark-jobs) usage
+sample for an example.
+
 #### default-open
 
 Pass `true` to this option to automatically open this actions benchmark results
@@ -103,6 +187,20 @@ field or "version" field) which serves as the base this PR is to be compared
 against (e.g. the latest published version of your library/website).
 
 ## Notes
+
+### Multiple comments
+
+This action will create one comment per workflow that uses it. So if you have
+two workflows that each run two jobs that use this action (a total of 4
+instances of this action), you should have two comments in your PR.
+
+By default, `tachometer-reporter-action` relies on a timing heuristic so that
+multiple jobs don't try to create multiple comments at the same time. However
+this timing heuristic doesn't work for all workflow configurations. To
+workaround this use the [`initialize`](#initialize) option to instruct only one
+`tachometer-reporter-action` instance in a workflow to initialize the comment
+all other `tachometer-reporter-action`s will share. See the [Multiple benchmark
+jobs](#multiple-benchmark-jobs) usage sample for an example.
 
 ### Sorting
 

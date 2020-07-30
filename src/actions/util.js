@@ -28,8 +28,9 @@ function getLogger() {
  * @returns {import('../global').Inputs}
  */
 function getInputs(logger) {
-	const path = core.getInput("path", { required: true });
+	const path = core.getInput("path", { required: false });
 	const reportId = core.getInput("report-id", { required: false });
+	const initialize = core.getInput("initialize", { required: false });
 	const keepOldResults = core.getInput("keep-old-results", { required: false });
 	const defaultOpen = core.getInput("default-open", { required: false });
 	const prBenchName = core.getInput("pr-bench-name", { required: false });
@@ -37,7 +38,8 @@ function getInputs(logger) {
 
 	/** @type {import('../global').Inputs} */
 	const inputs = {
-		path,
+		path: path ? path : null,
+		initialize: initialize ? initialize == "true" : null,
 		reportId: reportId ? reportId : null,
 		keepOldResults: keepOldResults != "false",
 		defaultOpen: defaultOpen !== "false",
@@ -47,14 +49,20 @@ function getInputs(logger) {
 
 	if (inputs.prBenchName != null && inputs.baseBenchName == null) {
 		logger.warn(
-			`"pr-bench-name input provided without base-bench-name input. Please provide both.`
+			`pr-bench-name input provided without base-bench-name input. Please provide both.`
 		);
 		inputs.prBenchName = null;
 	} else if (inputs.prBenchName == null && inputs.baseBenchName != null) {
 		logger.warn(
-			`"base-bench-name input provided without pr-bench-name input. Please provide both.`
+			`base-bench-name input provided without pr-bench-name input. Please provide both.`
 		);
 		inputs.baseBenchName = null;
+	}
+
+	if (inputs.initialize == null && inputs.path == null) {
+		throw new Error(
+			`Either the initialize option or the path option must be provided. Neither was provided.`
+		);
 	}
 
 	return inputs;
