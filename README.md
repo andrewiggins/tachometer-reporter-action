@@ -97,7 +97,7 @@ jobs:
       - name: Report Other Tachometer Result
         uses: andrewiggins/tachometer-reporter-action@v1
         with:
-          path: tests/results/other-results.json
+          path: other-results.json
 ```
 
 ## Features

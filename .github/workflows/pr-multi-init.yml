@@ -23,7 +23,7 @@ jobs:
         uses: andrewiggins/tachometer-reporter-action@master
         with:
           path: tests/results/test-results.json
-          initialize: true
+          initialize: true # Should work without report-id
           pr-bench-name: local-framework
           base-bench-name: base-framework
 
