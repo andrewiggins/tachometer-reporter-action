@@ -38,7 +38,7 @@ function getInputs(logger) {
 
 	/** @type {import('../global').Inputs} */
 	const inputs = {
-		path,
+		path: path ? path : null,
 		initialize: initialize ? initialize == "true" : null,
 		reportId: reportId ? reportId : null,
 		keepOldResults: keepOldResults != "false",
