@@ -44,11 +44,8 @@ async function createCheck(github, context) {
 	}
 
 	let finish;
-	if (useCheck == "true") {
+	if (useCheck == "true" && inputs.path) {
 		finish = await createCheck(octokit, github.context);
-	} else {
-		finish = (checkResult) =>
-			core.debug("Check Result: " + JSON.stringify(checkResult));
 	}
 
 	try {
@@ -61,22 +58,26 @@ async function createCheck(github, context) {
 			logger
 		);
 
-		await finish({
-			conclusion: "success",
-			output: {
-				title: `Tachometer Benchmark Results`,
-				summary: report.summary,
-			},
-		});
+		if (finish) {
+			await finish({
+				conclusion: "success",
+				output: {
+					title: `Tachometer Benchmark Results`,
+					summary: report?.summary,
+				},
+			});
+		}
 	} catch (e) {
 		core.setFailed(e.message);
 
-		await finish({
-			conclusion: "failure",
-			output: {
-				title: "Tachometer Benchmarks failed",
-				summary: `Error: ${e.message}`,
-			},
-		});
+		if (finish) {
+			await finish({
+				conclusion: "failure",
+				output: {
+					title: "Tachometer Benchmarks failed",
+					summary: `Error: ${e.message}`,
+				},
+			});
+		}
 	}
 })();

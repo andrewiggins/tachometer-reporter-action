@@ -16,6 +16,8 @@ require('stream');
 require('zlib');
 require('crypto');
 
+function _optionalChain(ops) { let lastAccessLHS = undefined; let value = ops[0]; let i = 1; while (i < ops.length) { const op = ops[i]; const fn = ops[i + 1]; i += 2; if ((op === 'optionalAccess' || op === 'optionalCall') && value == null) { return undefined; } if (op === 'access' || op === 'optionalAccess') { lastAccessLHS = value; value = fn(value); } else if (op === 'call' || op === 'optionalCall') { value = fn((...args) => value.call(lastAccessLHS, ...args)); lastAccessLHS = undefined; } } return value; }
+
 const { reportTachResults } = util.src;
 const { getLogger, getInputs } = util.util;
 
@@ -60,11 +62,8 @@ async function createCheck(github, context) {
 	}
 
 	let finish;
-	if (useCheck == "true") {
+	if (useCheck == "true" && inputs.path) {
 		finish = await createCheck(octokit, util.github.context);
-	} else {
-		finish = (checkResult) =>
-			util.core.debug("Check Result: " + JSON.stringify(checkResult));
 	}
 
 	try {
@@ -77,22 +76,26 @@ async function createCheck(github, context) {
 			logger
 		);
 
-		await finish({
-			conclusion: "success",
-			output: {
-				title: `Tachometer Benchmark Results`,
-				summary: report.summary,
-			},
-		});
+		if (finish) {
+			await finish({
+				conclusion: "success",
+				output: {
+					title: `Tachometer Benchmark Results`,
+					summary: _optionalChain([report, 'optionalAccess', _ => _.summary]),
+				},
+			});
+		}
 	} catch (e) {
 		util.core.setFailed(e.message);
 
-		await finish({
-			conclusion: "failure",
-			output: {
-				title: "Tachometer Benchmarks failed",
-				summary: `Error: ${e.message}`,
-			},
-		});
+		if (finish) {
+			await finish({
+				conclusion: "failure",
+				output: {
+					title: "Tachometer Benchmarks failed",
+					summary: `Error: ${e.message}`,
+				},
+			});
+		}
 	}
 })();
