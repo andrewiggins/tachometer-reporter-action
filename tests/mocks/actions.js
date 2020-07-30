@@ -32,7 +32,7 @@ const fakeGitHubContext = {
 	workflow: defaultActionInfo.workflow.name,
 	action: "context.action",
 	actor: "context.actor",
-	job: "context.job",
+	job: defaultActionInfo.job.name,
 	runNumber: defaultActionInfo.run.number,
 	runId: defaultActionInfo.run.id,
 	repo: {

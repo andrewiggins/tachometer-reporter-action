@@ -45,6 +45,7 @@ interface CommentContext {
 	footerRe: RegExp;
 	matches(comment: CommentData): boolean;
 	createDelayFactor: number;
+	created: boolean;
 }
 
 interface ActionInfo {

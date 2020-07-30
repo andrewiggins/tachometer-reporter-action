@@ -373,8 +373,14 @@ async function acquireCommentLock(github, context, getInitialBody, logger) {
 			}
 
 			case "creating.creating":
-				const newBody = addLockHtml(getInitialBody(null), context.lockId);
+				// TODO: this flow is kinda weird... Can we improve it? It's weird cuz
+				// when creating the comment we need to do what the body of
+				// postOrUpdateComment does but inside of the acquireLock loop... Is
+				// there some way we could push this outside of the acquire lock loop?
+				// Or maybe move the real update inside the machine?
+				const newBody = getFinalBody(context, getInitialBody, null);
 				comment = await createComment(github, context, newBody, logger);
+				context.created = true;
 				nextEvent = "CREATED";
 				break;
 
@@ -589,6 +595,21 @@ async function createComment(github, context, body, logger) {
 }
 
 /**
+ * @param {import('./global').CommentContext} context
+ * @param {(comment: import('./global').CommentData | null) => string} getCommentBody
+ * @param {import('./global').CommentData | null} comment
+ * @returns {string}
+ */
+function getFinalBody(context, getCommentBody, comment) {
+	let updatedBody = getCommentBody(comment);
+	if (!updatedBody.includes(context.footer)) {
+		updatedBody = updatedBody + context.footer;
+	}
+
+	return removeLockHtml(updatedBody);
+}
+
+/**
  * Create a PR comment, or update one if it already exists
  * @param {import('./global').GitHubActionClient} github
  * @param {import('./global').CommentContext} context
@@ -607,19 +628,16 @@ async function postOrUpdateComment(github, context, getCommentBody, logger) {
 		logger
 	);
 
+	if (context.created) {
+		// If this job created the comment, no need to do further updating
+		logger.info(`Comment was created. (id: ${comment.id})`);
+		return comment;
+	}
+
 	context.commentId = comment.id;
 	try {
-		let updatedBody = getCommentBody(comment);
-		if (!updatedBody.includes(context.footer)) {
-			updatedBody = updatedBody + context.footer;
-		}
-
-		comment = await updateComment(
-			github,
-			context,
-			removeLockHtml(updatedBody),
-			logger
-		);
+		const body = getFinalBody(context, getCommentBody, comment);
+		comment = await updateComment(github, context, body, logger);
 	} catch (e) {
 		logger.info(`Error updating comment: ${e.message}`);
 		logger.debug(() => e.toString());
@@ -666,6 +684,7 @@ function createCommentContext(context, actionInfo, customId, initialize) {
 			return c.user.type === "Bot" && footerRe.test(c.body);
 		},
 		createDelayFactor,
+		created: false,
 	};
 }
 

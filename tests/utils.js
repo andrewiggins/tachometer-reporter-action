@@ -56,8 +56,20 @@ function pick(obj, keys) {
 	return newObj;
 }
 
+function skipSuite(suite) {
+	function fakeSuite(...params) {}
+	fakeSuite.run = function fakeRun(...params) {};
+	fakeSuite.before = function fakeBefore(...params) {};
+	fakeSuite.before.each = function fakeBeforeEach(...params) {};
+	fakeSuite.after = function fakeAfter(...params) {};
+	fakeSuite.after.each = function fakeAfterEach(...params) {};
+
+	return fakeSuite;
+}
+
 module.exports = {
 	pick,
+	skipSuite,
 	testRoot,
 	copyTestResults,
 	formatHtml,

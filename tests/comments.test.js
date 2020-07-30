@@ -308,13 +308,16 @@ acquireLockSuite(
 			context: initializerCtx,
 		});
 
-		await clock.runAllAsync();
-
-		const [waiterStates, waiterFinalComment] = await waiterCompletion;
+		debug("testTrace", "Let initializer job finish");
+		await clock.nextAsync();
 		const [
 			initializerStates,
 			initializerFinalComment,
 		] = await initializeCompletion;
+
+		debug("testTrace", "Let waiter job finish");
+		await clock.runAllAsync();
+		const [waiterStates, waiterFinalComment] = await waiterCompletion;
 
 		validateFinalComment(waiterFinalComment);
 		validateFinalComment(initializerFinalComment);
@@ -370,6 +373,7 @@ acquireLockSuite(
 			...Array.from(new Array(121), () => [
 				{ value: { creating: "waiting" } },
 				{ value: { creating: "searching" } },
+				// @ts-ignore
 			]).flat(),
 			{ value: "timed_out" },
 		]);
