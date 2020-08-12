@@ -228,12 +228,12 @@ that the reporter-action will try to overwrite each other's results if both jobs
 read the comment before either has updated it with their results. In this
 situation, both jobs get a view of the comment with no results and only adds
 their results to the comment. The last job whose update is written would
-override the update of the other job.
+overwrite the update of the other job.
 
 To mitigate this situation, this action implements a basic "locking" mechanism
 on the comment. Before any job can make significant changes to the comment, it
 must first write an empty `span` to the comment with an ID and wait a short time
 to ensure all other jobs have seen it's `span`, claiming the comment as locked.
-if another job sees that this `span` exists, it will wait a random amount of time
-before trying to acquire the comment lock for itself. This protocol is perfect,
+If another job sees that this `span` exists, it will wait a random amount of time
+before trying to acquire the comment lock for itself. This protocol isn't perfect,
 but it is likely good enough for our purposes.
