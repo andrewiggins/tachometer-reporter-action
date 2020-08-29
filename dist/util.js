@@ -8311,12 +8311,7 @@ function ResultsEntry({ reportId, benchmarks, actionInfo, commitInfo }) {
 	const labelFn = makeUniqueLabelFn$1(benchmarks);
 	const listDimensions = [browserDimension$1, sampleSizeDimension$1];
 
-	const sha = h('tt', null, commitInfo.sha.slice(0, 7));
-	const commitHtml = commitInfo.html_url ? (
-		h('a', { href: commitInfo.html_url,}, sha)
-	) : (
-		sha
-	);
+	const sha = commitInfo.sha.slice(0, 7);
 
 	/** @type {import("./global").Dimension[]} */
 	const tableDimensions = [
@@ -8340,7 +8335,7 @@ function ResultsEntry({ reportId, benchmarks, actionInfo, commitInfo }) {
 )
 					);
 				})
-, h('li', null, "Commit: " , commitHtml)
+, h('li', null, `\n\nCommit: ${sha}\n\n`)
 , actionInfo.job.htmlUrl && (
 					h('li', null, "Built by: "
   , h('a', { href: actionInfo.job.htmlUrl,}, actionInfo.run.name)
