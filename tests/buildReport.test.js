@@ -47,7 +47,7 @@ buildReportSuite("Uses input.reportId", () => {
 });
 
 buildReportSuite("Generates reportId if not given", () => {
-	const expectedId = "l5UdXHMZ2m10Bdp0kqRnW0cWarA";
+	const expectedId = "fXZiwODNGd0dkOsS2QmPDRQGacM";
 	const report = invokeBuildReport();
 
 	assert.is(report.id, expectedId, "report.id matches expectation");

@@ -9,22 +9,12 @@ const {
 } = require("./getCommentBody");
 const { getActionInfo, getCommit } = require("./utils/github");
 const { createCommentContext, postOrUpdateComment } = require("./comments");
+const { patchResults } = require("./utils/tachometer");
 
-/**
- * @param {import('./global').BenchmarkResult[]} benchmarks
- */
-function getReportId(benchmarks) {
-	/** @type {(b: import('./global').BenchmarkResult) => string} */
-	const getBrowserKey = (b) =>
-		b.browser.name + (b.browser.headless ? "-headless" : "");
-
-	const benchKeys = benchmarks.map((b) => {
-		return `${b.name},${b.version},${getBrowserKey(b)}`;
-	});
-
+function hash(s) {
 	return crypto
 		.createHash("sha1")
-		.update(benchKeys.join("::"))
+		.update(s)
 		.digest("base64")
 		.replace(/\+/g, "-")
 		.replace(/\//g, "_")
@@ -32,10 +22,40 @@ function getReportId(benchmarks) {
 }
 
 /**
+ * @param {import('./global').Measurement} measurement
+ */
+function getMeasurementId(measurement) {
+	let otherData = "";
+	if (measurement.mode == "expression") {
+		otherData = measurement.expression;
+	} else if (measurement.mode == "performance") {
+		otherData = measurement.entryName;
+	}
+
+	return hash(`${measurement.name}::${measurement.mode}::${otherData}`);
+}
+
+/**
+ * @param {import('./global').PatchedBenchmarkResult[]} benchmarks
+ */
+function getReportId(benchmarks) {
+	/** @type {(b: import('./global').BenchmarkResult) => string} */
+	const getBrowserKey = (b) =>
+		b.browser.name + (b.browser.headless ? "-headless" : "");
+
+	const benchKeys = benchmarks.map((b) => {
+		const measureId = getMeasurementId(b.measurement);
+		return [b.name, b.version, measureId, getBrowserKey(b)].join(",");
+	});
+
+	return hash(benchKeys.join("::"));
+}
+
+/**
  * @param {import("./global").CommitInfo} commitInfo
  * @param {import('./global').ActionInfo} actionInfo
  * @param {Pick<import('./global').Inputs, 'prBenchName' | 'baseBenchName' | 'defaultOpen' | 'reportId'>} inputs
- * @param {import('./global').TachResults} tachResults
+ * @param {import('./global').PatchedTachResults} tachResults
  * @param {boolean} [isRunning]
  * @returns {import('./global').Report}
  */
@@ -52,7 +72,26 @@ function buildReport(
 	//    - Allowing aliases
 	//    - replace `base-bench-name` with `branch@SHA`
 
-	const benchmarks = tachResults?.benchmarks;
+	/** @type {import("./global").PatchedBenchmarkResult[]} */
+	let benchmarks;
+
+	/** @type {import('./global').ResultsByMeasurement} */
+	let resultsByMeasurement;
+
+	if (tachResults) {
+		tachResults = patchResults(tachResults);
+		benchmarks = tachResults.benchmarks;
+
+		resultsByMeasurement = new Map();
+		for (let bench of benchmarks) {
+			let measurementId = getMeasurementId(bench.measurement);
+			if (!resultsByMeasurement.has(measurementId)) {
+				resultsByMeasurement.set(measurementId, []);
+			}
+
+			resultsByMeasurement.get(measurementId).push(bench);
+		}
+	}
 
 	let reportId;
 	let title;
@@ -81,6 +120,7 @@ function buildReport(
 			<ResultsEntry
 				reportId={reportId}
 				benchmarks={benchmarks}
+				resultsByMeasurement={resultsByMeasurement}
 				actionInfo={actionInfo}
 				commitInfo={commitInfo}
 			/>

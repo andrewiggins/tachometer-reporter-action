@@ -79,9 +79,22 @@ interface Inputs {
 	defaultOpen?: boolean;
 }
 
+type Measurement = import("tachometer/lib/types").Measurement & {
+	name?: string;
+};
 type TachResults = import("tachometer/lib/json-output").JsonOutputFile;
 type BenchmarkResult = TachResults["benchmarks"][0];
 type ConfidenceInterval = TachResults["benchmarks"][0]["mean"];
+
+interface PatchedBenchmarkResult extends BenchmarkResult {
+	measurement?: Measurement;
+}
+
+interface PatchedTachResults extends TachResults {
+	benchmarks: Array<PatchedBenchmarkResult>;
+}
+
+type ResultsByMeasurement = Map<string, PatchedBenchmarkResult[]>;
 
 interface Report {
 	id: string;

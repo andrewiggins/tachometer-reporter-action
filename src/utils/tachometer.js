@@ -212,6 +212,65 @@ function makeUniqueLabelFn(results) {
 	};
 }
 
+/**
+ * Return a good-enough label for the given measurement, to disambiguate cases
+ * where there are multiple measurements on the same page.
+ * @param {import("../global").Measurement} measurement
+ * @returns {string}
+ */
+function measurementName(measurement) {
+	if (measurement.name) {
+		return measurement.name;
+	}
+
+	switch (measurement.mode) {
+		case "callback":
+			return "callback";
+		case "expression":
+			return measurement.expression;
+		case "performance":
+			return measurement.entryName === "first-contentful-paint"
+				? "fcp"
+				: measurement.entryName;
+	}
+	throw new Error(
+		`Internal error: unknown measurement type ` + JSON.stringify(measurement)
+	);
+}
+
+/**
+ * Patch tachometer results to include a `measurement` field parsed from the
+ * benchmark name
+ * @param {import("../global").TachResults} tachResults
+ * @returns {import('../global').PatchedTachResults}
+ */
+function patchResults(tachResults) {
+	const nameRe = /(.+?)(?: \[(.+)\])?$/;
+
+	/** @type {import('../global').PatchedTachResults} */
+	const patchedResults = { benchmarks: [] };
+	for (let bench of tachResults.benchmarks) {
+		let match = bench.name.match(nameRe);
+		if (!match) {
+			console.warn(`Could not parse benchmark name: ${bench.name}`);
+			continue;
+		}
+
+		const benchName = match[1];
+		const measurementName = match[2];
+		patchedResults.benchmarks.push({
+			...bench,
+			name: benchName,
+			// @ts-ignore - can't determine mode when patching
+			measurement: {
+				name: measurementName ?? "default",
+			},
+		});
+	}
+
+	return patchedResults;
+}
+
 module.exports = {
 	formatDifference,
 	makeUniqueLabelFn,
@@ -222,4 +281,6 @@ module.exports = {
 	sampleSizeDimension,
 	bytesSentDimension,
 	runtimeConfidenceIntervalDimension,
+	measurementName,
+	patchResults,
 };

@@ -7994,6 +7994,7 @@ var uaParser = createCommonjsModule(function (module, exports) {
 })(typeof window === 'object' ? window : commonjsGlobal);
 });
 
+function _nullishCoalesce(lhs, rhsFn) { if (lhs != null) { return lhs; } else { return rhsFn(); } }
 const { UAParser } = uaParser;
 
 // Utilities from Tachometer, adapted from: https://github.com/Polymer/tachometer/blob/ff284b0329aa24249aa5ebce8bb009d88d0b057a/src/format.ts
@@ -8207,6 +8208,65 @@ function makeUniqueLabelFn(results) {
 	};
 }
 
+/**
+ * Return a good-enough label for the given measurement, to disambiguate cases
+ * where there are multiple measurements on the same page.
+ * @param {import("../global").Measurement} measurement
+ * @returns {string}
+ */
+function measurementName(measurement) {
+	if (measurement.name) {
+		return measurement.name;
+	}
+
+	switch (measurement.mode) {
+		case "callback":
+			return "callback";
+		case "expression":
+			return measurement.expression;
+		case "performance":
+			return measurement.entryName === "first-contentful-paint"
+				? "fcp"
+				: measurement.entryName;
+	}
+	throw new Error(
+		`Internal error: unknown measurement type ` + JSON.stringify(measurement)
+	);
+}
+
+/**
+ * Patch tachometer results to include a `measurement` field parsed from the
+ * benchmark name
+ * @param {import("../global").TachResults} tachResults
+ * @returns {import('../global').PatchedTachResults}
+ */
+function patchResults(tachResults) {
+	const nameRe = /(.+?)(?: \[(.+)\])?$/;
+
+	/** @type {import('../global').PatchedTachResults} */
+	const patchedResults = { benchmarks: [] };
+	for (let bench of tachResults.benchmarks) {
+		let match = bench.name.match(nameRe);
+		if (!match) {
+			console.warn(`Could not parse benchmark name: ${bench.name}`);
+			continue;
+		}
+
+		const benchName = match[1];
+		const measurementName = match[2];
+		patchedResults.benchmarks.push({
+			...bench,
+			name: benchName,
+			// @ts-ignore - can't determine mode when patching
+			measurement: {
+				name: _nullishCoalesce(measurementName, () => ( "default")),
+			},
+		});
+	}
+
+	return patchedResults;
+}
+
 var tachometer = {
 	formatDifference,
 	makeUniqueLabelFn,
@@ -8217,9 +8277,11 @@ var tachometer = {
 	sampleSizeDimension,
 	bytesSentDimension,
 	runtimeConfidenceIntervalDimension,
+	measurementName,
+	patchResults,
 };
 
-function _nullishCoalesce(lhs, rhsFn) { if (lhs != null) { return lhs; } else { return rhsFn(); } } function _optionalChain(ops) { let lastAccessLHS = undefined; let value = ops[0]; let i = 1; while (i < ops.length) { const op = ops[i]; const fn = ops[i + 1]; i += 2; if ((op === 'optionalAccess' || op === 'optionalCall') && value == null) { return undefined; } if (op === 'access' || op === 'optionalAccess') { lastAccessLHS = value; value = fn(value); } else if (op === 'call' || op === 'optionalCall') { value = fn((...args) => value.call(lastAccessLHS, ...args)); lastAccessLHS = undefined; } } return value; }const { parse: parse$1, HTMLElement, TextNode, NodeType } = dist;
+function _nullishCoalesce$1(lhs, rhsFn) { if (lhs != null) { return lhs; } else { return rhsFn(); } } function _optionalChain(ops) { let lastAccessLHS = undefined; let value = ops[0]; let i = 1; while (i < ops.length) { const op = ops[i]; const fn = ops[i + 1]; i += 2; if ((op === 'optionalAccess' || op === 'optionalCall') && value == null) { return undefined; } if (op === 'access' || op === 'optionalAccess') { lastAccessLHS = value; value = fn(value); } else if (op === 'call' || op === 'optionalCall') { value = fn((...args) => value.call(lastAccessLHS, ...args)); lastAccessLHS = undefined; } } return value; }const { parse: parse$1, HTMLElement, TextNode, NodeType } = dist;
 const {
 	formatDifference: formatDifference$1,
 	makeUniqueLabelFn: makeUniqueLabelFn$1,
@@ -8227,6 +8289,7 @@ const {
 	browserDimension: browserDimension$1,
 	sampleSizeDimension: sampleSizeDimension$1,
 	runtimeConfidenceIntervalDimension: runtimeConfidenceIntervalDimension$1,
+	measurementName: measurementName$1,
 } = tachometer;
 
 const globalStatusClass = "global-status";
@@ -8291,12 +8354,19 @@ function h(tag, attrs, ...children) {
  * @typedef ResultsEntryProps
  * @property {string} reportId
  * @property {import('./global').BenchmarkResult[]} benchmarks
+ * @property {import('./global').ResultsByMeasurement} resultsByMeasurement
  * @property {import('./global').ActionInfo} actionInfo
  * @property {import('./global').CommitInfo} commitInfo
  *
  * @param {ResultsEntryProps} props
  */
-function ResultsEntry({ reportId, benchmarks, actionInfo, commitInfo }) {
+function ResultsEntry({
+	reportId,
+	benchmarks,
+	resultsByMeasurement,
+	actionInfo,
+	commitInfo,
+}) {
 	// Hard code what dimensions are rendered in the main table since GitHub comments
 	// have limited horizontal space
 
@@ -8308,21 +8378,26 @@ function ResultsEntry({ reportId, benchmarks, actionInfo, commitInfo }) {
 		);
 	}
 
-	const labelFn = makeUniqueLabelFn$1(benchmarks);
 	const listDimensions = [browserDimension$1, sampleSizeDimension$1];
 
 	const sha = commitInfo.sha.slice(0, 7);
 
-	/** @type {import("./global").Dimension[]} */
-	const tableDimensions = [
-		// Custom dimension that combines Tachometer's benchmark & version dimensions
-		{
-			label: "Version",
-			format: labelFn,
-		},
-		runtimeConfidenceIntervalDimension$1,
-		...makeDifferenceDimensions$1(labelFn, benchmarks),
-	];
+	/** @type {JSX.Element | JSX.Element[]} */
+	let table;
+	if (resultsByMeasurement.size == 1) {
+		const labelFn = makeUniqueLabelFn$1(benchmarks);
+		table = h(ResultsTable, { benchmarks: benchmarks, labelFn: labelFn,} );
+	} else {
+		table = [];
+		for (let group of resultsByMeasurement.values()) {
+			const metricName = measurementName$1(group[0].measurement);
+			const labelFn = makeUniqueLabelFn$1(group);
+			table.push(
+				h('h4', null, metricName),
+				h(ResultsTable, { benchmarks: group, labelFn: labelFn,} )
+			);
+		}
+	}
 
 	return (
 		h('div', { class: resultEntryClass,}
@@ -8342,25 +8417,42 @@ function ResultsEntry({ reportId, benchmarks, actionInfo, commitInfo }) {
 )
 				)
 )
-, h('table', null
+, table
+)
+	);
+}
+
+function ResultsTable({ benchmarks, labelFn }) {
+	/** @type {import("./global").Dimension[]} */
+	const tableDimensions = [
+		// Custom dimension that combines Tachometer's benchmark & version dimensions
+		{
+			label: "Version",
+			format: labelFn,
+		},
+		runtimeConfidenceIntervalDimension$1,
+		...makeDifferenceDimensions$1(labelFn, benchmarks),
+	];
+
+	return (
+		h('table', null
 , h('thead', null
 , h('tr', null
 , tableDimensions.map((d) => (
-							h('th', null, d.label)
-						))
+						h('th', null, d.label)
+					))
 )
 )
 , h('tbody', null
 , benchmarks.map((b) => {
-						return (
-							h('tr', null
+					return (
+						h('tr', null
 , tableDimensions.map((d, i) => {
-									return h('td', { align: "center",}, d.format(b));
-								})
+								return h('td', { align: "center",}, d.format(b));
+							})
 )
-						);
-					})
-)
+					);
+				})
 )
 )
 	);
@@ -8434,7 +8526,7 @@ function Summary({
 }) {
 	const benchLength = Array.isArray(benchmarks) ? benchmarks.length : -1;
 	let usesDefaults = false;
-	let showDiff = false;
+	let showDiffSubtext = false;
 
 	/** @type {JSX.Element} */
 	let summaryBody;
@@ -8445,6 +8537,7 @@ function Summary({
 	} else if (benchLength > 1) {
 		// Show message with instructions how to customize summary if default values used
 		usesDefaults = !prBenchName || !baseBenchName;
+		showDiffSubtext = true;
 
 		let baseIndex;
 		if (baseBenchName) {
@@ -8453,7 +8546,7 @@ function Summary({
 			);
 		} else {
 			baseIndex = 0;
-			baseBenchName = _nullishCoalesce(_optionalChain([benchmarks, 'access', _ => _[0], 'optionalAccess', _2 => _2.version]), () => ( benchmarks[0].name));
+			baseBenchName = _nullishCoalesce$1(_optionalChain([benchmarks, 'access', _ => _[0], 'optionalAccess', _2 => _2.version]), () => ( benchmarks[0].name));
 		}
 
 		let localIndex, localResults;
@@ -8465,10 +8558,9 @@ function Summary({
 		} else {
 			let localIndex = (baseIndex + 1) % benchLength;
 			localResults = benchmarks[localIndex];
-			prBenchName = _nullishCoalesce(_optionalChain([localResults, 'optionalAccess', _3 => _3.version]), () => ( localResults.name));
+			prBenchName = _nullishCoalesce$1(_optionalChain([localResults, 'optionalAccess', _3 => _3.version]), () => ( localResults.name));
 		}
 
-		showDiff = true;
 		if (localIndex == -1) {
 			summaryBody = (
 				h('span', null, ": Could not find benchmark matching "
@@ -8515,7 +8607,7 @@ function Summary({
 , h('span', { class: statusClass,}, status)
 , title
 , summaryBody
-, showDiff && [
+, showDiffSubtext && [
 				h('br', null ),
 				h('sup', null
 , prBenchName, " vs "  , baseBenchName
@@ -8707,7 +8799,7 @@ var getCommentBody_1 = {
 	Status,
 };
 
-function _nullishCoalesce$1(lhs, rhsFn) { if (lhs != null) { return lhs; } else { return rhsFn(); } } function _optionalChain$1(ops) { let lastAccessLHS = undefined; let value = ops[0]; let i = 1; while (i < ops.length) { const op = ops[i]; const fn = ops[i + 1]; i += 2; if ((op === 'optionalAccess' || op === 'optionalCall') && value == null) { return undefined; } if (op === 'access' || op === 'optionalAccess') { lastAccessLHS = value; value = fn(value); } else if (op === 'call' || op === 'optionalCall') { value = fn((...args) => value.call(lastAccessLHS, ...args)); lastAccessLHS = undefined; } } return value; }/**
+function _nullishCoalesce$2(lhs, rhsFn) { if (lhs != null) { return lhs; } else { return rhsFn(); } } function _optionalChain$1(ops) { let lastAccessLHS = undefined; let value = ops[0]; let i = 1; while (i < ops.length) { const op = ops[i]; const fn = ops[i + 1]; i += 2; if ((op === 'optionalAccess' || op === 'optionalCall') && value == null) { return undefined; } if (op === 'access' || op === 'optionalAccess') { lastAccessLHS = value; value = fn(value); } else if (op === 'call' || op === 'optionalCall') { value = fn((...args) => value.call(lastAccessLHS, ...args)); lastAccessLHS = undefined; } } return value; }/**
  * @param {import('../global').GitHubActionContext} context
  * @param {import('../global').GitHubActionClient} github
  * @param {import('../global').Logger} logger
@@ -8806,8 +8898,8 @@ async function getActionInfo(context, github, logger) {
 		},
 		job: {
 			id: _optionalChain$1([matchingJob, 'optionalAccess', _ => _.id]),
-			name: _nullishCoalesce$1(_optionalChain$1([matchingJob, 'optionalAccess', _2 => _2.name]), () => ( context.job)),
-			htmlUrl: _nullishCoalesce$1(_optionalChain$1([matchingJob, 'optionalAccess', _3 => _3.html_url]), () => ( run.html_url)),
+			name: _nullishCoalesce$2(_optionalChain$1([matchingJob, 'optionalAccess', _2 => _2.name]), () => ( context.job)),
+			htmlUrl: _nullishCoalesce$2(_optionalChain$1([matchingJob, 'optionalAccess', _3 => _3.html_url]), () => ( run.html_url)),
 			index: jobIndex,
 		},
 	};
@@ -14339,22 +14431,12 @@ const {
 } = getCommentBody_1;
 const { getActionInfo: getActionInfo$1, getCommit: getCommit$1 } = github$1;
 const { createCommentContext: createCommentContext$1, postOrUpdateComment: postOrUpdateComment$1 } = comments;
+const { patchResults: patchResults$1 } = tachometer;
 
-/**
- * @param {import('./global').BenchmarkResult[]} benchmarks
- */
-function getReportId(benchmarks) {
-	/** @type {(b: import('./global').BenchmarkResult) => string} */
-	const getBrowserKey = (b) =>
-		b.browser.name + (b.browser.headless ? "-headless" : "");
-
-	const benchKeys = benchmarks.map((b) => {
-		return `${b.name},${b.version},${getBrowserKey(b)}`;
-	});
-
+function hash(s) {
 	return crypto
 		.createHash("sha1")
-		.update(benchKeys.join("::"))
+		.update(s)
 		.digest("base64")
 		.replace(/\+/g, "-")
 		.replace(/\//g, "_")
@@ -14362,10 +14444,40 @@ function getReportId(benchmarks) {
 }
 
 /**
+ * @param {import('./global').Measurement} measurement
+ */
+function getMeasurementId(measurement) {
+	let otherData = "";
+	if (measurement.mode == "expression") {
+		otherData = measurement.expression;
+	} else if (measurement.mode == "performance") {
+		otherData = measurement.entryName;
+	}
+
+	return hash(`${measurement.name}::${measurement.mode}::${otherData}`);
+}
+
+/**
+ * @param {import('./global').PatchedBenchmarkResult[]} benchmarks
+ */
+function getReportId(benchmarks) {
+	/** @type {(b: import('./global').BenchmarkResult) => string} */
+	const getBrowserKey = (b) =>
+		b.browser.name + (b.browser.headless ? "-headless" : "");
+
+	const benchKeys = benchmarks.map((b) => {
+		const measureId = getMeasurementId(b.measurement);
+		return [b.name, b.version, measureId, getBrowserKey(b)].join(",");
+	});
+
+	return hash(benchKeys.join("::"));
+}
+
+/**
  * @param {import("./global").CommitInfo} commitInfo
  * @param {import('./global').ActionInfo} actionInfo
  * @param {Pick<import('./global').Inputs, 'prBenchName' | 'baseBenchName' | 'defaultOpen' | 'reportId'>} inputs
- * @param {import('./global').TachResults} tachResults
+ * @param {import('./global').PatchedTachResults} tachResults
  * @param {boolean} [isRunning]
  * @returns {import('./global').Report}
  */
@@ -14382,7 +14494,26 @@ function buildReport(
 	//    - Allowing aliases
 	//    - replace `base-bench-name` with `branch@SHA`
 
-	const benchmarks = _optionalChain$2([tachResults, 'optionalAccess', _ => _.benchmarks]);
+	/** @type {import("./global").PatchedBenchmarkResult[]} */
+	let benchmarks;
+
+	/** @type {import('./global').ResultsByMeasurement} */
+	let resultsByMeasurement;
+
+	if (tachResults) {
+		tachResults = patchResults$1(tachResults);
+		benchmarks = tachResults.benchmarks;
+
+		resultsByMeasurement = new Map();
+		for (let bench of benchmarks) {
+			let measurementId = getMeasurementId(bench.measurement);
+			if (!resultsByMeasurement.has(measurementId)) {
+				resultsByMeasurement.set(measurementId, []);
+			}
+
+			resultsByMeasurement.get(measurementId).push(bench);
+		}
+	}
 
 	let reportId;
 	let title;
@@ -14411,6 +14542,7 @@ function buildReport(
 			h$1(ResultsEntry$1, {
 				reportId: reportId,
 				benchmarks: benchmarks,
+				resultsByMeasurement: resultsByMeasurement,
 				actionInfo: actionInfo,
 				commitInfo: commitInfo,}
 			)
@@ -14488,17 +14620,17 @@ async function reportTachRunning(
 
 	await postOrUpdateComment$1(
 		github,
-		createCommentContext$1(context, actionInfo, _optionalChain$2([report, 'optionalAccess', _2 => _2.id]), inputs.initialize),
-		(comment) => getCommentBody$1(inputs, report, _optionalChain$2([comment, 'optionalAccess', _3 => _3.body]), logger),
+		createCommentContext$1(context, actionInfo, _optionalChain$2([report, 'optionalAccess', _ => _.id]), inputs.initialize),
+		(comment) => getCommentBody$1(inputs, report, _optionalChain$2([comment, 'optionalAccess', _2 => _2.body]), logger),
 		logger
 	);
 
 	if (report) {
 		return {
 			...report,
-			status: _optionalChain$2([report, 'access', _4 => _4.status, 'optionalAccess', _5 => _5.toString, 'call', _6 => _6()]),
-			body: _optionalChain$2([report, 'access', _7 => _7.body, 'optionalAccess', _8 => _8.toString, 'call', _9 => _9()]),
-			summary: _optionalChain$2([report, 'access', _10 => _10.summary, 'optionalAccess', _11 => _11.toString, 'call', _12 => _12()]),
+			status: _optionalChain$2([report, 'access', _3 => _3.status, 'optionalAccess', _4 => _4.toString, 'call', _5 => _5()]),
+			body: _optionalChain$2([report, 'access', _6 => _6.body, 'optionalAccess', _7 => _7.toString, 'call', _8 => _8()]),
+			summary: _optionalChain$2([report, 'access', _9 => _9.summary, 'optionalAccess', _10 => _10.toString, 'call', _11 => _11()]),
 		};
 	} else {
 		return null;
@@ -14554,15 +14686,15 @@ async function reportTachResults(
 	await postOrUpdateComment$1(
 		github,
 		createCommentContext$1(context, actionInfo, report.id, inputs.initialize),
-		(comment) => getCommentBody$1(inputs, report, _optionalChain$2([comment, 'optionalAccess', _13 => _13.body]), logger),
+		(comment) => getCommentBody$1(inputs, report, _optionalChain$2([comment, 'optionalAccess', _12 => _12.body]), logger),
 		logger
 	);
 
 	return {
 		...report,
-		status: _optionalChain$2([report, 'access', _14 => _14.status, 'optionalAccess', _15 => _15.toString, 'call', _16 => _16()]),
-		body: _optionalChain$2([report, 'access', _17 => _17.body, 'optionalAccess', _18 => _18.toString, 'call', _19 => _19()]),
-		summary: _optionalChain$2([report, 'access', _20 => _20.summary, 'optionalAccess', _21 => _21.toString, 'call', _22 => _22()]),
+		status: _optionalChain$2([report, 'access', _13 => _13.status, 'optionalAccess', _14 => _14.toString, 'call', _15 => _15()]),
+		body: _optionalChain$2([report, 'access', _16 => _16.body, 'optionalAccess', _17 => _17.toString, 'call', _18 => _18()]),
+		summary: _optionalChain$2([report, 'access', _19 => _19.summary, 'optionalAccess', _20 => _20.toString, 'call', _21 => _21()]),
 	};
 }
 

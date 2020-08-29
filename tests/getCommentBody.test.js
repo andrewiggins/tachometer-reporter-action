@@ -111,7 +111,7 @@ newCommentSuite("Uses input.reportId", () => {
 });
 
 newCommentSuite("Generates reportId if not given", () => {
-	const expectedId = "l5UdXHMZ2m10Bdp0kqRnW0cWarA";
+	const expectedId = "fXZiwODNGd0dkOsS2QmPDRQGacM";
 	const bodyIdRe = new RegExp(`<div id="${getBenchmarkSectionId(expectedId)}"`);
 	const summaryIdRe = new RegExp(`<div id="${getSummaryId(expectedId)}"`);
 

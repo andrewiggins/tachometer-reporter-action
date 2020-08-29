@@ -6,6 +6,7 @@ const {
 	browserDimension,
 	sampleSizeDimension,
 	runtimeConfidenceIntervalDimension,
+	measurementName,
 } = require("./utils/tachometer");
 
 const globalStatusClass = "global-status";
@@ -70,12 +71,19 @@ function h(tag, attrs, ...children) {
  * @typedef ResultsEntryProps
  * @property {string} reportId
  * @property {import('./global').BenchmarkResult[]} benchmarks
+ * @property {import('./global').ResultsByMeasurement} resultsByMeasurement
  * @property {import('./global').ActionInfo} actionInfo
  * @property {import('./global').CommitInfo} commitInfo
  *
  * @param {ResultsEntryProps} props
  */
-function ResultsEntry({ reportId, benchmarks, actionInfo, commitInfo }) {
+function ResultsEntry({
+	reportId,
+	benchmarks,
+	resultsByMeasurement,
+	actionInfo,
+	commitInfo,
+}) {
 	// Hard code what dimensions are rendered in the main table since GitHub comments
 	// have limited horizontal space
 
@@ -87,21 +95,26 @@ function ResultsEntry({ reportId, benchmarks, actionInfo, commitInfo }) {
 		);
 	}
 
-	const labelFn = makeUniqueLabelFn(benchmarks);
 	const listDimensions = [browserDimension, sampleSizeDimension];
 
 	const sha = commitInfo.sha.slice(0, 7);
 
-	/** @type {import("./global").Dimension[]} */
-	const tableDimensions = [
-		// Custom dimension that combines Tachometer's benchmark & version dimensions
-		{
-			label: "Version",
-			format: labelFn,
-		},
-		runtimeConfidenceIntervalDimension,
-		...makeDifferenceDimensions(labelFn, benchmarks),
-	];
+	/** @type {JSX.Element | JSX.Element[]} */
+	let table;
+	if (resultsByMeasurement.size == 1) {
+		const labelFn = makeUniqueLabelFn(benchmarks);
+		table = <ResultsTable benchmarks={benchmarks} labelFn={labelFn} />;
+	} else {
+		table = [];
+		for (let group of resultsByMeasurement.values()) {
+			const metricName = measurementName(group[0].measurement);
+			const labelFn = makeUniqueLabelFn(group);
+			table.push(
+				<h4>{metricName}</h4>,
+				<ResultsTable benchmarks={group} labelFn={labelFn} />
+			);
+		}
+	}
 
 	return (
 		<div class={resultEntryClass}>
@@ -121,27 +134,44 @@ function ResultsEntry({ reportId, benchmarks, actionInfo, commitInfo }) {
 					</li>
 				)}
 			</ul>
-			<table>
-				<thead>
-					<tr>
-						{tableDimensions.map((d) => (
-							<th>{d.label}</th>
-						))}
-					</tr>
-				</thead>
-				<tbody>
-					{benchmarks.map((b) => {
-						return (
-							<tr>
-								{tableDimensions.map((d, i) => {
-									return <td align="center">{d.format(b)}</td>;
-								})}
-							</tr>
-						);
-					})}
-				</tbody>
-			</table>
+			{table}
 		</div>
+	);
+}
+
+function ResultsTable({ benchmarks, labelFn }) {
+	/** @type {import("./global").Dimension[]} */
+	const tableDimensions = [
+		// Custom dimension that combines Tachometer's benchmark & version dimensions
+		{
+			label: "Version",
+			format: labelFn,
+		},
+		runtimeConfidenceIntervalDimension,
+		...makeDifferenceDimensions(labelFn, benchmarks),
+	];
+
+	return (
+		<table>
+			<thead>
+				<tr>
+					{tableDimensions.map((d) => (
+						<th>{d.label}</th>
+					))}
+				</tr>
+			</thead>
+			<tbody>
+				{benchmarks.map((b) => {
+					return (
+						<tr>
+							{tableDimensions.map((d, i) => {
+								return <td align="center">{d.format(b)}</td>;
+							})}
+						</tr>
+					);
+				})}
+			</tbody>
+		</table>
 	);
 }
 
@@ -213,7 +243,7 @@ function Summary({
 }) {
 	const benchLength = Array.isArray(benchmarks) ? benchmarks.length : -1;
 	let usesDefaults = false;
-	let showDiff = false;
+	let showDiffSubtext = false;
 
 	/** @type {JSX.Element} */
 	let summaryBody;
@@ -224,6 +254,7 @@ function Summary({
 	} else if (benchLength > 1) {
 		// Show message with instructions how to customize summary if default values used
 		usesDefaults = !prBenchName || !baseBenchName;
+		showDiffSubtext = true;
 
 		let baseIndex;
 		if (baseBenchName) {
@@ -247,7 +278,6 @@ function Summary({
 			prBenchName = localResults?.version ?? localResults.name;
 		}
 
-		showDiff = true;
 		if (localIndex == -1) {
 			summaryBody = (
 				<span>
@@ -294,7 +324,7 @@ function Summary({
 			<span class={statusClass}>{status}</span>
 			{title}
 			{summaryBody}
-			{showDiff && [
+			{showDiffSubtext && [
 				<br />,
 				<sup>
 					{prBenchName} vs {baseBenchName}
