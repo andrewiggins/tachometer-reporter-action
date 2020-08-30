@@ -8059,12 +8059,13 @@ const { defaultMeasure: defaultMeasure$1 } = hash_1;
 const lineBreak = "<br />";
 
 /**
+ * @param {(b: import('../global').BenchmarkResult) => string} labelFn
  * @param {import('../global').BenchmarkResult[]} benchmarks
+ * @returns {import('../global').Dimension[]}
  */
 function makeDifferenceDimensions(labelFn, benchmarks) {
 	return benchmarks.map((b, i) => {
-		/** @type {import('../global').Dimension} */
-		const dimension = {
+		return {
 			label: `vs ${labelFn(b)}`,
 			format: (b) => {
 				if (b.differences === undefined) {
@@ -8084,8 +8085,6 @@ function makeDifferenceDimensions(labelFn, benchmarks) {
 			// 	alignment: "right",
 			// },
 		};
-
-		return dimension;
 	});
 }
 
@@ -14650,6 +14649,22 @@ const {
 } = hash_1;
 
 /**
+ * Given an array and a list of indexes into that array, return a new array with
+ * just the values from the indexes specified
+ * @template T
+ * @param {T[]} array
+ * @param {number[]} indexes
+ * @returns {T[]}
+ */
+function pickArray(array, indexes) {
+	let newArray = [];
+	for (let index of indexes) {
+		newArray.push(array[index]);
+	}
+	return newArray;
+}
+
+/**
  * @param {import("./global").CommitInfo} commitInfo
  * @param {import('./global').ActionInfo} actionInfo
  * @param {Pick<import('./global').Inputs, 'prBenchName' | 'baseBenchName' | 'defaultOpen' | 'reportId'>} inputs
@@ -14683,18 +14698,39 @@ function buildReport(
 		tachResults = normalizeResults$1(tachResults);
 		benchmarks = tachResults.benchmarks;
 
-		resultsByMeasurement = new Map();
-		for (let bench of benchmarks) {
+		// First, group bench indexes by same measurements
+		let measurementIndexes = new Map();
+		for (let i = 0; i < benchmarks.length; i++) {
+			let bench = benchmarks[i];
 			let measurementId =
 				bench.measurement === defaultMeasure$3
 					? defaultMeasureId$2
 					: getMeasurementId$1(bench.measurement);
 
+			if (!measurementIndexes.has(measurementId)) {
+				measurementIndexes.set(measurementId, []);
+			}
+
+			measurementIndexes.get(measurementId).push(i);
+		}
+
+		// Now, group the actual benchmark results by measurement. We modify the
+		// "differences" array to only include the differences with other benchmarks
+		// of the same measurement, using the indexes we determined in the loop
+		// above.
+		resultsByMeasurement = new Map();
+		for (let [measurementId, benchIndexes] of measurementIndexes.entries()) {
 			if (!resultsByMeasurement.has(measurementId)) {
 				resultsByMeasurement.set(measurementId, []);
 			}
 
-			resultsByMeasurement.get(measurementId).push(bench);
+			for (let benchIndex of benchIndexes) {
+				let bench = benchmarks[benchIndex];
+				resultsByMeasurement.get(measurementId).push({
+					...bench,
+					differences: pickArray(bench.differences, benchIndexes),
+				});
+			}
 		}
 	}
 
