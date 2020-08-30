@@ -5,7 +5,12 @@ const fakeTimers = require("@sinonjs/fake-timers");
 const { reportTachRunning, reportTachResults } = require("../lib/index");
 const { fakeGitHubContext, defaultInputs } = require("./mocks/actions");
 const { createGitHubClient, defaultActionInfo } = require("./mocks/github");
-const { assertFixture, testRoot, formatHtml, skipSuite } = require("./utils");
+const {
+	assertFixture,
+	testRoot,
+	formatHtml,
+	readFixture: rawReadFixture,
+} = require("./utils");
 const { createCommentContext } = require("../lib/comments");
 
 const DEBUG = {
@@ -87,8 +92,7 @@ function addFooter(
 }
 
 async function readFixture(fixtureName) {
-	const path = testRoot("fixtures/" + fixtureName);
-	return formatHtml(addFooter(await readFile(path, "utf8")));
+	return formatHtml(addFooter(await rawReadFixture(fixtureName)));
 }
 
 /**

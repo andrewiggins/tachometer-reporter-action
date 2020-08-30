@@ -1,5 +1,6 @@
 const path = require("path");
 const { readFileSync } = require("fs");
+const { readFile } = require("fs/promises");
 const assert = require("uvu/assert");
 const prettier = require("prettier");
 
@@ -25,6 +26,14 @@ const getMultiMeasureResults = () =>
 /** @type {(html: string) => string} */
 const formatHtml = (html) =>
 	prettier.format(html, { parser: "html", useTabs: true });
+
+/**
+ * @param {string} fixtureName
+ */
+async function readFixture(fixtureName) {
+	const path = testRoot("fixtures/" + fixtureName);
+	return await readFile(path, "utf8");
+}
 
 const shouldAssertFixtures =
 	process.env.TACH_REPORTER_SKIP_SNAPSHOT_TESTS !== "true";
@@ -100,6 +109,7 @@ module.exports = {
 	copyTestResults,
 	getMultiMeasureResults,
 	formatHtml,
+	readFixture,
 	shouldAssertFixtures,
 	assertFixture,
 	getBenchmarkSectionId,
