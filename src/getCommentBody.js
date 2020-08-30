@@ -462,28 +462,33 @@ function getCommentBody(inputs, report, commentBody, logger) {
 
 	logger.info("Parsing existing comment...");
 	const commentHtml = parse(commentBody);
-	const summaryContainer = commentHtml.querySelector(`#${getSummaryListId()}`);
-	const resultsContainer = commentHtml.querySelector(
-		`#${getResultsContainerId()}`
-	);
-
-	const summaryId = getSummaryId(report.id);
-	const summary = commentHtml.querySelector(`#${summaryId}`);
-
-	const resultsId = getBenchmarkSectionId(report.id);
-	const results = commentHtml.querySelector(`#${resultsId}`);
-
-	const summaryStatus = summary?.querySelector(`.${statusClass}`);
-	const resultStatus = results?.querySelector(`.${statusClass}`);
 
 	// Clear global status messages
 	commentHtml
 		.querySelectorAll(`.${globalStatusClass}`)
 		.forEach((el) => el.set_content(""));
 
-	// Update summary
+	updateSummary(inputs, report, commentHtml, logger);
+	updateResults(inputs, report, commentHtml, logger);
+
+	return commentHtml.toString();
+}
+
+/**
+ * @param {import('./global').Inputs} inputs
+ * @param {import('./global').Report} report
+ * @param {import('node-html-parser').HTMLElement} commentHtml
+ * @param {import('./global').Logger} logger
+ */
+function updateSummary(inputs, report, commentHtml, logger) {
+	const summaryContainer = commentHtml.querySelector(`#${getSummaryListId()}`);
+
+	const summaryId = getSummaryId(report.id);
+	const summary = commentHtml.querySelector(`#${summaryId}`);
+	const summaryStatus = summary?.querySelector(`.${statusClass}`);
+
 	if (summary) {
-		const htmlRunNumber = parseInt(results.getAttribute("data-run-number"), 10);
+		const htmlRunNumber = parseInt(summary.getAttribute("data-run-number"), 10);
 
 		if (report.isRunning) {
 			logger.info(`Adding status info to summary with id "${summaryId}"...`);
@@ -506,8 +511,23 @@ function getCommentBody(inputs, report, commentBody, logger) {
 			<SummaryListItem report={report} />
 		);
 	}
+}
 
-	// Update results entry
+/**
+ * @param {import('./global').Inputs} inputs
+ * @param {import('./global').Report} report
+ * @param {import('node-html-parser').HTMLElement} commentHtml
+ * @param {import('./global').Logger} logger
+ */
+function updateResults(inputs, report, commentHtml, logger) {
+	const resultsContainer = commentHtml.querySelector(
+		`#${getResultsContainerId()}`
+	);
+
+	const resultsId = getBenchmarkSectionId(report.id);
+	const results = commentHtml.querySelector(`#${resultsId}`);
+	const resultStatus = results?.querySelector(`.${statusClass}`);
+
 	if (results) {
 		const htmlRunNumber = parseInt(results.getAttribute("data-run-number"), 10);
 
@@ -539,8 +559,6 @@ function getCommentBody(inputs, report, commentBody, logger) {
 			<BenchmarkSection report={report} open={inputs.defaultOpen} />
 		);
 	}
-
-	return commentHtml.toString();
 }
 
 module.exports = {
