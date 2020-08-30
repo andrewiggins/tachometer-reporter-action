@@ -7,6 +7,7 @@ const {
 	formatHtml,
 	copyTestResults,
 	getMultiMeasureResults,
+	readFixture,
 	assertFixture,
 	getBenchmarkSectionId,
 	getSummaryId,
@@ -18,6 +19,7 @@ const { invokeBuildReport } = require("./invokeBuildReport");
 const { defaultInputs, testLogger } = require("./mocks/actions");
 const { defaultActionInfo } = require("./mocks/github");
 const { getCommentBody } = require("../lib/getCommentBody");
+const { defaultMeasureId } = require("../src/utils/hash");
 
 function generateNewTestResults() {
 	var results = copyTestResults();
@@ -65,6 +67,51 @@ function invokeGetCommentBody({
 	}
 
 	return getCommentBody(fullInputs, report, commentBody, testLogger);
+}
+
+/**
+ * @param {string} label
+ * @param {import('node-html-parser').HTMLElement} body
+ * @param {{ isRunning?: boolean; hasResults?: boolean; }} [options]
+ * @param {{ reportId?: string; measurementId?: string; }} [ids]
+ */
+function assertUIState(
+	label,
+	body,
+	{ isRunning = false, hasResults = true } = {},
+	{ reportId = testReportId, measurementId = defaultMeasureId } = {}
+) {
+	let summaryId = getSummaryId({ reportId, measurementId });
+	let summaryStatus = body.querySelector(`#${summaryId} .status a`);
+	let summaryData = body.querySelector(`#${summaryId} em`);
+
+	let resultId = getBenchmarkSectionId(reportId);
+	let resultStatus = body.querySelector(`#${resultId} .status a`);
+	let resultData = body.querySelector(`#${resultId} table`);
+
+	const msg = (message) => `${label}: ${message}`;
+
+	if (isRunning) {
+		assert.ok(summaryStatus, msg(`Summary running status link should exist`));
+		assert.ok(resultStatus, msg(`Result running link should exist`));
+
+		let summaryText = summaryStatus?.text.includes("⏱");
+		let resultText = resultStatus?.text.includes("⏱");
+
+		assert.ok(summaryText, msg(`Summary running status link has text`));
+		assert.ok(resultText, msg(`Result running status link has text`));
+	} else {
+		assert.not.ok(summaryStatus, `summary status link should not exist`);
+		assert.not.ok(resultStatus, msg(`result status link should not exist`));
+	}
+
+	if (hasResults) {
+		assert.ok(summaryData, msg(`summary results should exist`));
+		assert.ok(resultData, msg(`result data should exist`));
+	} else {
+		assert.not.ok(summaryData, msg(`summary results should not exist`));
+		assert.not.ok(resultData, msg(`result data should not exist`));
+	}
 }
 
 //#region New Comment Suite
@@ -229,9 +276,7 @@ newCommentSuite("Renders generic comment body if report is null", async () => {
 	const body = invokeGetCommentBody({ report: null });
 	const html = formatHtml(body.toString());
 
-	const fixturePath = testRoot("fixtures/new-comment-initialized.html");
-	const fixture = await readFile(fixturePath, "utf-8");
-
+	const fixture = await readFixture("new-comment-initialized.html");
 	assertFixture(html, fixture, "Comment body matches fixture");
 });
 
@@ -261,10 +306,7 @@ const otherReportId = "test-results-new-id";
 updateCommentSuite(
 	"Update status for existing comment with old results",
 	async () => {
-		const commentBodyPath = testRoot(
-			"fixtures/test-results-existing-comment.html"
-		);
-		const commentBody = await readFile(commentBodyPath, "utf-8");
+		const commentBody = await readFixture("test-results-existing-comment.html");
 		const report = invokeBuildReport({
 			inputs: { reportId: testReportId },
 			results: null,
@@ -273,23 +315,14 @@ updateCommentSuite(
 
 		const bodyHtml = parse(invokeGetCommentBody({ report, commentBody }));
 
-		const summaryId = getSummaryId({ reportId: testReportId });
-		const summaryStatus = bodyHtml.querySelector(`#${summaryId} .status a`);
-		const summaryData = bodyHtml.querySelector(`#${summaryId} em`);
+		assertUIState("Updated results", bodyHtml, {
+			isRunning: true,
+			hasResults: true,
+		});
 
-		const resultId = getBenchmarkSectionId(testReportId);
-		const resultStatus = bodyHtml.querySelector(`#${resultId} .status a`);
-		const resultData = bodyHtml.querySelector(`#${resultId} table`);
-
-		assert.ok(summaryStatus, "Summary status link exists");
-		assert.ok(resultStatus, "Result status link exists");
-		assert.ok(summaryStatus.text.includes("⏱"), "Summary status link has text");
-		assert.ok(resultStatus.text.includes("⏱"), "Result status link has text");
-		assert.ok(summaryData, "Summary data is still present");
-		assert.ok(resultData, "Result data is still present");
+		const actualHtml = formatHtml(bodyHtml.toString());
 
 		const fixturePath = testRoot("fixtures/test-results-existing-running.html");
-		const actualHtml = formatHtml(bodyHtml.toString());
 		const expectedHtml = await readFile(fixturePath, "utf-8");
 
 		// Uncomment to update fixture
@@ -306,10 +339,7 @@ updateCommentSuite(
 updateCommentSuite(
 	"Update status for existing comment when no job.html_url or run.html_url is present",
 	async () => {
-		const commentBodyPath = testRoot(
-			"fixtures/test-results-existing-comment.html"
-		);
-		const commentBody = await readFile(commentBodyPath, "utf-8");
+		const commentBody = await readFixture("test-results-existing-comment.html");
 		const report = invokeBuildReport({
 			inputs: { reportId: testReportId },
 			actionInfo: {
@@ -352,30 +382,14 @@ updateCommentSuite(
 updateCommentSuite(
 	"Remove running status from existing comment when results come in",
 	async () => {
-		const commentBodyPath = testRoot(
-			"fixtures/test-results-existing-running.html"
-		);
-		const commentBody = await readFile(commentBodyPath, "utf-8");
+		const commentBody = await readFixture("test-results-existing-running.html");
 		const report = invokeBuildReport({
 			inputs: { reportId: testReportId },
 		});
 
 		const bodyHtml = parse(invokeGetCommentBody({ report, commentBody }));
 
-		const summaryId = getSummaryId({ reportId: testReportId });
-		const summaryStatus = bodyHtml.querySelector(`#${summaryId} .status a`);
-		const summaryData = bodyHtml.querySelector(`#${summaryId} em`);
-
-		const resultId = getBenchmarkSectionId(testReportId);
-		const resultStatus = bodyHtml.querySelector(`#${resultId} .status a`);
-		const resultData = bodyHtml.querySelector(`#${resultId} table`);
-
-		// console.log(formatHtml(bodyHtml.toString()));
-
-		assert.not.ok(summaryStatus, "Summary status link does not exist");
-		assert.not.ok(resultStatus, "Result status link does not exist");
-		assert.ok(summaryData, "Summary data is still present");
-		assert.ok(resultData, "Result data is still present");
+		assertUIState("Updated", bodyHtml, { isRunning: false, hasResults: true });
 	}
 );
 
@@ -385,10 +399,7 @@ updateCommentSuite(
 	async () => {
 		const newResults = generateNewTestResults();
 
-		const commentBodyPath = testRoot(
-			"fixtures/test-results-existing-comment.html"
-		);
-		const commentBody = await readFile(commentBodyPath, "utf-8");
+		const commentBody = await readFixture("test-results-existing-comment.html");
 		const origBodyHtml = parse(commentBody);
 
 		// Assert original body html is what we expect
@@ -406,25 +417,17 @@ updateCommentSuite(
 		});
 
 		const newBodyHtml = parse(invokeGetCommentBody({ report, commentBody }));
+		// console.log(formatHtml(bodyHtml.toString()));
 
-		const summaryId = getSummaryId({ reportId: testReportId });
-		const summaryStatus = newBodyHtml.querySelector(`#${summaryId} .status a`);
-		const summaryData = newBodyHtml.querySelector(`#${summaryId} em`);
-
-		const resultId = getBenchmarkSectionId(testReportId);
-		const resultStatus = newBodyHtml.querySelector(`#${resultId} .status a`);
-		const resultData = newBodyHtml.querySelector(`#${resultId} table`);
+		assertUIState("New results", newBodyHtml, {
+			isRunning: false,
+			hasResults: true,
+		});
 
 		resultTableCell = newBodyHtml
 			.querySelectorAll(`tbody tr`)[2]
 			.querySelectorAll("td")[3];
 
-		// console.log(formatHtml(bodyHtml.toString()));
-
-		assert.not.ok(summaryStatus, "Summary status link does not exist");
-		assert.not.ok(resultStatus, "Result status link does not exist");
-		assert.ok(summaryData, "Summary data is still present");
-		assert.ok(resultData, "Result data is still present");
 		assert.ok(
 			resultTableCell.text.includes("faster"),
 			"Result table is updated to show new results"
@@ -437,10 +440,7 @@ updateCommentSuite(
 	"Add new summary/results entry when new report with status comes in",
 	async () => {
 		const newId = "new-id";
-		const commentBodyPath = testRoot(
-			"fixtures/test-results-existing-comment.html"
-		);
-		const commentBody = await readFile(commentBodyPath, "utf-8");
+		const commentBody = await readFixture("test-results-existing-comment.html");
 		const report = invokeBuildReport({
 			inputs: { reportId: newId },
 			results: null,
@@ -449,35 +449,17 @@ updateCommentSuite(
 
 		const bodyHtml = parse(invokeGetCommentBody({ report, commentBody }));
 
-		const newSummaryData = bodyHtml.querySelector(
-			`#${getSummaryId({ reportId: newId })} em`
-		);
-		const newSummaryStatus = bodyHtml.querySelector(
-			`#${getSummaryId({ reportId: newId })} .status a`
-		);
+		assertUIState("Other job data", bodyHtml, {
+			isRunning: false,
+			hasResults: true,
+		});
 
-		const newResultData = bodyHtml.querySelector(
-			`#${getBenchmarkSectionId(newId)} table`
+		assertUIState(
+			"This job data",
+			bodyHtml,
+			{ isRunning: true, hasResults: false },
+			{ reportId: newId }
 		);
-		const newResultStatus = bodyHtml.querySelector(
-			`#${getBenchmarkSectionId(newId)} .status a`
-		);
-
-		const oldSummaryData = bodyHtml.querySelector(
-			`#${getSummaryId({ reportId: testReportId })} em`
-		);
-		const oldResultData = bodyHtml.querySelector(
-			`#${getBenchmarkSectionId(testReportId)} table`
-		);
-
-		// console.log(formatHtml(bodyHtml.toString()));
-
-		assert.not.ok(newSummaryData, "No summary data since it doesn't exist yet");
-		assert.not.ok(newResultData, "No result data since it doesn't exist yet");
-		assert.ok(newSummaryStatus, "New summary status link exists");
-		assert.ok(newResultStatus, "New result status link exists");
-		assert.ok(oldSummaryData, "Old summary data is still present");
-		assert.ok(oldResultData, "Old result data is still present");
 	}
 );
 
@@ -490,46 +472,26 @@ updateCommentSuite(
 			await readFile(testRoot("results/other-results.json"), "utf8")
 		);
 
-		const commentBodyPath = testRoot(
-			"fixtures/test-results-existing-comment.html"
-		);
-		const commentBody = await readFile(commentBodyPath, "utf-8");
+		const commentBody = await readFixture("test-results-existing-comment.html");
 		const report = invokeBuildReport({
 			inputs: { reportId: newId },
 			results: newResults,
 		});
 
 		const bodyHtml = parse(invokeGetCommentBody({ report, commentBody }));
-
-		const newSummaryData = bodyHtml.querySelector(
-			`#${getSummaryId({ reportId: newId })} em`
-		);
-		const newSummaryStatus = bodyHtml.querySelector(
-			`#${getSummaryId({ reportId: newId })} .status a`
-		);
-
-		const newResultData = bodyHtml.querySelector(
-			`#${getBenchmarkSectionId(newId)} table`
-		);
-		const newResultStatus = bodyHtml.querySelector(
-			`#${getBenchmarkSectionId(newId)} .status a`
-		);
-
-		const oldSummaryData = bodyHtml.querySelector(
-			`#${getSummaryId({ reportId: testReportId })} em`
-		);
-		const oldResultData = bodyHtml.querySelector(
-			`#${getBenchmarkSectionId(testReportId)} table`
-		);
-
 		// console.log(formatHtml(bodyHtml.toString()));
 
-		assert.ok(newSummaryData, "New summary data exists");
-		assert.ok(newResultData, "New result data exists");
-		assert.not.ok(newSummaryStatus, "New summary status link does not exist");
-		assert.not.ok(newResultStatus, "New result status link does not exist");
-		assert.ok(oldSummaryData, "Old summary data is still present");
-		assert.ok(oldResultData, "Old result data is still present");
+		assertUIState("Other job data", bodyHtml, {
+			isRunning: false,
+			hasResults: true,
+		});
+
+		assertUIState(
+			"This job data",
+			bodyHtml,
+			{ isRunning: false, hasResults: true },
+			{ reportId: newId }
+		);
 	}
 );
 
@@ -538,10 +500,7 @@ updateCommentSuite("Add new summary/results entry snapshot", async () => {
 		await readFile(testRoot("results/other-results.json"), "utf8")
 	);
 
-	const commentBodyPath = testRoot(
-		"fixtures/test-results-existing-comment.html"
-	);
-	const commentBody = await readFile(commentBodyPath, "utf-8");
+	const commentBody = await readFixture("test-results-existing-comment.html");
 	const report = invokeBuildReport({
 		inputs: { reportId: otherReportId },
 		results: newResults,
@@ -566,8 +525,7 @@ updateCommentSuite(
 			await readFile(testRoot("results/other-results.json"), "utf8")
 		);
 
-		const commentBodyPath = testRoot("fixtures/multiple-entries.html");
-		const commentBody = await readFile(commentBodyPath, "utf-8");
+		const commentBody = await readFixture("multiple-entries.html");
 		const report = invokeBuildReport({
 			inputs: { reportId: newId },
 			results: newResults,
@@ -626,8 +584,7 @@ updateCommentSuite(
 			await readFile(testRoot("results/other-results.json"), "utf8")
 		);
 
-		const commentBodyPath = testRoot("fixtures/multiple-entries.html");
-		const commentBody = await readFile(commentBodyPath, "utf-8");
+		const commentBody = await readFixture("multiple-entries.html");
 		const report = invokeBuildReport({
 			inputs: { reportId: newId },
 			results: newResults,
@@ -683,10 +640,7 @@ updateCommentSuite(
 	async () => {
 		const newResults = generateNewTestResults();
 
-		const commentBodyPath = testRoot(
-			"fixtures/test-results-existing-comment.html"
-		);
-		const commentBody = await readFile(commentBodyPath, "utf-8");
+		const commentBody = await readFixture("test-results-existing-comment.html");
 		const report = invokeBuildReport({
 			inputs: { reportId: testReportId },
 			results: newResults,
@@ -716,10 +670,7 @@ updateCommentSuite(
 	async () => {
 		const newResults = generateNewTestResults();
 
-		const commentBodyPath = testRoot(
-			"fixtures/test-results-existing-comment.html"
-		);
-		const commentBody = await readFile(commentBodyPath, "utf-8");
+		const commentBody = await readFixture("test-results-existing-comment.html");
 		const report = invokeBuildReport({
 			inputs: { reportId: testReportId },
 			results: newResults,
@@ -749,10 +700,7 @@ updateCommentSuite(
 	async () => {
 		const newResults = generateNewTestResults();
 
-		const commentBodyPath = testRoot(
-			"fixtures/test-results-existing-comment.html"
-		);
-		const commentBody = await readFile(commentBodyPath, "utf-8");
+		const commentBody = await readFixture("test-results-existing-comment.html");
 		const report = invokeBuildReport({
 			inputs: { reportId: testReportId },
 			results: newResults,
@@ -780,10 +728,7 @@ updateCommentSuite(
 updateCommentSuite(
 	"Renders unmodified comment body report is null",
 	async () => {
-		const commentBodyPath = testRoot(
-			"fixtures/test-results-existing-comment.html"
-		);
-		const commentBody = await readFile(commentBodyPath, "utf-8");
+		const commentBody = await readFixture("test-results-existing-comment.html");
 
 		const body = invokeGetCommentBody({
 			commentBody,
@@ -796,15 +741,12 @@ updateCommentSuite(
 );
 
 updateCommentSuite("Clears global status when results come in", async () => {
-	const commentBodyPath = testRoot("fixtures/new-comment-initialized.html");
-	const commentBody = await readFile(commentBodyPath, "utf-8");
+	const commentBody = await readFixture("new-comment-initialized.html");
 
 	const body = invokeGetCommentBody({ commentBody });
 	const html = formatHtml(body.toString());
 
-	const fixturePath = testRoot("fixtures/test-results-new-comment.html");
-	const fixture = await readFile(fixturePath, "utf-8");
-
+	const fixture = await readFixture("test-results-new-comment.html");
 	assertFixture(html, fixture, "Report body matches fixture");
 });
 
