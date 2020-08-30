@@ -8330,24 +8330,31 @@ function h(tag, attrs, ...children) {
 		}
 	}
 
-	// @ts-ignore
-	children = children.flat(Infinity);
-
 	const element = new HTMLElement(tag, { id, class: className }, attrStr);
-	element.set_content(
-		children.filter(Boolean).map((c) => {
-			if (typeof c == "number" || typeof c == "string") {
-				return new TextNode(c.toString());
-			} else if (c instanceof HTMLElement) {
-				c.parentNode = element;
-				return c;
-			} else {
-				return c;
-			}
-		})
-	);
+
+	children = flattenChildren(children, element);
+	element.set_content(children);
 
 	return element;
+}
+
+function flattenChildren(children, parent, flattened) {
+	if (!flattened) flattened = [];
+
+	if (!children || typeof children == "boolean") ; else if (typeof children == "number" || typeof children == "string") {
+		flattened.push(new TextNode(children.toString()));
+	} else if (children instanceof HTMLElement) {
+		children.parentNode = parent;
+		flattened.push(children);
+	} else if (Array.isArray(children)) {
+		for (let child of children) {
+			flattenChildren(child, parent, flattened);
+		}
+	} else {
+		flattened.push(children);
+	}
+
+	return flattened;
 }
 
 /**
