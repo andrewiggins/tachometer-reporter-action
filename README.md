@@ -106,7 +106,7 @@ jobs:
 - See what benchmarks are currently running
 <!-- - Keep a log of benchmark results from this PR -->
 
-### Summary
+### Summaries
 
 `tachometer-reporter-action` will generate a summary of results for you if you
 provide a `pr-bench-name` and `base-bench-name`. This summary will take the
