@@ -8499,12 +8499,12 @@ function ResultsEntry({
 )
 					);
 				})
-, h('li', null, `\n\nCommit: ${sha}\n\n`)
 , actionInfo.job.htmlUrl && (
 					h('li', null, "Built by: "
   , h('a', { href: actionInfo.job.htmlUrl,}, actionInfo.run.name)
 )
 				)
+, h('li', null, `\n\nCommit: ${sha}\n\n`)
 )
 , table
 )

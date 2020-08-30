@@ -155,12 +155,12 @@ function ResultsEntry({
 						</li>
 					);
 				})}
-				<li>{`\n\nCommit: ${sha}\n\n`}</li>
 				{actionInfo.job.htmlUrl && (
 					<li>
 						Built by: <a href={actionInfo.job.htmlUrl}>{actionInfo.run.name}</a>
 					</li>
 				)}
+				<li>{`\n\nCommit: ${sha}\n\n`}</li>
 			</ul>
 			{table}
 		</div>
