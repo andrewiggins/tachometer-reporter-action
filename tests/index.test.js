@@ -1,4 +1,4 @@
-const { readFile, writeFile } = require("fs/promises");
+const { writeFile } = require("fs/promises");
 const { suite } = require("uvu");
 const assert = require("uvu/assert");
 const fakeTimers = require("@sinonjs/fake-timers");
@@ -9,7 +9,7 @@ const {
 	assertFixture,
 	testRoot,
 	formatHtml,
-	readFixture: rawReadFixture,
+	readFixture: readRawFixture,
 } = require("./utils");
 const { createCommentContext } = require("../lib/comments");
 
@@ -91,8 +91,18 @@ function addFooter(
 	return body + "\n" + footer;
 }
 
-async function readFixture(fixtureName) {
-	return formatHtml(addFooter(await rawReadFixture(fixtureName)));
+/**
+ * @param {string} fixtureName
+ * @param {boolean} [addDefaultFooter]
+ */
+async function readFixture(fixtureName, addDefaultFooter = true) {
+	let fixture = await readRawFixture(fixtureName);
+
+	if (addDefaultFooter) {
+		fixture = formatHtml(addFooter(fixture));
+	}
+
+	return fixture;
 }
 
 /**
@@ -252,8 +262,9 @@ setupClock(runningUpdateSuite);
  * @param {Partial<import('../src/global').Inputs>} inputs
  */
 async function runRunningUpdateDoNothingScenario(inputs) {
-	const commentPath = testRoot("fixtures/test-results-new-comment.html");
-	const body = addFooter(await readFile(commentPath, "utf8"));
+	const body = addFooter(
+		await readFixture("test-results-new-comment.html", false)
+	);
 
 	const github = createGitHubClient();
 	await github.issues.createComment({ body });
@@ -307,8 +318,9 @@ runningUpdateSuite(
 runningUpdateSuite(
 	"Updates comment with running status if report id is non-null and initialize is null",
 	async () => {
-		const commentPath = testRoot("fixtures/test-results-existing-comment.html");
-		const body = addFooter(await readFile(commentPath, "utf8"));
+		const body = addFooter(
+			await readFixture("test-results-existing-comment.html", false)
+		);
 
 		const github = createGitHubClient();
 		await github.issues.createComment({ body });
@@ -333,8 +345,9 @@ runningUpdateSuite(
 runningUpdateSuite(
 	"Updates comment with running status if report id is non-null and initialize is true",
 	async () => {
-		const commentPath = testRoot("fixtures/test-results-existing-comment.html");
-		const body = addFooter(await readFile(commentPath, "utf8"));
+		const body = addFooter(
+			await readFixture("test-results-existing-comment.html", false)
+		);
 
 		const github = createGitHubClient();
 		await github.issues.createComment({ body });
@@ -479,8 +492,9 @@ updatedResultsSuite.after(() => {
  * @param {Partial<import('../src/global').Inputs>} inputs
  */
 async function runUpdatedResultsUpdateScenario(inputs) {
-	const commentPath = testRoot("fixtures/test-results-new-comment.html");
-	const body = addFooter(await readFile(commentPath, "utf8"));
+	const body = addFooter(
+		await readFixture("test-results-new-comment.html", false)
+	);
 
 	const github = createGitHubClient();
 	await github.issues.createComment({ body });
