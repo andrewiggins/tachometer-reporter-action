@@ -39,12 +39,29 @@ function assertFixture(actual, expected, message) {
 	}
 }
 
-const getBenchmarkSectionId = (id) =>
-	`tachometer-reporter-action--results-${id ? id : ""}`;
-const getSummaryId = (id) =>
-	`tachometer-reporter-action--summary-${id ? id : ""}`;
-const getSummaryListId = () => `tachometer-reporter-action--summaries`;
+const testResultsHashId = "JQx4P-VUyiFWEMlMIUU5w9uyy6s";
+const defaultMeasurementId = "vLpvdPi0hOozeUB9NMaWIJ9oUSA";
+
+const getBenchmarkSectionId = (id = testResultsHashId) =>
+	`tachometer-reporter-action--results-${id}`;
 const getResultsContainerId = () => `tachometer-reporter-action--results`;
+
+/**
+ * @param {{ measurementId?: string; reportId?: string; }} [params]
+ */
+function getSummaryId({
+	reportId = testResultsHashId,
+	measurementId = defaultMeasurementId,
+} = {}) {
+	return `tachometer-reporter-action--summary::${measurementId}::${reportId}`;
+}
+
+/**
+ * @param {string} [measurementId]
+ */
+function getSummaryListId(measurementId = defaultMeasurementId) {
+	return `tachometer-reporter-action--summaries::${measurementId}`;
+}
 
 /**
  * @template T
@@ -86,6 +103,8 @@ module.exports = {
 	shouldAssertFixtures,
 	assertFixture,
 	getBenchmarkSectionId,
+	testResultsHashId,
+	defaultMeasurementId,
 	getSummaryId,
 	getSummaryListId,
 	getResultsContainerId,

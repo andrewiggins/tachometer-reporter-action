@@ -16,7 +16,10 @@ const resultEntryClass = "result-entry";
 
 /** @type {(id: string) => string} */
 const getId = (id) => `tachometer-reporter-action--${id}`;
+
 const getResultsContainerId = () => getId("results");
+const getBenchmarkSectionId = (reportId) => getId(`results-${reportId}`);
+
 const getSummaryContainerId = () => getId("summaries");
 
 /** @type {(measurementId: string) => string} */
@@ -24,7 +27,6 @@ const getMeasurementSummaryListId = (measurementId) =>
 	getId(`summaries::${measurementId}`);
 
 /** @type {(reportId: string) => string} */
-const getBenchmarkSectionId = (reportId) => getId(`results-${reportId}`);
 
 /** @type {(measurementId: string, reportId: string) => string} */
 const getSummaryId = (measurementId, reportId) =>

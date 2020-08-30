@@ -8,6 +8,7 @@ const {
 	copyTestResults,
 	assertFixture,
 	shouldAssertFixtures,
+	testResultsHashId,
 } = require("./utils");
 const { invokeBuildReport } = require("./invokeBuildReport");
 
@@ -54,10 +55,8 @@ buildReportSuite("Uses input.reportId", () => {
 });
 
 buildReportSuite("Generates reportId if not given", () => {
-	const expectedId = "fXZiwODNGd0dkOsS2QmPDRQGacM";
 	const report = invokeBuildReport();
-
-	assert.is(report.id, expectedId, "report.id matches expectation");
+	assert.is(report.id, testResultsHashId, "report.id matches expectation");
 });
 
 buildReportSuite("Summarizes one benchmark correctly", () => {

@@ -12,6 +12,7 @@ const {
 	getSummaryId,
 	getSummaryListId,
 	getResultsContainerId,
+	skipSuite,
 } = require("./utils");
 const { invokeBuildReport } = require("./invokeBuildReport");
 const { defaultInputs, testLogger } = require("./mocks/actions");
@@ -103,7 +104,7 @@ newCommentSuite("New comment snapshot with results", async () => {
 newCommentSuite("Uses input.reportId", () => {
 	const reportId = "test-input-id";
 	const bodyIdRe = new RegExp(`<div id="${getBenchmarkSectionId(reportId)}"`);
-	const summaryIdRe = new RegExp(`<div id="${getSummaryId(reportId)}"`);
+	const summaryIdRe = new RegExp(`<div id="${getSummaryId({ reportId })}"`);
 
 	const body = invokeGetCommentBody({ inputs: { reportId } });
 
@@ -112,9 +113,8 @@ newCommentSuite("Uses input.reportId", () => {
 });
 
 newCommentSuite("Generates reportId if not given", () => {
-	const expectedId = "fXZiwODNGd0dkOsS2QmPDRQGacM";
-	const bodyIdRe = new RegExp(`<div id="${getBenchmarkSectionId(expectedId)}"`);
-	const summaryIdRe = new RegExp(`<div id="${getSummaryId(expectedId)}"`);
+	const bodyIdRe = new RegExp(`<div id="${getBenchmarkSectionId()}"`);
+	const summaryIdRe = new RegExp(`<div id="${getSummaryId()}"`);
 
 	const body = invokeGetCommentBody();
 
@@ -212,7 +212,7 @@ newCommentSuite(
 
 		const bodyHtml = parse(invokeGetCommentBody({ report }));
 
-		const summaryId = getSummaryId(testReportId);
+		const summaryId = getSummaryId({ reportId: testReportId });
 		const summaryStatus = bodyHtml.querySelector(`#${summaryId} .status span`);
 
 		const resultId = getBenchmarkSectionId(testReportId);
@@ -273,7 +273,7 @@ updateCommentSuite(
 
 		const bodyHtml = parse(invokeGetCommentBody({ report, commentBody }));
 
-		const summaryId = getSummaryId(testReportId);
+		const summaryId = getSummaryId({ reportId: testReportId });
 		const summaryStatus = bodyHtml.querySelector(`#${summaryId} .status a`);
 		const summaryData = bodyHtml.querySelector(`#${summaryId} em`);
 
@@ -331,7 +331,7 @@ updateCommentSuite(
 
 		const bodyHtml = parse(invokeGetCommentBody({ report, commentBody }));
 
-		const summaryId = getSummaryId(testReportId);
+		const summaryId = getSummaryId({ reportId: testReportId });
 		const summaryStatus = bodyHtml.querySelector(`#${summaryId} .status span`);
 		const summaryData = bodyHtml.querySelector(`#${summaryId} em`);
 
@@ -362,7 +362,7 @@ updateCommentSuite(
 
 		const bodyHtml = parse(invokeGetCommentBody({ report, commentBody }));
 
-		const summaryId = getSummaryId(testReportId);
+		const summaryId = getSummaryId({ reportId: testReportId });
 		const summaryStatus = bodyHtml.querySelector(`#${summaryId} .status a`);
 		const summaryData = bodyHtml.querySelector(`#${summaryId} em`);
 
@@ -407,7 +407,7 @@ updateCommentSuite(
 
 		const newBodyHtml = parse(invokeGetCommentBody({ report, commentBody }));
 
-		const summaryId = getSummaryId(testReportId);
+		const summaryId = getSummaryId({ reportId: testReportId });
 		const summaryStatus = newBodyHtml.querySelector(`#${summaryId} .status a`);
 		const summaryData = newBodyHtml.querySelector(`#${summaryId} em`);
 
@@ -449,9 +449,11 @@ updateCommentSuite(
 
 		const bodyHtml = parse(invokeGetCommentBody({ report, commentBody }));
 
-		const newSummaryData = bodyHtml.querySelector(`#${getSummaryId(newId)} em`);
+		const newSummaryData = bodyHtml.querySelector(
+			`#${getSummaryId({ reportId: newId })} em`
+		);
 		const newSummaryStatus = bodyHtml.querySelector(
-			`#${getSummaryId(newId)} .status a`
+			`#${getSummaryId({ reportId: newId })} .status a`
 		);
 
 		const newResultData = bodyHtml.querySelector(
@@ -462,7 +464,7 @@ updateCommentSuite(
 		);
 
 		const oldSummaryData = bodyHtml.querySelector(
-			`#${getSummaryId(testReportId)} em`
+			`#${getSummaryId({ reportId: testReportId })} em`
 		);
 		const oldResultData = bodyHtml.querySelector(
 			`#${getBenchmarkSectionId(testReportId)} table`
@@ -499,9 +501,11 @@ updateCommentSuite(
 
 		const bodyHtml = parse(invokeGetCommentBody({ report, commentBody }));
 
-		const newSummaryData = bodyHtml.querySelector(`#${getSummaryId(newId)} em`);
+		const newSummaryData = bodyHtml.querySelector(
+			`#${getSummaryId({ reportId: newId })} em`
+		);
 		const newSummaryStatus = bodyHtml.querySelector(
-			`#${getSummaryId(newId)} .status a`
+			`#${getSummaryId({ reportId: newId })} .status a`
 		);
 
 		const newResultData = bodyHtml.querySelector(
@@ -512,7 +516,7 @@ updateCommentSuite(
 		);
 
 		const oldSummaryData = bodyHtml.querySelector(
-			`#${getSummaryId(testReportId)} em`
+			`#${getSummaryId({ reportId: testReportId })} em`
 		);
 		const oldResultData = bodyHtml.querySelector(
 			`#${getBenchmarkSectionId(testReportId)} table`
@@ -555,7 +559,7 @@ updateCommentSuite("Add new summary/results entry snapshot", async () => {
 });
 
 updateCommentSuite(
-	"Insert a benchmark with a lower job index at the front",
+	"Insert a benchmark with a lower report title at the front",
 	async () => {
 		const newId = "another-new-id";
 		const newResults = JSON.parse(
@@ -582,17 +586,17 @@ updateCommentSuite(
 
 		assert.equal(
 			summaries[0].getAttribute("id"),
-			getSummaryId(newId),
+			getSummaryId({ reportId: newId }),
 			"First summary should be new report"
 		);
 		assert.equal(
 			summaries[1].getAttribute("id"),
-			getSummaryId(testReportId),
+			getSummaryId({ reportId: testReportId }),
 			"Second summary should be test results"
 		);
 		assert.equal(
 			summaries[2].getAttribute("id"),
-			getSummaryId(otherReportId),
+			getSummaryId({ reportId: otherReportId }),
 			"Third summary should be other test results"
 		);
 
@@ -615,7 +619,7 @@ updateCommentSuite(
 );
 
 updateCommentSuite(
-	"Insert a benchmark with the higher job index at the end of the benchmarks",
+	"Insert a benchmark with the higher report title at the end of the benchmarks",
 	async () => {
 		const newId = "zz-another-new-id";
 		const newResults = JSON.parse(
@@ -627,13 +631,6 @@ updateCommentSuite(
 		const report = invokeBuildReport({
 			inputs: { reportId: newId },
 			results: newResults,
-			actionInfo: {
-				...defaultActionInfo,
-				job: {
-					...defaultActionInfo.job,
-					index: defaultActionInfo.job.index + 10,
-				},
-			},
 		});
 
 		const bodyHtml = parse(invokeGetCommentBody({ report, commentBody }));
@@ -649,17 +646,17 @@ updateCommentSuite(
 
 		assert.equal(
 			summaries[0].getAttribute("id"),
-			getSummaryId(testReportId),
+			getSummaryId({ reportId: testReportId }),
 			"First summary should be test results"
 		);
 		assert.equal(
 			summaries[1].getAttribute("id"),
-			getSummaryId(otherReportId),
+			getSummaryId({ reportId: otherReportId }),
 			"Second summary should be other test results"
 		);
 		assert.equal(
 			summaries[2].getAttribute("id"),
-			getSummaryId(newId),
+			getSummaryId({ reportId: newId }),
 			"Third summary should be new results"
 		);
 
