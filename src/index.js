@@ -81,6 +81,9 @@ function buildReport(
 
 	if (resultsByMeasurement) {
 		for (let [measurementId, benches] of resultsByMeasurement) {
+			// TODO: Need to adjust benches differences array to accommodate reduced
+			// comparisons to just benches of same measurement. Handcrafted test
+			// results file doesn't appropriately replicate this scenario
 			summaries.push({
 				measurementId,
 				measurement: benches[0].measurement,
