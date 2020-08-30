@@ -6,12 +6,21 @@ const prettier = require("prettier");
 const testRoot = (...args) => path.join(__dirname, ...args);
 
 const testResultsPath = testRoot("results/test-results.json");
+const multiMeasureResultsPath = testRoot("results/multi-measure-results.json");
 
 /** @type {import('../src/global').TachResults} */
 const testResults = JSON.parse(readFileSync(testResultsPath, "utf8"));
 
 /** @type {() => import('../src/global').TachResults} */
 const copyTestResults = () => JSON.parse(JSON.stringify(testResults));
+
+const multiMeasureResults = JSON.parse(
+	readFileSync(multiMeasureResultsPath, "utf8")
+);
+
+/** @type {() => import('../src/global').TachResults} */
+const getMultiMeasureResults = () =>
+	JSON.parse(JSON.stringify(multiMeasureResults));
 
 /** @type {(html: string) => string} */
 const formatHtml = (html) =>
@@ -72,6 +81,7 @@ module.exports = {
 	skipSuite,
 	testRoot,
 	copyTestResults,
+	getMultiMeasureResults,
 	formatHtml,
 	shouldAssertFixtures,
 	assertFixture,

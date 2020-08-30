@@ -6,6 +6,7 @@ const {
 	testRoot,
 	formatHtml,
 	copyTestResults,
+	getMultiMeasureResults,
 	assertFixture,
 	getBenchmarkSectionId,
 	getSummaryId,
@@ -229,7 +230,21 @@ newCommentSuite("Renders generic comment body if report is null", async () => {
 	const fixturePath = testRoot("fixtures/new-comment-initialized.html");
 	const fixture = await readFile(fixturePath, "utf-8");
 
-	assertFixture(html, fixture, "Report body matches fixture");
+	assertFixture(html, fixture, "Comment body matches fixture");
+});
+
+newCommentSuite("Renders multiple measures in report correctly", async () => {
+	const results = getMultiMeasureResults();
+	const body = invokeGetCommentBody({ report: invokeBuildReport({ results }) });
+	const actualHtml = formatHtml(body.toString());
+
+	const fixturePath = testRoot("fixtures/multi-measure-new-comment.html");
+	const fixture = await readFile(fixturePath, "utf-8");
+
+	// Uncomment to update fixture
+	// await writeFile(fixturePath, actualHtml, "utf-8");
+
+	assertFixture(actualHtml, fixture, "Comment body matches fixture");
 });
 
 //#endregion
