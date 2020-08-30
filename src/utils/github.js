@@ -120,6 +120,30 @@ async function getCommit(context, github) {
 		.then((res) => res.data);
 }
 
+/**
+ * Create a status check, and return a function that updates (completes) it.
+ * @param {import('../global').GitHubActionClient} github
+ * @param {import('../global').GitHubActionContext} context
+ */
+async function createCheck(github, context) {
+	const check = await github.checks.create({
+		...context.repo,
+		name: "Tachometer Benchmarks",
+		head_sha: context.payload.pull_request.head.sha,
+		status: "in_progress",
+	});
+
+	return async (details) => {
+		await github.checks.update({
+			...context.repo,
+			check_run_id: check.data.id,
+			completed_at: new Date().toISOString(),
+			status: "completed",
+			...details,
+		});
+	};
+}
+
 module.exports = {
 	getActionInfo,
 	getCommit,
