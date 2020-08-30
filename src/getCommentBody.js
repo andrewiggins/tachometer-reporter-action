@@ -8,17 +8,30 @@ const {
 	runtimeConfidenceIntervalDimension,
 	measurementName,
 } = require("./utils/tachometer");
+const { defaultMeasure, defaultMeasureId } = require("./utils/hash");
 
 const globalStatusClass = "global-status";
 const statusClass = "status";
 const resultEntryClass = "result-entry";
 
+/** @type {(id: string) => string} */
 const getId = (id) => `tachometer-reporter-action--${id}`;
 const getResultsContainerId = () => getId("results");
-const getSummaryListId = () => getId("summaries");
+const getSummaryContainerId = () => getId("summaries");
 
-const getBenchmarkSectionId = (id) => getId(`results-${id}`);
-const getSummaryId = (id) => getId(`summary-${id}`);
+/** @type {(measurementId: string) => string} */
+const getMeasurementSummaryListId = (measurementId) =>
+	getId(`summaries::${measurementId}`);
+
+/** @type {(reportId: string) => string} */
+const getBenchmarkSectionId = (reportId) => getId(`results-${reportId}`);
+
+/** @type {(measurementId: string, reportId: string) => string} */
+const getSummaryId = (measurementId, reportId) =>
+	getId(`summary::${measurementId}::${reportId}`);
+
+/** @type {(reportId: string) => string} */
+const getSummaryClass = (reportId) => `summary::${reportId}`;
 
 /**
  * @typedef {(props: any) => import('node-html-parser').HTMLElement} Component
@@ -236,6 +249,7 @@ function Status({ actionInfo, icon }) {
 /**
  * @typedef SummaryProps
  * @property {string} reportId
+ * @property {string} measurementId
  * @property {string} title
  * @property {import('./global').BenchmarkResult[]} benchmarks
  * @property {string} prBenchName
@@ -247,6 +261,7 @@ function Status({ actionInfo, icon }) {
  */
 function Summary({
 	reportId,
+	measurementId,
 	title,
 	benchmarks,
 	prBenchName,
@@ -331,7 +346,8 @@ function Summary({
 
 	return (
 		<div
-			id={getSummaryId(reportId)}
+			id={getSummaryId(measurementId, reportId)}
+			class={getSummaryClass(reportId)}
 			data-run-number={actionInfo.run.number.toString()}
 		>
 			<span class={statusClass}>{status}</span>
@@ -357,10 +373,29 @@ function Summary({
 }
 
 /**
- * @param {{ report: import('./global').Report; }} props
+ * @param {{ title: string; summary: JSX.Element; }} props
  */
-function SummaryListItem({ report }) {
-	return <li data-sort-key={report.title}>{report.summary}</li>;
+function SummaryListItem({ title, summary }) {
+	return <li data-sort-key={title}>{summary}</li>;
+}
+
+/**
+ * @param {{ title: string; summary: import("./global").MeasurementSummary }} props
+ */
+function SummarySection({ title, summary }) {
+	let header = null;
+	if (summary.measurement !== defaultMeasure) {
+		header = <h4>{summary.measurement.name}</h4>;
+	}
+
+	return (
+		<div data-sort-key={getMeasurementSortKey(summary.measurement)}>
+			{header}
+			<ul id={getMeasurementSummaryListId(summary.measurementId)}>
+				<SummaryListItem title={title} summary={summary.summary} />
+			</ul>
+		</div>
+	);
 }
 
 /**
@@ -375,9 +410,12 @@ function NewCommentBody({ inputs, report }) {
 				{report == null &&
 					"A summary of the benchmark results will show here once they finish."}
 			</p>
-			<ul id={getSummaryListId()}>
-				{report != null && <SummaryListItem report={report} />}
-			</ul>
+			<div id={getSummaryContainerId()}>
+				{report != null &&
+					report.summaries.map((summary) => (
+						<SummarySection title={report.title} summary={summary} />
+					))}
+			</div>
 			<h3>Results</h3>
 			<p class={globalStatusClass}>
 				{report == null &&
@@ -412,6 +450,17 @@ function Icon() {
 			<line x1="6" y1="20" x2="6" y2="14" />
 		</svg>
 	);
+}
+
+/**
+ * @param {import("./global").Measurement} measurement
+ */
+function getMeasurementSortKey(measurement) {
+	if (measurement == defaultMeasure) {
+		return "000-default";
+	} else {
+		return measurement.name;
+	}
 }
 
 /**
@@ -468,7 +517,9 @@ function getCommentBody(inputs, report, commentBody, logger) {
 		.querySelectorAll(`.${globalStatusClass}`)
 		.forEach((el) => el.set_content(""));
 
-	updateSummary(inputs, report, commentHtml, logger);
+	report.summaries.forEach((summaryData) =>
+		updateSummary(inputs, report, summaryData, commentHtml, logger)
+	);
 	updateResults(inputs, report, commentHtml, logger);
 
 	return commentHtml.toString();
@@ -477,23 +528,71 @@ function getCommentBody(inputs, report, commentBody, logger) {
 /**
  * @param {import('./global').Inputs} inputs
  * @param {import('./global').Report} report
+ * @param {import('./global').MeasurementSummary} summaryData
  * @param {import('node-html-parser').HTMLElement} commentHtml
  * @param {import('./global').Logger} logger
  */
-function updateSummary(inputs, report, commentHtml, logger) {
-	const summaryContainer = commentHtml.querySelector(`#${getSummaryListId()}`);
+function updateSummary(inputs, report, summaryData, commentHtml, logger) {
+	if (report.isRunning) {
+		// Because this report is currently running, we don't have any results,
+		// meaning we don't yet know what measurements this report will generate.
+		// Because of this lack of knowledge, let's first check to see if any
+		// summary line items exist for this report (by looking for summary line
+		// items with a className containing this report id)
 
-	const summaryId = getSummaryId(report.id);
+		const selector = `.${getSummaryClass(report.id)}`;
+		const existingSummaries = commentHtml.querySelectorAll(selector);
+		if (existingSummaries && existingSummaries.length > 0) {
+			existingSummaries.forEach((summary) => {
+				logger.info(`Adding status info to summary with id "${summary.id}"...`);
+
+				const summaryStatus = summary.querySelector(`.${statusClass}`);
+				summaryStatus.set_content(report.status);
+			});
+
+			return;
+		}
+
+		// We did not find any existing summaries. Since we don't know what
+		// measurements this summary will go in we'll have to add to the "default"
+		// measurement for now. When the real results come in, we'll remove this
+		// summary and put the summaries under the right measurement header
+		//
+		// When the report is running, all of it's summary default to using the
+		// defaultMeasure as it's measure so we can rely on the logic below to
+		// handle this case.
+	}
+
+	if (summaryData.measurement !== defaultMeasure) {
+		// Benchmark results can't include default measures and non-default
+		// measures, so if this summary's measure is not the defaultMeasure, then
+		// any existing defaultMeasures for this report must've been added while the
+		// report is running. Let's remove them since that isn't true anymore.
+		const defaultId = getSummaryId(defaultMeasureId, report.id);
+		const defaultItem = commentHtml.querySelector(`#${defaultId}`);
+		if (defaultItem) {
+			const defaultListItem = defaultItem.parentNode;
+			defaultListItem.parentNode.removeChild(defaultListItem);
+		}
+	}
+
+	const measurementListId = `#${getMeasurementSummaryListId(
+		summaryData.measurementId
+	)}`;
+	const measurementList = commentHtml.querySelector(measurementListId);
+
+	const summaryId = getSummaryId(summaryData.measurementId, report.id);
 	const summary = commentHtml.querySelector(`#${summaryId}`);
-	const summaryStatus = summary?.querySelector(`.${statusClass}`);
+	// const summaryStatus = summary?.querySelector(`.${statusClass}`);
 
 	if (summary) {
 		const htmlRunNumber = parseInt(summary.getAttribute("data-run-number"), 10);
 
-		if (report.isRunning) {
-			logger.info(`Adding status info to summary with id "${summaryId}"...`);
-			summaryStatus.set_content(report.status);
-		} else if (htmlRunNumber > report.actionInfo.run.number) {
+		// if (report.isRunning) {
+		// 	logger.info(`Adding status info to summary with id "${summaryId}"...`);
+		// 	summaryStatus.set_content(report.status);
+		// } else if (htmlRunNumber > report.actionInfo.run.number) {
+		if (htmlRunNumber > report.actionInfo.run.number) {
 			logger.info(
 				`Existing summary is from a run (#${htmlRunNumber}) that is more recent than the` +
 					`current run (#${report.actionInfo.run.number}). Not updating the results.`
@@ -501,14 +600,32 @@ function updateSummary(inputs, report, commentHtml, logger) {
 		} else {
 			logger.info(`Updating summary with id "${summaryId}"...`);
 			// @ts-ignore - Can safely assume summary.parentNode is HTMLElement
-			summary.parentNode.exchangeChild(summary, report.summary);
+			summary.parentNode.exchangeChild(summary, summaryData.summary);
 		}
+	} else if (measurementList) {
+		logger.info(
+			`No summary found with id "${summaryId}" but found the right measurement section so adding this summary to that section.`
+		);
+
+		insertNewBenchData(
+			measurementList,
+			report.title,
+			<SummaryListItem title={report.title} summary={summaryData.summary} />
+		);
 	} else {
-		logger.info(`No summary found with id "${summaryId}" so adding new one.`);
+		logger.info(
+			`No summary found with id "${summaryId}" and no measurement section with id "${measurementListId}" so creating a new one.`
+		);
+
+		const summaryContainerId = getSummaryContainerId();
+		const summaryContainer = commentHtml.querySelector(
+			`#${summaryContainerId}`
+		);
+
 		insertNewBenchData(
 			summaryContainer,
-			report.title,
-			<SummaryListItem report={report} />
+			getMeasurementSortKey(summaryData.measurement),
+			<SummarySection title={report.title} summary={summaryData} />
 		);
 	}
 }

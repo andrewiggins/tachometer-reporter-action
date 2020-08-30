@@ -1,5 +1,4 @@
 const { readFile } = require("fs").promises;
-const crypto = require("crypto");
 const {
 	h,
 	getCommentBody,
@@ -9,47 +8,13 @@ const {
 } = require("./getCommentBody");
 const { getActionInfo, getCommit } = require("./utils/github");
 const { createCommentContext, postOrUpdateComment } = require("./comments");
-const { patchResults } = require("./utils/tachometer");
-
-function hash(s) {
-	return crypto
-		.createHash("sha1")
-		.update(s)
-		.digest("base64")
-		.replace(/\+/g, "-")
-		.replace(/\//g, "_")
-		.replace(/=*$/, "");
-}
-
-/**
- * @param {import('./global').Measurement} measurement
- */
-function getMeasurementId(measurement) {
-	let otherData = "";
-	if (measurement.mode == "expression") {
-		otherData = measurement.expression;
-	} else if (measurement.mode == "performance") {
-		otherData = measurement.entryName;
-	}
-
-	return hash(`${measurement.name}::${measurement.mode}::${otherData}`);
-}
-
-/**
- * @param {import('./global').PatchedBenchmarkResult[]} benchmarks
- */
-function getReportId(benchmarks) {
-	/** @type {(b: import('./global').BenchmarkResult) => string} */
-	const getBrowserKey = (b) =>
-		b.browser.name + (b.browser.headless ? "-headless" : "");
-
-	const benchKeys = benchmarks.map((b) => {
-		const measureId = getMeasurementId(b.measurement);
-		return [b.name, b.version, measureId, getBrowserKey(b)].join(",");
-	});
-
-	return hash(benchKeys.join("::"));
-}
+const { normalizeResults } = require("./utils/tachometer");
+const {
+	getMeasurementId,
+	getReportId,
+	defaultMeasure,
+	defaultMeasureId,
+} = require("./utils/hash");
 
 /**
  * @param {import("./global").CommitInfo} commitInfo
@@ -78,13 +43,20 @@ function buildReport(
 	/** @type {import('./global').ResultsByMeasurement} */
 	let resultsByMeasurement;
 
+	/** @type {import("./global").MeasurementSummary[]} */
+	let summaries = [];
+
 	if (tachResults) {
-		tachResults = patchResults(tachResults);
+		tachResults = normalizeResults(tachResults);
 		benchmarks = tachResults.benchmarks;
 
 		resultsByMeasurement = new Map();
 		for (let bench of benchmarks) {
-			let measurementId = getMeasurementId(bench.measurement);
+			let measurementId =
+				bench.measurement === defaultMeasure
+					? defaultMeasureId
+					: getMeasurementId(bench.measurement);
+
 			if (!resultsByMeasurement.has(measurementId)) {
 				resultsByMeasurement.set(measurementId, []);
 			}
@@ -107,6 +79,46 @@ function buildReport(
 		);
 	}
 
+	if (resultsByMeasurement) {
+		for (let [measurementId, benches] of resultsByMeasurement) {
+			summaries.push({
+				measurementId,
+				measurement: benches[0].measurement,
+				summary: (
+					<Summary
+						reportId={reportId}
+						measurementId={measurementId}
+						title={title}
+						benchmarks={benches}
+						prBenchName={inputs.prBenchName}
+						baseBenchName={inputs.baseBenchName}
+						actionInfo={actionInfo}
+						isRunning={isRunning}
+					/>
+				),
+			});
+		}
+	} else if (isRunning) {
+		// We don't have results meaning we don't know what measurements this report
+		// will use, so default to defaultMeasure for now
+		summaries.push({
+			measurementId: defaultMeasureId,
+			measurement: defaultMeasure,
+			summary: (
+				<Summary
+					reportId={reportId}
+					measurementId={defaultMeasureId}
+					title={title}
+					benchmarks={benchmarks}
+					prBenchName={inputs.prBenchName}
+					baseBenchName={inputs.baseBenchName}
+					actionInfo={actionInfo}
+					isRunning={isRunning}
+				/>
+			),
+		});
+	}
+
 	return {
 		id: reportId,
 		title,
@@ -114,7 +126,6 @@ function buildReport(
 		baseBenchName: inputs.baseBenchName,
 		actionInfo: actionInfo,
 		isRunning,
-		// results: benchmarks,
 		status: isRunning ? <Status actionInfo={actionInfo} icon={true} /> : null,
 		body: (
 			<ResultsEntry
@@ -125,17 +136,7 @@ function buildReport(
 				commitInfo={commitInfo}
 			/>
 		),
-		summary: (
-			<Summary
-				reportId={reportId}
-				title={title}
-				benchmarks={benchmarks}
-				prBenchName={inputs.prBenchName}
-				baseBenchName={inputs.baseBenchName}
-				actionInfo={actionInfo}
-				isRunning={isRunning}
-			/>
-		),
+		summaries,
 	};
 }
 
@@ -208,7 +209,11 @@ async function reportTachRunning(
 			...report,
 			status: report.status?.toString(),
 			body: report.body?.toString(),
-			summary: report.summary?.toString(),
+			summaries: report.summaries?.map((m) => ({
+				measurementId: m.measurementId,
+				measurement: m.measurement,
+				summary: m.summary.toString(),
+			})),
 		};
 	} else {
 		return null;
@@ -272,7 +277,11 @@ async function reportTachResults(
 		...report,
 		status: report.status?.toString(),
 		body: report.body?.toString(),
-		summary: report.summary?.toString(),
+		summaries: report.summaries?.map((m) => ({
+			measurementId: m.measurementId,
+			measurement: m.measurement,
+			summary: m.summary.toString(),
+		})),
 	};
 }
 

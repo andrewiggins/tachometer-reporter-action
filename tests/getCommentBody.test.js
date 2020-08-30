@@ -158,10 +158,12 @@ newCommentSuite("Generates full comment if comment null", () => {
 	assert.ok(body.includes("Tachometer Benchmark Results"), "Includes title");
 	assert.ok(body.includes("<h3>Summary</h3>"), "Includes summary title");
 	assert.ok(body.includes("<h3>Results</h3>"), "Includes results title");
-	assert.ok(
-		body.includes(report.summary.toString()),
-		"Includes report.summary"
-	);
+	report.summaries.forEach((m, i) => {
+		assert.ok(
+			body.includes(m.summary.toString()),
+			`Includes report.summaries[${i}]`
+		);
+	});
 	assert.ok(body.includes(report.body.toString()), "Includes report.body");
 });
 
@@ -837,9 +839,13 @@ updateCommentSuite.run();
 //
 // Summary Tests:
 // - multi-measure new comment with results
-// - multi-measure add results to existing comment
+// - multi-measure add results to existing running comment
+// - multi-measure add results to existing results comment
+// - multi-measure add results to existing empty comment
 // - multi-measure new comment running (no results)
-// - multi-measure add running to existing comment (no results)
+// - multi-measure add running to existing running comment
+// - multi-measure add running to existing results comment
+// - multi-measure add running to existing empty comment
 // - multi-measure update from new comment running to result (status is in
 //   default section)
 // - multi-measure update from results to running (no results)

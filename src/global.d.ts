@@ -96,6 +96,12 @@ interface PatchedTachResults extends TachResults {
 
 type ResultsByMeasurement = Map<string, PatchedBenchmarkResult[]>;
 
+interface MeasurementSummary {
+	measurementId: string;
+	measurement: Measurement;
+	summary: JSX.Element | null;
+}
+
 interface Report {
 	id: string;
 	title: string;
@@ -105,13 +111,17 @@ interface Report {
 	isRunning: boolean;
 	// results: BenchmarkResult[];
 	status: JSX.Element | null;
-	summary: JSX.Element | null;
+	summaries: MeasurementSummary[];
 	body: JSX.Element;
+}
+
+interface SerializedMeasurementSummary extends MeasurementSummary {
+	summary: string;
 }
 
 interface SerializedReport extends Report {
 	status: string;
-	summary: string;
+	summaries: Array<SerializedMeasurementSummary>;
 	body: string;
 }
 
