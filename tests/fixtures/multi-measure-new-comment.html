@@ -3,39 +3,39 @@
 	<h3>Summary</h3>
 	<p class="global-status"></p>
 	<div id="tachometer-reporter-action--summaries">
-		<div data-sort-key="metric1">
-			<h4>metric1</h4>
+		<div data-sort-key="duration">
+			<h4>duration</h4>
 			<ul
-				id="tachometer-reporter-action--summaries::NoiP7WgRdRcrJ70VIyPGsbpnK5s"
+				id="tachometer-reporter-action--summaries::R-VSUDBIvX9oa7OhG2Td6w-LuY4"
 			>
 				<li data-sort-key="test_bench">
 					<div
-						id="tachometer-reporter-action--summary::NoiP7WgRdRcrJ70VIyPGsbpnK5s::iY6BxdgC3PLg3Tl7RF-jNoBSUN0"
-						class="summary::iY6BxdgC3PLg3Tl7RF-jNoBSUN0"
+						id="tachometer-reporter-action--summary::R-VSUDBIvX9oa7OhG2Td6w-LuY4::4W8itmYrXE9DReBxWDOJZRrxTc4"
+						class="summary::4W8itmYrXE9DReBxWDOJZRrxTc4"
 						data-run-number="50"
 					>
 						<span class="status"></span>test_bench<span
-							>: <strong>unsure 🔍</strong>
-							<em>-10% - +12% (-4.10ms - +5.24ms)</em></span
+							>: <strong>faster ✔</strong>
+							<em>4% - 8% (6.30ms - 13.34ms)</em></span
 						><br /><sup>local-framework vs base-framework</sup>
 					</div>
 				</li>
 			</ul>
 		</div>
-		<div data-sort-key="metric2">
-			<h4>metric2</h4>
+		<div data-sort-key="window.usedJSHeapSize">
+			<h4>window.usedJSHeapSize</h4>
 			<ul
-				id="tachometer-reporter-action--summaries::KH9BvyhI7LuvKHw_rmA7TWNSg4M"
+				id="tachometer-reporter-action--summaries::AmH0KOJP8BUNrat2VaC_V3DY9mI"
 			>
 				<li data-sort-key="test_bench">
 					<div
-						id="tachometer-reporter-action--summary::KH9BvyhI7LuvKHw_rmA7TWNSg4M::iY6BxdgC3PLg3Tl7RF-jNoBSUN0"
-						class="summary::iY6BxdgC3PLg3Tl7RF-jNoBSUN0"
+						id="tachometer-reporter-action--summary::AmH0KOJP8BUNrat2VaC_V3DY9mI::4W8itmYrXE9DReBxWDOJZRrxTc4"
+						class="summary::4W8itmYrXE9DReBxWDOJZRrxTc4"
 						data-run-number="50"
 					>
 						<span class="status"></span>test_bench<span
-							>: <strong>faster ✔</strong>
-							<em>9% - 28% (3.55ms - 12.77ms)</em></span
+							>: <strong>slower ❌</strong>
+							<em>91% - 91% (3.25ms - 3.26ms)</em></span
 						><br /><sup>local-framework vs base-framework</sup>
 					</div>
 				</li>
@@ -46,7 +46,7 @@
 	<p class="global-status"></p>
 	<div id="tachometer-reporter-action--results">
 		<div
-			id="tachometer-reporter-action--results-iY6BxdgC3PLg3Tl7RF-jNoBSUN0"
+			id="tachometer-reporter-action--results-4W8itmYrXE9DReBxWDOJZRrxTc4"
 			data-run-number="50"
 			data-sort-key="test_bench"
 		>
@@ -56,8 +56,8 @@
 				>
 				<div class="result-entry">
 					<ul>
-						<li>Browser: chrome-headless 83.0.4103.116</li>
-						<li>Sample size: 60</li>
+						<li>Browser: chrome-headless 84.0.4147.125</li>
+						<li>Sample size: 10</li>
 						<li>
 							Built by:
 							<a
@@ -69,7 +69,7 @@
 							Commit: 626e78c
 						</li>
 					</ul>
-					<h4>metric1</h4>
+					<h4>duration</h4>
 					<table>
 						<thead>
 							<tr>
@@ -83,42 +83,44 @@
 						<tbody>
 							<tr>
 								<td align="center">fast-framework</td>
-								<td align="center">32.09ms - 38.19ms</td>
+								<td align="center">137.71ms - 141.73ms</td>
 								<td align="center">-</td>
 								<td align="center">
-									<strong>faster ✔</strong><br />8% - 27%<br />3.22ms - 11.96ms
+									<strong>faster ✔</strong><br />20% - 22%<br />34.69ms -
+									39.26ms
 								</td>
 								<td align="center">
-									<strong>faster ✔</strong><br />9% - 28%<br />3.55ms - 12.77ms
+									<strong>faster ✔</strong><br />14% - 18%<br />23.26ms -
+									31.06ms
 								</td>
 							</tr>
 							<tr>
 								<td align="center">base-framework</td>
-								<td align="center">39.60ms - 45.87ms</td>
+								<td align="center">175.60ms - 177.79ms</td>
 								<td align="center">
-									<strong>slower ❌</strong><br />8% - 35%<br />3.22ms - 11.96ms
+									<strong>slower ❌</strong><br />24% - 28%<br />34.69ms -
+									39.26ms
 								</td>
 								<td align="center">-</td>
 								<td align="center">
-									<strong>unsure 🔍</strong><br />-12% - +9%<br />-5.24ms -
-									+4.10ms
+									<strong>slower ❌</strong><br />4% - 8%<br />6.30ms - 13.34ms
 								</td>
 							</tr>
 							<tr>
 								<td align="center">local-framework</td>
-								<td align="center">39.84ms - 46.76ms</td>
+								<td align="center">163.53ms - 170.22ms</td>
 								<td align="center">
-									<strong>slower ❌</strong><br />9% - 38%<br />3.55ms - 12.77ms
+									<strong>slower ❌</strong><br />16% - 22%<br />23.26ms -
+									31.06ms
 								</td>
 								<td align="center">
-									<strong>unsure 🔍</strong><br />-10% - +12%<br />-4.10ms -
-									+5.24ms
+									<strong>faster ✔</strong><br />4% - 8%<br />6.30ms - 13.34ms
 								</td>
 								<td align="center">-</td>
 							</tr>
 						</tbody>
 					</table>
-					<h4>metric2</h4>
+					<h4>window.usedJSHeapSize</h4>
 					<table>
 						<thead>
 							<tr>
@@ -132,36 +134,35 @@
 						<tbody>
 							<tr>
 								<td align="center">fast-framework</td>
-								<td align="center">39.84ms - 46.76ms</td>
+								<td align="center">2.61ms - 2.61ms</td>
 								<td align="center">-</td>
 								<td align="center">
-									<strong>slower ❌</strong><br />9% - 38%<br />3.55ms - 12.77ms
+									<strong>faster ✔</strong><br />27% - 27%<br />0.95ms - 0.95ms
 								</td>
 								<td align="center">
-									<strong>unsure 🔍</strong><br />-10% - +12%<br />-4.10ms -
-									+5.24ms
+									<strong>faster ✔</strong><br />62% - 62%<br />4.20ms - 4.21ms
 								</td>
 							</tr>
 							<tr>
 								<td align="center">base-framework</td>
-								<td align="center">39.60ms - 45.87ms</td>
+								<td align="center">3.56ms - 3.57ms</td>
 								<td align="center">
-									<strong>unsure 🔍</strong><br />-12% - +9%<br />-5.24ms -
-									+4.10ms
+									<strong>slower ❌</strong><br />36% - 37%<br />0.95ms - 0.95ms
 								</td>
 								<td align="center">-</td>
 								<td align="center">
-									<strong>slower ❌</strong><br />8% - 35%<br />3.22ms - 11.96ms
+									<strong>faster ✔</strong><br />48% - 48%<br />3.25ms - 3.26ms
 								</td>
 							</tr>
 							<tr>
 								<td align="center">local-framework</td>
-								<td align="center">32.09ms - 38.19ms</td>
+								<td align="center">6.81ms - 6.82ms</td>
 								<td align="center">
-									<strong>faster ✔</strong><br />8% - 27%<br />3.22ms - 11.96ms
+									<strong>slower ❌</strong><br />161% - 161%<br />4.20ms -
+									4.21ms
 								</td>
 								<td align="center">
-									<strong>faster ✔</strong><br />9% - 28%<br />3.55ms - 12.77ms
+									<strong>slower ❌</strong><br />91% - 91%<br />3.25ms - 3.26ms
 								</td>
 								<td align="center">-</td>
 							</tr>

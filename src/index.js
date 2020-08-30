@@ -17,6 +17,22 @@ const {
 } = require("./utils/hash");
 
 /**
+ * Given an array and a list of indexes into that array, return a new array with
+ * just the values from the indexes specified
+ * @template T
+ * @param {T[]} array
+ * @param {number[]} indexes
+ * @returns {T[]}
+ */
+function pickArray(array, indexes) {
+	let newArray = [];
+	for (let index of indexes) {
+		newArray.push(array[index]);
+	}
+	return newArray;
+}
+
+/**
  * @param {import("./global").CommitInfo} commitInfo
  * @param {import('./global').ActionInfo} actionInfo
  * @param {Pick<import('./global').Inputs, 'prBenchName' | 'baseBenchName' | 'defaultOpen' | 'reportId'>} inputs
@@ -50,18 +66,39 @@ function buildReport(
 		tachResults = normalizeResults(tachResults);
 		benchmarks = tachResults.benchmarks;
 
-		resultsByMeasurement = new Map();
-		for (let bench of benchmarks) {
+		// First, group bench indexes by same measurements
+		let measurementIndexes = new Map();
+		for (let i = 0; i < benchmarks.length; i++) {
+			let bench = benchmarks[i];
 			let measurementId =
 				bench.measurement === defaultMeasure
 					? defaultMeasureId
 					: getMeasurementId(bench.measurement);
 
+			if (!measurementIndexes.has(measurementId)) {
+				measurementIndexes.set(measurementId, []);
+			}
+
+			measurementIndexes.get(measurementId).push(i);
+		}
+
+		// Now, group the actual benchmark results by measurement. We modify the
+		// "differences" array to only include the differences with other benchmarks
+		// of the same measurement, using the indexes we determined in the loop
+		// above.
+		resultsByMeasurement = new Map();
+		for (let [measurementId, benchIndexes] of measurementIndexes.entries()) {
 			if (!resultsByMeasurement.has(measurementId)) {
 				resultsByMeasurement.set(measurementId, []);
 			}
 
-			resultsByMeasurement.get(measurementId).push(bench);
+			for (let benchIndex of benchIndexes) {
+				let bench = benchmarks[benchIndex];
+				resultsByMeasurement.get(measurementId).push({
+					...bench,
+					differences: pickArray(bench.differences, benchIndexes),
+				});
+			}
 		}
 	}
 

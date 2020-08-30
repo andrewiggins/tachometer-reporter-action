@@ -7,12 +7,13 @@ const { defaultMeasure } = require("./hash");
 const lineBreak = "<br />";
 
 /**
+ * @param {(b: import('../global').BenchmarkResult) => string} labelFn
  * @param {import('../global').BenchmarkResult[]} benchmarks
+ * @returns {import('../global').Dimension[]}
  */
 function makeDifferenceDimensions(labelFn, benchmarks) {
 	return benchmarks.map((b, i) => {
-		/** @type {import('../global').Dimension} */
-		const dimension = {
+		return {
 			label: `vs ${labelFn(b)}`,
 			format: (b) => {
 				if (b.differences === undefined) {
@@ -32,8 +33,6 @@ function makeDifferenceDimensions(labelFn, benchmarks) {
 			// 	alignment: "right",
 			// },
 		};
-
-		return dimension;
 	});
 }
 
