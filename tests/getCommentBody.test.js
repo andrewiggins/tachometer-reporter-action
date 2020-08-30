@@ -255,6 +255,7 @@ const updateCommentSuite = suite("getCommentBody (update)");
 const testReportId = "report-id";
 const otherReportId = "test-results-new-id";
 
+// Update from results to running
 updateCommentSuite(
 	"Update status for existing comment with old results",
 	async () => {
@@ -345,6 +346,7 @@ updateCommentSuite(
 	}
 );
 
+// Update from existing running to results
 updateCommentSuite(
 	"Remove running status from existing comment when results come in",
 	async () => {
@@ -375,6 +377,7 @@ updateCommentSuite(
 	}
 );
 
+// Update from existing results to new results
 updateCommentSuite(
 	"Update summary/results when new results for existing benchmark come in",
 	async () => {
@@ -427,6 +430,7 @@ updateCommentSuite(
 	}
 );
 
+// Add new benchmark running to existing comment
 updateCommentSuite(
 	"Add new summary/results entry when new report with status comes in",
 	async () => {
@@ -473,6 +477,7 @@ updateCommentSuite(
 	}
 );
 
+// Add new benchmarks results to existing comment
 updateCommentSuite(
 	"Add new summary/results entry when new report with just results comes in",
 	async () => {
@@ -822,3 +827,23 @@ updateCommentSuite("Clears global status when results come in", async () => {
 
 newCommentSuite.run();
 updateCommentSuite.run();
+
+// TODO: New test cases to consider
+// - Update summary results with all measurements existing
+// - Update summary results with some measurements existing and some new
+// - Update summary results with all new measurements
+//
+// Particularly pay attention to summary changes in these scenarios
+//
+// Summary Tests:
+// - multi-measure new comment with results
+// - multi-measure add results to existing comment
+// - multi-measure new comment running (no results)
+// - multi-measure add running to existing comment (no results)
+// - multi-measure update from new comment running to result (status is in
+//   default section)
+// - multi-measure update from results to running (no results)
+// - multi-measure update from existing running to results (status is in
+//   proper measurement section)
+// - multi-measure update from existing results to new results
+// - multi-measure doesn't change comment if report is null
