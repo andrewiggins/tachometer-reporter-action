@@ -8,6 +8,7 @@ const { createGitHubClient, defaultActionInfo } = require("./mocks/github");
 const {
 	assertFixture,
 	testRoot,
+	testReportId,
 	formatHtml,
 	readFixture: readRawFixture,
 } = require("./utils");
@@ -218,7 +219,7 @@ runningCreateSuite(
 		const github = createGitHubClient();
 		const completion = invokeReportTachRunning({
 			github,
-			inputs: { reportId: "test-results", initialize: null },
+			inputs: { reportId: testReportId, initialize: null },
 		});
 
 		await clock.runAllAsync();
@@ -239,7 +240,7 @@ runningCreateSuite(
 		const github = createGitHubClient();
 		const completion = invokeReportTachRunning({
 			github,
-			inputs: { reportId: "test-results", initialize: true },
+			inputs: { reportId: testReportId, initialize: true },
 		});
 
 		await clock.runAllAsync();

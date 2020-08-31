@@ -3,6 +3,7 @@ const { suite } = require("uvu");
 const assert = require("uvu/assert");
 const { parse } = require("node-html-parser");
 const {
+	testReportId,
 	testRoot,
 	formatHtml,
 	copyTestResults,
@@ -119,7 +120,7 @@ function assertUIState(
 const newCommentSuite = suite("getCommentBody (new)");
 
 newCommentSuite("New comment snapshot in running state", async () => {
-	const inputs = { reportId: "test-results" };
+	const inputs = { reportId: testReportId };
 	const body = invokeGetCommentBody({
 		inputs,
 		report: invokeBuildReport({ inputs, isRunning: true, results: null }),
@@ -148,15 +149,17 @@ newCommentSuite("New comment snapshot with results", async () => {
 	assertFixture(html, fixture, "Report body matches fixture");
 });
 
-newCommentSuite("Uses input.reportId", () => {
-	const reportId = "test-input-id";
-	const bodyIdRe = new RegExp(`<div id="${getBenchmarkSectionId(reportId)}"`);
-	const summaryIdRe = new RegExp(`<div id="${getSummaryId({ reportId })}"`);
+newCommentSuite("Uses input.reportId", async () => {
+	const body = invokeGetCommentBody({ inputs: { reportId: testReportId } });
+	const html = formatHtml(body.toString());
 
-	const body = invokeGetCommentBody({ inputs: { reportId } });
+	const fixturePath = testRoot("fixtures/test-results-existing-comment.html");
+	const fixture = await readFile(fixturePath, "utf-8");
 
-	assert.ok(body.match(bodyIdRe), "body contains input id");
-	assert.ok(body.match(summaryIdRe), "summary contains input id");
+	// Uncomment to update fixture
+	// await writeFile(fixturePath, html, "utf8");
+
+	assertFixture(html, fixture, "Report body matches fixture");
 });
 
 newCommentSuite("Generates reportId if not given", () => {
@@ -299,7 +302,6 @@ newCommentSuite("Renders multiple measures in report correctly", async () => {
 //#region Update Comment Suite
 
 const updateCommentSuite = suite("getCommentBody (update)");
-const testReportId = "report-id";
 const otherReportId = "test-results-new-id";
 
 // Update from results to running

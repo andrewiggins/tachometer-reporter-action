@@ -6,6 +6,8 @@ const prettier = require("prettier");
 
 const testRoot = (...args) => path.join(__dirname, ...args);
 
+const testReportId = "report-id";
+
 const testResultsPath = testRoot("results/test-results.json");
 const multiMeasureResultsPath = testRoot("results/multi-measure-results.json");
 
@@ -105,6 +107,7 @@ function skipSuite(suite) {
 module.exports = {
 	pick,
 	skipSuite,
+	testReportId,
 	testRoot,
 	copyTestResults,
 	getMultiMeasureResults,
