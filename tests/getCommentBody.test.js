@@ -119,12 +119,20 @@ function assertUIState(
 
 const newCommentSuite = suite("getCommentBody (new)");
 
+newCommentSuite("New comment snapshot in initialized state", async () => {
+	// Should renders generic comment body if report is null
+	const body = invokeGetCommentBody({ report: null });
+	const html = formatHtml(body.toString());
+
+	const fixture = await readFixture("new-comment-initialized.html");
+	assertFixture(html, fixture, "Comment body matches fixture");
+});
+
 newCommentSuite("New comment snapshot in running state", async () => {
 	const inputs = { reportId: testReportId };
-	const body = invokeGetCommentBody({
-		inputs,
-		report: invokeBuildReport({ inputs, isRunning: true, results: null }),
-	});
+	const report = invokeBuildReport({ inputs, results: null, isRunning: true });
+	const body = invokeGetCommentBody({ inputs, report });
+
 	const html = formatHtml(body.toString());
 
 	const fixturePath = testRoot("fixtures/new-comment-running.html");
@@ -275,28 +283,6 @@ newCommentSuite(
 	}
 );
 
-newCommentSuite("Renders generic comment body if report is null", async () => {
-	const body = invokeGetCommentBody({ report: null });
-	const html = formatHtml(body.toString());
-
-	const fixture = await readFixture("new-comment-initialized.html");
-	assertFixture(html, fixture, "Comment body matches fixture");
-});
-
-newCommentSuite("Renders multiple measures in report correctly", async () => {
-	const results = getMultiMeasureResults();
-	const body = invokeGetCommentBody({ report: invokeBuildReport({ results }) });
-	const actualHtml = formatHtml(body.toString());
-
-	const fixturePath = testRoot("fixtures/multi-measure-new-comment.html");
-	const fixture = await readFile(fixturePath, "utf-8");
-
-	// Uncomment to update fixture
-	// await writeFile(fixturePath, actualHtml, "utf-8");
-
-	assertFixture(actualHtml, fixture, "Comment body matches fixture");
-});
-
 //#endregion
 
 //#region Update Comment Suite
@@ -304,37 +290,269 @@ newCommentSuite("Renders multiple measures in report correctly", async () => {
 const updateCommentSuite = suite("getCommentBody (update)");
 const otherReportId = "test-results-new-id";
 
-// Update from results to running
+updateCommentSuite("Update from initialized to running", async () => {
+	// Should add running status to initialized comment
+
+	const commentBody = await readFixture("new-comment-initialized.html");
+	const report = invokeBuildReport({
+		inputs: { reportId: testReportId },
+		results: null,
+		isRunning: true,
+	});
+
+	const bodyHtml = parse(invokeGetCommentBody({ report, commentBody }));
+
+	assertUIState("Updated with running", bodyHtml, {
+		isRunning: true,
+		hasResults: false,
+	});
+
+	const actualHtml = formatHtml(bodyHtml.toString());
+	const fixture = await readFixture("new-comment-running.html");
+	assertFixture(actualHtml, fixture, "Updating from initialized to running");
+});
+
+updateCommentSuite("Update from initialized to results", async () => {
+	// Should clear global status when results come in
+
+	const commentBody = await readFixture("new-comment-initialized.html");
+
+	const body = invokeGetCommentBody({ commentBody });
+	const html = formatHtml(body.toString());
+
+	const fixture = await readFixture("test-results-new-comment.html");
+	assertFixture(html, fixture, "Report body matches fixture");
+});
+
+updateCommentSuite("Update from running to results", async () => {
+	const commentBody = await readFixture("new-comment-running.html");
+	const report = invokeBuildReport({
+		inputs: { reportId: testReportId },
+	});
+
+	const bodyHtml = parse(invokeGetCommentBody({ report, commentBody }));
+
+	assertUIState("Updated", bodyHtml, { isRunning: false, hasResults: true });
+
+	const actualHtml = formatHtml(bodyHtml.toString());
+	const expectedHtml = await readFixture("test-results-existing-comment.html");
+
+	assertFixture(
+		actualHtml,
+		expectedHtml,
+		"Updating status with results fixture"
+	);
+});
+
+updateCommentSuite("Update from results to running + results", async () => {
+	// Update status for existing comment with old results
+
+	const commentBody = await readFixture("test-results-existing-comment.html");
+	const report = invokeBuildReport({
+		inputs: { reportId: testReportId },
+		results: null,
+		isRunning: true,
+	});
+
+	const bodyHtml = parse(invokeGetCommentBody({ report, commentBody }));
+
+	assertUIState("Updated results", bodyHtml, {
+		isRunning: true,
+		hasResults: true,
+	});
+
+	const actualHtml = formatHtml(bodyHtml.toString());
+
+	const fixturePath = testRoot("fixtures/test-results-existing-running.html");
+	const expectedHtml = await readFile(fixturePath, "utf-8");
+
+	// Uncomment to update fixture
+	// await writeFile(fixturePath, actualHtml, "utf-8");
+
+	assertFixture(
+		actualHtml,
+		expectedHtml,
+		"Updating status with results fixture"
+	);
+});
+
+updateCommentSuite("Update from running + results to results", async () => {
+	// Should remove running status from existing comment when results come in
+
+	const commentBody = await readFixture("test-results-existing-running.html");
+	const report = invokeBuildReport({
+		inputs: { reportId: testReportId },
+	});
+
+	const bodyHtml = parse(invokeGetCommentBody({ report, commentBody }));
+
+	assertUIState("Updated", bodyHtml, { isRunning: false, hasResults: true });
+});
+
+updateCommentSuite("Update from results to new results", async () => {
+	// Should update summary/results when new results for existing benchmark come in"
+
+	const newResults = generateNewTestResults();
+
+	const commentBody = await readFixture("test-results-existing-comment.html");
+	const origBodyHtml = parse(commentBody);
+
+	// Assert original body html is what we expect
+	let resultTableCell = origBodyHtml
+		.querySelectorAll(`tbody tr`)[2]
+		.querySelectorAll("td")[3];
+	assert.ok(
+		resultTableCell.text.includes("unsure"),
+		"Result table includes expected initial data"
+	);
+
+	const report = invokeBuildReport({
+		inputs: { reportId: testReportId },
+		results: newResults,
+	});
+
+	const newBodyHtml = parse(invokeGetCommentBody({ report, commentBody }));
+	// console.log(formatHtml(bodyHtml.toString()));
+
+	assertUIState("New results", newBodyHtml, {
+		isRunning: false,
+		hasResults: true,
+	});
+
+	resultTableCell = newBodyHtml
+		.querySelectorAll(`tbody tr`)[2]
+		.querySelectorAll("td")[3];
+
+	assert.ok(
+		resultTableCell.text.includes("faster"),
+		"Result table is updated to show new results"
+	);
+});
+
 updateCommentSuite(
-	"Update status for existing comment with old results",
+	"Add new running status to comment with another job's running status",
 	async () => {
-		const commentBody = await readFixture("test-results-existing-comment.html");
+		const commentBody = await readFixture("new-comment-running.html");
 		const report = invokeBuildReport({
-			inputs: { reportId: testReportId },
+			inputs: { reportId: otherReportId },
 			results: null,
 			isRunning: true,
 		});
 
 		const bodyHtml = parse(invokeGetCommentBody({ report, commentBody }));
 
-		assertUIState("Updated results", bodyHtml, {
+		assertUIState("Other job data", bodyHtml, {
 			isRunning: true,
+			hasResults: false,
+		});
+
+		assertUIState(
+			"This job data",
+			bodyHtml,
+			{ isRunning: true, hasResults: false },
+			{ reportId: otherReportId }
+		);
+	}
+);
+
+updateCommentSuite(
+	"Add new running status to comment with another job's results",
+	async () => {
+		// Should Add new summary/results entry when new report with status comes in
+
+		const commentBody = await readFixture("test-results-existing-comment.html");
+		const report = invokeBuildReport({
+			inputs: { reportId: otherReportId },
+			results: null,
+			isRunning: true,
+		});
+
+		const bodyHtml = parse(invokeGetCommentBody({ report, commentBody }));
+
+		assertUIState("Other job data", bodyHtml, {
+			isRunning: false,
 			hasResults: true,
 		});
 
-		const actualHtml = formatHtml(bodyHtml.toString());
+		assertUIState(
+			"This job data",
+			bodyHtml,
+			{ isRunning: true, hasResults: false },
+			{ reportId: otherReportId }
+		);
+	}
+);
 
-		const fixturePath = testRoot("fixtures/test-results-existing-running.html");
-		const expectedHtml = await readFile(fixturePath, "utf-8");
+updateCommentSuite(
+	"Add new results to comment with another job's running status",
+	async () => {
+		// Should add new summary/results entry when new report with just results comes in
+
+		const newResults = JSON.parse(
+			await readFile(testRoot("results/other-results.json"), "utf8")
+		);
+
+		const commentBody = await readFixture("new-comment-running.html");
+		const report = invokeBuildReport({
+			inputs: { reportId: otherReportId },
+			results: newResults,
+		});
+
+		const bodyHtml = parse(invokeGetCommentBody({ report, commentBody }));
+		// console.log(formatHtml(bodyHtml.toString()));
+
+		assertUIState("Other job data", bodyHtml, {
+			isRunning: true,
+			hasResults: false,
+		});
+
+		assertUIState(
+			"This job data",
+			bodyHtml,
+			{ isRunning: false, hasResults: true },
+			{ reportId: otherReportId }
+		);
+	}
+);
+
+updateCommentSuite(
+	"Add new results to comment with another job's results",
+	async () => {
+		// Should add new summary/results entry when new report with just results comes in
+
+		const newResults = JSON.parse(
+			await readFile(testRoot("results/other-results.json"), "utf8")
+		);
+
+		const commentBody = await readFixture("test-results-existing-comment.html");
+		const report = invokeBuildReport({
+			inputs: { reportId: otherReportId },
+			results: newResults,
+		});
+
+		const bodyHtml = parse(invokeGetCommentBody({ report, commentBody }));
+		// console.log(formatHtml(bodyHtml.toString()));
+
+		assertUIState("Other job data", bodyHtml, {
+			isRunning: false,
+			hasResults: true,
+		});
+
+		assertUIState(
+			"This job data",
+			bodyHtml,
+			{ isRunning: false, hasResults: true },
+			{ reportId: otherReportId }
+		);
+
+		const html = formatHtml(bodyHtml.toString());
+		const fixturePath = testRoot("fixtures/multiple-entries.html");
+		const fixture = await readFile(fixturePath, "utf-8");
 
 		// Uncomment to update fixture
-		// await writeFile(fixturePath, actualHtml, "utf-8");
+		// await writeFile(fixturePath, html, "utf8");
 
-		assertFixture(
-			actualHtml,
-			expectedHtml,
-			"Updating status with results fixture"
-		);
+		assertFixture(html, fixture, "Multiple results snapshot");
 	}
 );
 
@@ -379,145 +597,6 @@ updateCommentSuite(
 		assert.ok(resultData, "Result data is still present");
 	}
 );
-
-// Update from existing running to results
-updateCommentSuite(
-	"Remove running status from existing comment when results come in",
-	async () => {
-		const commentBody = await readFixture("test-results-existing-running.html");
-		const report = invokeBuildReport({
-			inputs: { reportId: testReportId },
-		});
-
-		const bodyHtml = parse(invokeGetCommentBody({ report, commentBody }));
-
-		assertUIState("Updated", bodyHtml, { isRunning: false, hasResults: true });
-	}
-);
-
-// Update from existing results to new results
-updateCommentSuite(
-	"Update summary/results when new results for existing benchmark come in",
-	async () => {
-		const newResults = generateNewTestResults();
-
-		const commentBody = await readFixture("test-results-existing-comment.html");
-		const origBodyHtml = parse(commentBody);
-
-		// Assert original body html is what we expect
-		let resultTableCell = origBodyHtml
-			.querySelectorAll(`tbody tr`)[2]
-			.querySelectorAll("td")[3];
-		assert.ok(
-			resultTableCell.text.includes("unsure"),
-			"Result table includes expected initial data"
-		);
-
-		const report = invokeBuildReport({
-			inputs: { reportId: testReportId },
-			results: newResults,
-		});
-
-		const newBodyHtml = parse(invokeGetCommentBody({ report, commentBody }));
-		// console.log(formatHtml(bodyHtml.toString()));
-
-		assertUIState("New results", newBodyHtml, {
-			isRunning: false,
-			hasResults: true,
-		});
-
-		resultTableCell = newBodyHtml
-			.querySelectorAll(`tbody tr`)[2]
-			.querySelectorAll("td")[3];
-
-		assert.ok(
-			resultTableCell.text.includes("faster"),
-			"Result table is updated to show new results"
-		);
-	}
-);
-
-// Add new benchmark running to existing comment
-updateCommentSuite(
-	"Add new summary/results entry when new report with status comes in",
-	async () => {
-		const newId = "new-id";
-		const commentBody = await readFixture("test-results-existing-comment.html");
-		const report = invokeBuildReport({
-			inputs: { reportId: newId },
-			results: null,
-			isRunning: true,
-		});
-
-		const bodyHtml = parse(invokeGetCommentBody({ report, commentBody }));
-
-		assertUIState("Other job data", bodyHtml, {
-			isRunning: false,
-			hasResults: true,
-		});
-
-		assertUIState(
-			"This job data",
-			bodyHtml,
-			{ isRunning: true, hasResults: false },
-			{ reportId: newId }
-		);
-	}
-);
-
-// Add new benchmarks results to existing comment
-updateCommentSuite(
-	"Add new summary/results entry when new report with just results comes in",
-	async () => {
-		const newId = "new-id";
-		const newResults = JSON.parse(
-			await readFile(testRoot("results/other-results.json"), "utf8")
-		);
-
-		const commentBody = await readFixture("test-results-existing-comment.html");
-		const report = invokeBuildReport({
-			inputs: { reportId: newId },
-			results: newResults,
-		});
-
-		const bodyHtml = parse(invokeGetCommentBody({ report, commentBody }));
-		// console.log(formatHtml(bodyHtml.toString()));
-
-		assertUIState("Other job data", bodyHtml, {
-			isRunning: false,
-			hasResults: true,
-		});
-
-		assertUIState(
-			"This job data",
-			bodyHtml,
-			{ isRunning: false, hasResults: true },
-			{ reportId: newId }
-		);
-	}
-);
-
-updateCommentSuite("Add new summary/results entry snapshot", async () => {
-	const newResults = JSON.parse(
-		await readFile(testRoot("results/other-results.json"), "utf8")
-	);
-
-	const commentBody = await readFixture("test-results-existing-comment.html");
-	const report = invokeBuildReport({
-		inputs: { reportId: otherReportId },
-		results: newResults,
-	});
-
-	const html = formatHtml(invokeGetCommentBody({ report, commentBody }));
-
-	const fixturePath = testRoot("fixtures/multiple-entries.html");
-	const fixture = await readFile(fixturePath, "utf-8");
-
-	// Uncomment to update fixture
-	// await writeFile(fixturePath, html, "utf8");
-
-	assertFixture(html, fixture, "Multiple results snapshot");
-});
 
 updateCommentSuite(
 	"Insert a benchmark with a lower report title at the front",
@@ -742,16 +821,6 @@ updateCommentSuite(
 	}
 );
 
-updateCommentSuite("Clears global status when results come in", async () => {
-	const commentBody = await readFixture("new-comment-initialized.html");
-
-	const body = invokeGetCommentBody({ commentBody });
-	const html = formatHtml(body.toString());
-
-	const fixture = await readFixture("test-results-new-comment.html");
-	assertFixture(html, fixture, "Report body matches fixture");
-});
-
 // keep-old-results option
 // updateCommentSuite(
 // 	"Updates existing comment that contains matching ID with keep old option and no old content",
@@ -768,29 +837,34 @@ updateCommentSuite("Clears global status when results come in", async () => {
 
 //#endregion
 
+//#region Multi-measure tests
+const multiMeasure = suite("Multiple measures in one benchmark");
+
+const multiMeasureReportId = "4W8itmYrXE9DReBxWDOJZRrxTc4";
+const multiMeasureIds = [
+	"R-VSUDBIvX9oa7OhG2Td6w-LuY4", // duration
+	"AmH0KOJP8BUNrat2VaC_V3DY9mI", // window.usedJSHeapSize
+];
+
+// Create/add with results
+// ==============================
+
+multiMeasure("Creates new comment results", async () => {
+	const results = getMultiMeasureResults();
+	const body = invokeGetCommentBody({ report: invokeBuildReport({ results }) });
+	const actualHtml = formatHtml(body.toString());
+
+	const fixturePath = testRoot("fixtures/multi-measure-new-comment.html");
+	const fixture = await readFile(fixturePath, "utf-8");
+
+	// Uncomment to update fixture
+	// await writeFile(fixturePath, actualHtml, "utf-8");
+
+	assertFixture(actualHtml, fixture, "Comment body matches fixture");
+});
+
+//#endregion
+
 newCommentSuite.run();
 updateCommentSuite.run();
-
-// TODO: New test cases to consider
-// - Update summary results with all measurements existing
-// - Update summary results with some measurements existing and some new
-// - Update summary results with all new measurements
-//
-// Particularly pay attention to summary changes in these scenarios
-//
-// Summary Tests:
-// - multi-measure new comment with results
-// - multi-measure add results to existing running comment
-// - multi-measure add results to existing results comment
-// - multi-measure add results to existing empty comment
-// - multi-measure new comment running (no results)
-// - multi-measure add running to existing running comment
-// - multi-measure add running to existing results comment
-// - multi-measure add running to existing empty comment
-// - multi-measure update from new comment running to result (status is in
-//   default section)
-// - multi-measure update from results to running (no results)
-// - multi-measure update from existing running to results (status is in
-//   proper measurement section)
-// - multi-measure update from existing results to new results
-// - multi-measure doesn't change comment if report is null
+multiMeasure.run();
