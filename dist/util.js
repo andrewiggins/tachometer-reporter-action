@@ -7994,19 +7994,78 @@ var uaParser = createCommonjsModule(function (module, exports) {
 })(typeof window === 'object' ? window : commonjsGlobal);
 });
 
+function hash(s) {
+	return crypto
+		.createHash("sha1")
+		.update(s)
+		.digest("base64")
+		.replace(/\+/g, "-")
+		.replace(/\//g, "_")
+		.replace(/=*$/, "");
+}
+
+/** @type {import("../global").Measurement} */
+const defaultMeasure = {
+	name: "default",
+	// @ts-ignore Invent a fake mode to signify this is the default measure we
+	// made up
+	mode: hash(JSON.stringify({ name: "default" })),
+};
+
+const defaultMeasureId = getMeasurementId(defaultMeasure);
+
+/**
+ * @param {import('../global').Measurement} measurement
+ */
+function getMeasurementId(measurement) {
+	let otherData = "";
+	if (measurement.mode == "expression") {
+		otherData = measurement.expression;
+	} else if (measurement.mode == "performance") {
+		otherData = measurement.entryName;
+	}
+
+	return hash(`${measurement.name}::${measurement.mode}::${otherData}`);
+}
+
+/**
+ * @param {import('../global').PatchedBenchmarkResult[]} benchmarks
+ */
+function getReportId(benchmarks) {
+	/** @type {(b: import('../global').BenchmarkResult) => string} */
+	const getBrowserKey = (b) =>
+		b.browser.name + (b.browser.headless ? "-headless" : "");
+
+	const benchKeys = benchmarks.map((b) => {
+		const measureId = getMeasurementId(b.measurement);
+		return [b.name, b.version, measureId, getBrowserKey(b)].join(",");
+	});
+
+	return hash(benchKeys.join("::"));
+}
+
+var hash_1 = {
+	defaultMeasure,
+	defaultMeasureId,
+	getMeasurementId,
+	getReportId,
+};
+
 const { UAParser } = uaParser;
+const { defaultMeasure: defaultMeasure$1 } = hash_1;
 
 // Utilities from Tachometer, adapted from: https://github.com/Polymer/tachometer/blob/ff284b0329aa24249aa5ebce8bb009d88d0b057a/src/format.ts
 
 const lineBreak = "<br />";
 
 /**
+ * @param {(b: import('../global').BenchmarkResult) => string} labelFn
  * @param {import('../global').BenchmarkResult[]} benchmarks
+ * @returns {import('../global').Dimension[]}
  */
 function makeDifferenceDimensions(labelFn, benchmarks) {
 	return benchmarks.map((b, i) => {
-		/** @type {import('../global').Dimension} */
-		const dimension = {
+		return {
 			label: `vs ${labelFn(b)}`,
 			format: (b) => {
 				if (b.differences === undefined) {
@@ -8026,8 +8085,6 @@ function makeDifferenceDimensions(labelFn, benchmarks) {
 			// 	alignment: "right",
 			// },
 		};
-
-		return dimension;
 	});
 }
 
@@ -8207,6 +8264,75 @@ function makeUniqueLabelFn(results) {
 	};
 }
 
+/**
+ * Return a good-enough label for the given measurement, to disambiguate cases
+ * where there are multiple measurements on the same page.
+ * @param {import("../global").Measurement} measurement
+ * @returns {string}
+ */
+function measurementName(measurement) {
+	if (measurement.name) {
+		return measurement.name;
+	}
+
+	switch (measurement.mode) {
+		case "callback":
+			return "callback";
+		case "expression":
+			return measurement.expression;
+		case "performance":
+			return measurement.entryName === "first-contentful-paint"
+				? "fcp"
+				: measurement.entryName;
+	}
+	throw new Error(
+		`Internal error: unknown measurement type ` + JSON.stringify(measurement)
+	);
+}
+
+/**
+ * Patch tachometer results to include a `measurement` field parsed from the
+ * benchmark name. Ensure all measurement fields have a name if they exist.
+ * @param {import("../global").PatchedTachResults} tachResults
+ * @returns {import('../global').PatchedTachResults}
+ */
+function normalizeResults(tachResults) {
+	const nameRe = /(.+?)(?: \[(.+)\])?$/;
+
+	/** @type {import('../global').PatchedTachResults} */
+	const patchedResults = { benchmarks: [] };
+	for (let bench of tachResults.benchmarks) {
+		if (bench.measurement) {
+			if (!bench.measurement.name) {
+				bench.measurement.name = measurementName(bench.measurement);
+			}
+
+			continue;
+		}
+
+		let match = bench.name.match(nameRe);
+		if (!match) {
+			console.warn(`Could not parse benchmark name: ${bench.name}`);
+			continue;
+		}
+
+		const benchName = match[1];
+		const measureName = match[2];
+		patchedResults.benchmarks.push({
+			...bench,
+			name: benchName,
+			// @ts-ignore - can't determine mode when patching
+			measurement: measureName
+				? {
+						name: measureName,
+				  }
+				: defaultMeasure$1,
+		});
+	}
+
+	return patchedResults;
+}
+
 var tachometer = {
 	formatDifference,
 	makeUniqueLabelFn,
@@ -8217,6 +8343,8 @@ var tachometer = {
 	sampleSizeDimension,
 	bytesSentDimension,
 	runtimeConfidenceIntervalDimension,
+	measurementName,
+	normalizeResults,
 };
 
 function _nullishCoalesce(lhs, rhsFn) { if (lhs != null) { return lhs; } else { return rhsFn(); } } function _optionalChain(ops) { let lastAccessLHS = undefined; let value = ops[0]; let i = 1; while (i < ops.length) { const op = ops[i]; const fn = ops[i + 1]; i += 2; if ((op === 'optionalAccess' || op === 'optionalCall') && value == null) { return undefined; } if (op === 'access' || op === 'optionalAccess') { lastAccessLHS = value; value = fn(value); } else if (op === 'call' || op === 'optionalCall') { value = fn((...args) => value.call(lastAccessLHS, ...args)); lastAccessLHS = undefined; } } return value; }const { parse: parse$1, HTMLElement, TextNode, NodeType } = dist;
@@ -8227,18 +8355,35 @@ const {
 	browserDimension: browserDimension$1,
 	sampleSizeDimension: sampleSizeDimension$1,
 	runtimeConfidenceIntervalDimension: runtimeConfidenceIntervalDimension$1,
+	measurementName: measurementName$1,
 } = tachometer;
+const { defaultMeasure: defaultMeasure$2, defaultMeasureId: defaultMeasureId$1 } = hash_1;
 
 const globalStatusClass = "global-status";
 const statusClass = "status";
 const resultEntryClass = "result-entry";
 
+/** @type {(id: string) => string} */
 const getId = (id) => `tachometer-reporter-action--${id}`;
-const getResultsContainerId = () => getId("results");
-const getSummaryListId = () => getId("summaries");
 
-const getBenchmarkSectionId = (id) => getId(`results-${id}`);
-const getSummaryId = (id) => getId(`summary-${id}`);
+const getResultsContainerId = () => getId("results");
+const getBenchmarkSectionId = (reportId) => getId(`results-${reportId}`);
+const getResultTableClass = (measurementId) => `results::${measurementId}`;
+
+const getSummaryContainerId = () => getId("summaries");
+
+/** @type {(measurementId: string) => string} */
+const getMeasurementSummaryListId = (measurementId) =>
+	getId(`summaries::${measurementId}`);
+
+/** @type {(reportId: string) => string} */
+
+/** @type {(measurementId: string, reportId: string) => string} */
+const getSummaryId = (measurementId, reportId) =>
+	getId(`summary::${measurementId}::${reportId}`);
+
+/** @type {(reportId: string) => string} */
+const getSummaryClass = (reportId) => `summary::${reportId}`;
 
 /**
  * @typedef {(props: any) => import('node-html-parser').HTMLElement} Component
@@ -8267,36 +8412,50 @@ function h(tag, attrs, ...children) {
 		}
 	}
 
-	// @ts-ignore
-	children = children.flat(Infinity);
-
 	const element = new HTMLElement(tag, { id, class: className }, attrStr);
-	element.set_content(
-		children.filter(Boolean).map((c) => {
-			if (typeof c == "number" || typeof c == "string") {
-				return new TextNode(c.toString());
-			} else if (c instanceof HTMLElement) {
-				c.parentNode = element;
-				return c;
-			} else {
-				return c;
-			}
-		})
-	);
+
+	children = flattenChildren(children, element);
+	element.set_content(children);
 
 	return element;
+}
+
+function flattenChildren(children, parent, flattened) {
+	if (!flattened) flattened = [];
+
+	if (!children || typeof children == "boolean") ; else if (typeof children == "number" || typeof children == "string") {
+		flattened.push(new TextNode(children.toString()));
+	} else if (children instanceof HTMLElement) {
+		children.parentNode = parent;
+		flattened.push(children);
+	} else if (Array.isArray(children)) {
+		for (let child of children) {
+			flattenChildren(child, parent, flattened);
+		}
+	} else {
+		flattened.push(children);
+	}
+
+	return flattened;
 }
 
 /**
  * @typedef ResultsEntryProps
  * @property {string} reportId
  * @property {import('./global').BenchmarkResult[]} benchmarks
+ * @property {import('./global').ResultsByMeasurement} resultsByMeasurement
  * @property {import('./global').ActionInfo} actionInfo
  * @property {import('./global').CommitInfo} commitInfo
  *
  * @param {ResultsEntryProps} props
  */
-function ResultsEntry({ reportId, benchmarks, actionInfo, commitInfo }) {
+function ResultsEntry({
+	reportId,
+	benchmarks,
+	resultsByMeasurement,
+	actionInfo,
+	commitInfo,
+}) {
 	// Hard code what dimensions are rendered in the main table since GitHub comments
 	// have limited horizontal space
 
@@ -8308,21 +8467,37 @@ function ResultsEntry({ reportId, benchmarks, actionInfo, commitInfo }) {
 		);
 	}
 
-	const labelFn = makeUniqueLabelFn$1(benchmarks);
 	const listDimensions = [browserDimension$1, sampleSizeDimension$1];
 
 	const sha = commitInfo.sha.slice(0, 7);
 
-	/** @type {import("./global").Dimension[]} */
-	const tableDimensions = [
-		// Custom dimension that combines Tachometer's benchmark & version dimensions
-		{
-			label: "Version",
-			format: labelFn,
-		},
-		runtimeConfidenceIntervalDimension$1,
-		...makeDifferenceDimensions$1(labelFn, benchmarks),
-	];
+	/** @type {JSX.Element | JSX.Element[]} */
+	let table;
+	if (resultsByMeasurement.size == 1) {
+		const labelFn = makeUniqueLabelFn$1(benchmarks);
+		const measurementId = Array.from(resultsByMeasurement.keys())[0];
+		table = (
+			h(ResultsTable, {
+				benchmarks: benchmarks,
+				labelFn: labelFn,
+				measurementId: measurementId,}
+			)
+		);
+	} else {
+		table = [];
+		for (let [measurementId, group] of resultsByMeasurement.entries()) {
+			const metricName = measurementName$1(group[0].measurement);
+			const labelFn = makeUniqueLabelFn$1(group);
+			table.push(
+				h('h4', null, metricName),
+				h(ResultsTable, {
+					benchmarks: group,
+					labelFn: labelFn,
+					measurementId: measurementId,}
+				)
+			);
+		}
+	}
 
 	return (
 		h('div', { class: resultEntryClass,}
@@ -8335,32 +8510,56 @@ function ResultsEntry({ reportId, benchmarks, actionInfo, commitInfo }) {
 )
 					);
 				})
-, h('li', null, `\n\nCommit: ${sha}\n\n`)
 , actionInfo.job.htmlUrl && (
 					h('li', null, "Built by: "
   , h('a', { href: actionInfo.job.htmlUrl,}, actionInfo.run.name)
 )
 				)
+, h('li', null, `\n\nCommit: ${sha}\n\n`)
 )
-, h('table', null
+, table
+)
+	);
+}
+
+/**
+ * @typedef ResultsTableProps
+ * @property {import('./global').BenchmarkResult[]} benchmarks
+ * @property {(b: import('./global').BenchmarkResult) => string} labelFn
+ * @property {string} measurementId
+ * @param {ResultsTableProps} props
+ */
+function ResultsTable({ benchmarks, labelFn, measurementId }) {
+	/** @type {import("./global").Dimension[]} */
+	const tableDimensions = [
+		// Custom dimension that combines Tachometer's benchmark & version dimensions
+		{
+			label: "Version",
+			format: labelFn,
+		},
+		runtimeConfidenceIntervalDimension$1,
+		...makeDifferenceDimensions$1(labelFn, benchmarks),
+	];
+
+	return (
+		h('table', { class: getResultTableClass(measurementId),}
 , h('thead', null
 , h('tr', null
 , tableDimensions.map((d) => (
-							h('th', null, d.label)
-						))
+						h('th', null, d.label)
+					))
 )
 )
 , h('tbody', null
 , benchmarks.map((b) => {
-						return (
-							h('tr', null
+					return (
+						h('tr', null
 , tableDimensions.map((d, i) => {
-									return h('td', { align: "center",}, d.format(b));
-								})
+								return h('td', { align: "center",}, d.format(b));
+							})
 )
-						);
-					})
-)
+					);
+				})
 )
 )
 	);
@@ -8414,6 +8613,7 @@ function Status({ actionInfo, icon }) {
 /**
  * @typedef SummaryProps
  * @property {string} reportId
+ * @property {string} measurementId
  * @property {string} title
  * @property {import('./global').BenchmarkResult[]} benchmarks
  * @property {string} prBenchName
@@ -8425,6 +8625,7 @@ function Status({ actionInfo, icon }) {
  */
 function Summary({
 	reportId,
+	measurementId,
 	title,
 	benchmarks,
 	prBenchName,
@@ -8434,7 +8635,7 @@ function Summary({
 }) {
 	const benchLength = Array.isArray(benchmarks) ? benchmarks.length : -1;
 	let usesDefaults = false;
-	let showDiff = false;
+	let showDiffSubtext = false;
 
 	/** @type {JSX.Element} */
 	let summaryBody;
@@ -8445,6 +8646,7 @@ function Summary({
 	} else if (benchLength > 1) {
 		// Show message with instructions how to customize summary if default values used
 		usesDefaults = !prBenchName || !baseBenchName;
+		showDiffSubtext = true;
 
 		let baseIndex;
 		if (baseBenchName) {
@@ -8468,7 +8670,6 @@ function Summary({
 			prBenchName = _nullishCoalesce(_optionalChain([localResults, 'optionalAccess', _3 => _3.version]), () => ( localResults.name));
 		}
 
-		showDiff = true;
 		if (localIndex == -1) {
 			summaryBody = (
 				h('span', null, ": Could not find benchmark matching "
@@ -8509,13 +8710,14 @@ function Summary({
 
 	return (
 		h('div', {
-			id: getSummaryId(reportId),
+			id: getSummaryId(measurementId, reportId),
+			class: getSummaryClass(reportId),
 			'data-run-number': actionInfo.run.number.toString(),}
 		
 , h('span', { class: statusClass,}, status)
 , title
 , summaryBody
-, showDiff && [
+, showDiffSubtext && [
 				h('br', null ),
 				h('sup', null
 , prBenchName, " vs "  , baseBenchName
@@ -8535,10 +8737,29 @@ function Summary({
 }
 
 /**
- * @param {{ report: import('./global').Report; }} props
+ * @param {{ title: string; summary: JSX.Element; }} props
  */
-function SummaryListItem({ report }) {
-	return h('li', { 'data-sort-key': report.title,}, report.summary);
+function SummaryListItem({ title, summary }) {
+	return h('li', { 'data-sort-key': title,}, summary);
+}
+
+/**
+ * @param {{ title: string; summary: import("./global").MeasurementSummary }} props
+ */
+function SummarySection({ title, summary }) {
+	let header = null;
+	if (summary.measurement !== defaultMeasure$2) {
+		header = h('h4', null, summary.measurement.name);
+	}
+
+	return (
+		h('div', { 'data-sort-key': getMeasurementSortKey(summary.measurement),}
+, header
+, h('ul', { id: getMeasurementSummaryListId(summary.measurementId),}
+, h(SummaryListItem, { title: title, summary: summary.summary,} )
+)
+)
+	);
 }
 
 /**
@@ -8553,8 +8774,11 @@ function NewCommentBody({ inputs, report }) {
 , report == null &&
 					"A summary of the benchmark results will show here once they finish."
 )
-, h('ul', { id: getSummaryListId(),}
-, report != null && h(SummaryListItem, { report: report,} )
+, h('div', { id: getSummaryContainerId(),}
+, report != null &&
+					report.summaries.map((summary) => (
+						h(SummarySection, { title: report.title, summary: summary,} )
+					))
 )
 , h('h3', null, "Results")
 , h('p', { class: globalStatusClass,}
@@ -8568,6 +8792,17 @@ function NewCommentBody({ inputs, report }) {
 )
 )
 	);
+}
+
+/**
+ * @param {import("./global").Measurement} measurement
+ */
+function getMeasurementSortKey(measurement) {
+	if (measurement == defaultMeasure$2) {
+		return "000-default";
+	} else {
+		return measurement.name;
+	}
 }
 
 /**
@@ -8618,33 +8853,95 @@ function getCommentBody(inputs, report, commentBody, logger) {
 
 	logger.info("Parsing existing comment...");
 	const commentHtml = parse$1(commentBody);
-	const summaryContainer = commentHtml.querySelector(`#${getSummaryListId()}`);
-	const resultsContainer = commentHtml.querySelector(
-		`#${getResultsContainerId()}`
-	);
-
-	const summaryId = getSummaryId(report.id);
-	const summary = commentHtml.querySelector(`#${summaryId}`);
-
-	const resultsId = getBenchmarkSectionId(report.id);
-	const results = commentHtml.querySelector(`#${resultsId}`);
-
-	const summaryStatus = _optionalChain([summary, 'optionalAccess', _4 => _4.querySelector, 'call', _5 => _5(`.${statusClass}`)]);
-	const resultStatus = _optionalChain([results, 'optionalAccess', _6 => _6.querySelector, 'call', _7 => _7(`.${statusClass}`)]);
 
 	// Clear global status messages
 	commentHtml
 		.querySelectorAll(`.${globalStatusClass}`)
 		.forEach((el) => el.set_content(""));
 
-	// Update summary
-	if (summary) {
-		const htmlRunNumber = parseInt(results.getAttribute("data-run-number"), 10);
+	report.summaries.forEach((summaryData) =>
+		updateSummary(inputs, report, summaryData, commentHtml, logger)
+	);
+	updateResults(inputs, report, commentHtml, logger);
 
-		if (report.isRunning) {
-			logger.info(`Adding status info to summary with id "${summaryId}"...`);
-			summaryStatus.set_content(report.status);
-		} else if (htmlRunNumber > report.actionInfo.run.number) {
+	return commentHtml.toString();
+}
+
+/**
+ * @param {import('./global').Inputs} inputs
+ * @param {import('./global').Report} report
+ * @param {import('./global').MeasurementSummary} summaryData
+ * @param {import('node-html-parser').HTMLElement} commentHtml
+ * @param {import('./global').Logger} logger
+ */
+function updateSummary(inputs, report, summaryData, commentHtml, logger) {
+	if (report.isRunning) {
+		// Because this report is currently running, we don't have any results,
+		// meaning we don't yet know what measurements this report will generate.
+		// Because of this lack of knowledge, let's first check to see if any
+		// summary line items exist for this report (by looking for summary line
+		// items with a className containing this report id)
+
+		const selector = `.${getSummaryClass(report.id)}`;
+		const existingSummaries = commentHtml.querySelectorAll(selector);
+		if (existingSummaries && existingSummaries.length > 0) {
+			existingSummaries.forEach((summary) => {
+				logger.info(`Adding status info to summary with id "${summary.id}"...`);
+
+				const summaryStatus = summary.querySelector(`.${statusClass}`);
+				summaryStatus.set_content(report.status);
+			});
+
+			return;
+		}
+
+		// We did not find any existing summaries. Since we don't know what
+		// measurements this summary will go in we'll have to add to the "default"
+		// measurement for now. When the real results come in, we'll remove this
+		// summary and put the summaries under the right measurement header
+		//
+		// When the report is running, all of it's summary default to using the
+		// defaultMeasure as it's measure so we can rely on the logic below to
+		// handle this case.
+	}
+
+	if (summaryData.measurement !== defaultMeasure$2) {
+		// Benchmark results can't include default measures and non-default
+		// measures, so if this summary's measure is not the defaultMeasure, then
+		// any existing defaultMeasures for this report must've been added while the
+		// report is running. Let's remove them since that isn't true anymore.
+		const defaultId = getSummaryId(defaultMeasureId$1, report.id);
+		const defaultItem = commentHtml.querySelector(`#${defaultId}`);
+		if (defaultItem) {
+			const defaultListItem = defaultItem.parentNode;
+			const defaultList = defaultListItem.parentNode;
+			defaultList.removeChild(defaultListItem);
+
+			if (defaultList.innerHTML.trim() === "") {
+				// Remove default section if list is empty
+				let defaultMeasureContainer = defaultList.parentNode;
+				defaultMeasureContainer.parentNode.removeChild(defaultMeasureContainer);
+			}
+		}
+	}
+
+	const measurementListId = `#${getMeasurementSummaryListId(
+		summaryData.measurementId
+	)}`;
+	const measurementList = commentHtml.querySelector(measurementListId);
+
+	const summaryId = getSummaryId(summaryData.measurementId, report.id);
+	const summary = commentHtml.querySelector(`#${summaryId}`);
+	// const summaryStatus = summary?.querySelector(`.${statusClass}`);
+
+	if (summary) {
+		const htmlRunNumber = parseInt(summary.getAttribute("data-run-number"), 10);
+
+		// if (report.isRunning) {
+		// 	logger.info(`Adding status info to summary with id "${summaryId}"...`);
+		// 	summaryStatus.set_content(report.status);
+		// } else if (htmlRunNumber > report.actionInfo.run.number) {
+		if (htmlRunNumber > report.actionInfo.run.number) {
 			logger.info(
 				`Existing summary is from a run (#${htmlRunNumber}) that is more recent than the` +
 					`current run (#${report.actionInfo.run.number}). Not updating the results.`
@@ -8652,18 +8949,51 @@ function getCommentBody(inputs, report, commentBody, logger) {
 		} else {
 			logger.info(`Updating summary with id "${summaryId}"...`);
 			// @ts-ignore - Can safely assume summary.parentNode is HTMLElement
-			summary.parentNode.exchangeChild(summary, report.summary);
+			summary.parentNode.exchangeChild(summary, summaryData.summary);
 		}
+	} else if (measurementList) {
+		logger.info(
+			`No summary found with id "${summaryId}" but found the right measurement section so adding this summary to that section.`
+		);
+
+		insertNewBenchData(
+			measurementList,
+			report.title,
+			h(SummaryListItem, { title: report.title, summary: summaryData.summary,} )
+		);
 	} else {
-		logger.info(`No summary found with id "${summaryId}" so adding new one.`);
+		logger.info(
+			`No summary found with id "${summaryId}" and no measurement section with id "${measurementListId}" so creating a new one.`
+		);
+
+		const summaryContainerId = getSummaryContainerId();
+		const summaryContainer = commentHtml.querySelector(
+			`#${summaryContainerId}`
+		);
+
 		insertNewBenchData(
 			summaryContainer,
-			report.title,
-			h(SummaryListItem, { report: report,} )
+			getMeasurementSortKey(summaryData.measurement),
+			h(SummarySection, { title: report.title, summary: summaryData,} )
 		);
 	}
+}
 
-	// Update results entry
+/**
+ * @param {import('./global').Inputs} inputs
+ * @param {import('./global').Report} report
+ * @param {import('node-html-parser').HTMLElement} commentHtml
+ * @param {import('./global').Logger} logger
+ */
+function updateResults(inputs, report, commentHtml, logger) {
+	const resultsContainer = commentHtml.querySelector(
+		`#${getResultsContainerId()}`
+	);
+
+	const resultsId = getBenchmarkSectionId(report.id);
+	const results = commentHtml.querySelector(`#${resultsId}`);
+	const resultStatus = _optionalChain([results, 'optionalAccess', _4 => _4.querySelector, 'call', _5 => _5(`.${statusClass}`)]);
+
 	if (results) {
 		const htmlRunNumber = parseInt(results.getAttribute("data-run-number"), 10);
 
@@ -8695,8 +9025,6 @@ function getCommentBody(inputs, report, commentBody, logger) {
 			h(BenchmarkSection, { report: report, open: inputs.defaultOpen,} )
 		);
 	}
-
-	return commentHtml.toString();
 }
 
 var getCommentBody_1 = {
@@ -14329,7 +14657,6 @@ var comments = {
 };
 
 function _optionalChain$2(ops) { let lastAccessLHS = undefined; let value = ops[0]; let i = 1; while (i < ops.length) { const op = ops[i]; const fn = ops[i + 1]; i += 2; if ((op === 'optionalAccess' || op === 'optionalCall') && value == null) { return undefined; } if (op === 'access' || op === 'optionalAccess') { lastAccessLHS = value; value = fn(value); } else if (op === 'call' || op === 'optionalCall') { value = fn((...args) => value.call(lastAccessLHS, ...args)); lastAccessLHS = undefined; } } return value; }const { readFile } = fs.promises;
-
 const {
 	h: h$1,
 	getCommentBody: getCommentBody$1,
@@ -14339,33 +14666,35 @@ const {
 } = getCommentBody_1;
 const { getActionInfo: getActionInfo$1, getCommit: getCommit$1 } = github$1;
 const { createCommentContext: createCommentContext$1, postOrUpdateComment: postOrUpdateComment$1 } = comments;
+const { normalizeResults: normalizeResults$1 } = tachometer;
+const {
+	getMeasurementId: getMeasurementId$1,
+	getReportId: getReportId$1,
+	defaultMeasure: defaultMeasure$3,
+	defaultMeasureId: defaultMeasureId$2,
+} = hash_1;
 
 /**
- * @param {import('./global').BenchmarkResult[]} benchmarks
+ * Given an array and a list of indexes into that array, return a new array with
+ * just the values from the indexes specified
+ * @template T
+ * @param {T[]} array
+ * @param {number[]} indexes
+ * @returns {T[]}
  */
-function getReportId(benchmarks) {
-	/** @type {(b: import('./global').BenchmarkResult) => string} */
-	const getBrowserKey = (b) =>
-		b.browser.name + (b.browser.headless ? "-headless" : "");
-
-	const benchKeys = benchmarks.map((b) => {
-		return `${b.name},${b.version},${getBrowserKey(b)}`;
-	});
-
-	return crypto
-		.createHash("sha1")
-		.update(benchKeys.join("::"))
-		.digest("base64")
-		.replace(/\+/g, "-")
-		.replace(/\//g, "_")
-		.replace(/=*$/, "");
+function pickArray(array, indexes) {
+	let newArray = [];
+	for (let index of indexes) {
+		newArray.push(array[index]);
+	}
+	return newArray;
 }
 
 /**
  * @param {import("./global").CommitInfo} commitInfo
  * @param {import('./global').ActionInfo} actionInfo
  * @param {Pick<import('./global').Inputs, 'prBenchName' | 'baseBenchName' | 'defaultOpen' | 'reportId'>} inputs
- * @param {import('./global').TachResults} tachResults
+ * @param {import('./global').PatchedTachResults} tachResults
  * @param {boolean} [isRunning]
  * @returns {import('./global').Report}
  */
@@ -14382,7 +14711,54 @@ function buildReport(
 	//    - Allowing aliases
 	//    - replace `base-bench-name` with `branch@SHA`
 
-	const benchmarks = _optionalChain$2([tachResults, 'optionalAccess', _ => _.benchmarks]);
+	/** @type {import("./global").PatchedBenchmarkResult[]} */
+	let benchmarks;
+
+	/** @type {import('./global').ResultsByMeasurement} */
+	let resultsByMeasurement;
+
+	/** @type {import("./global").MeasurementSummary[]} */
+	let summaries = [];
+
+	if (tachResults) {
+		tachResults = normalizeResults$1(tachResults);
+		benchmarks = tachResults.benchmarks;
+
+		// First, group bench indexes by same measurements
+		let measurementIndexes = new Map();
+		for (let i = 0; i < benchmarks.length; i++) {
+			let bench = benchmarks[i];
+			let measurementId =
+				bench.measurement === defaultMeasure$3
+					? defaultMeasureId$2
+					: getMeasurementId$1(bench.measurement);
+
+			if (!measurementIndexes.has(measurementId)) {
+				measurementIndexes.set(measurementId, []);
+			}
+
+			measurementIndexes.get(measurementId).push(i);
+		}
+
+		// Now, group the actual benchmark results by measurement. We modify the
+		// "differences" array to only include the differences with other benchmarks
+		// of the same measurement, using the indexes we determined in the loop
+		// above.
+		resultsByMeasurement = new Map();
+		for (let [measurementId, benchIndexes] of measurementIndexes.entries()) {
+			if (!resultsByMeasurement.has(measurementId)) {
+				resultsByMeasurement.set(measurementId, []);
+			}
+
+			for (let benchIndex of benchIndexes) {
+				let bench = benchmarks[benchIndex];
+				resultsByMeasurement.get(measurementId).push({
+					...bench,
+					differences: pickArray(bench.differences, benchIndexes),
+				});
+			}
+		}
+	}
 
 	let reportId;
 	let title;
@@ -14390,12 +14766,55 @@ function buildReport(
 		reportId = inputs.reportId;
 		title = inputs.reportId;
 	} else if (benchmarks) {
-		reportId = getReportId(benchmarks);
+		reportId = getReportId$1(benchmarks);
 		title = Array.from(new Set(benchmarks.map((b) => b.name))).join(", ");
 	} else {
 		throw new Error(
 			"Could not determine ID for report. 'report-id' option was not provided and there are no benchmark results"
 		);
+	}
+
+	if (resultsByMeasurement) {
+		for (let [measurementId, benches] of resultsByMeasurement) {
+			// TODO: Need to adjust benches differences array to accommodate reduced
+			// comparisons to just benches of same measurement. Handcrafted test
+			// results file doesn't appropriately replicate this scenario
+			summaries.push({
+				measurementId,
+				measurement: benches[0].measurement,
+				summary: (
+					h$1(Summary$1, {
+						reportId: reportId,
+						measurementId: measurementId,
+						title: title,
+						benchmarks: benches,
+						prBenchName: inputs.prBenchName,
+						baseBenchName: inputs.baseBenchName,
+						actionInfo: actionInfo,
+						isRunning: isRunning,}
+					)
+				),
+			});
+		}
+	} else if (isRunning) {
+		// We don't have results meaning we don't know what measurements this report
+		// will use, so default to defaultMeasure for now
+		summaries.push({
+			measurementId: defaultMeasureId$2,
+			measurement: defaultMeasure$3,
+			summary: (
+				h$1(Summary$1, {
+					reportId: reportId,
+					measurementId: defaultMeasureId$2,
+					title: title,
+					benchmarks: benchmarks,
+					prBenchName: inputs.prBenchName,
+					baseBenchName: inputs.baseBenchName,
+					actionInfo: actionInfo,
+					isRunning: isRunning,}
+				)
+			),
+		});
 	}
 
 	return {
@@ -14405,27 +14824,17 @@ function buildReport(
 		baseBenchName: inputs.baseBenchName,
 		actionInfo: actionInfo,
 		isRunning,
-		// results: benchmarks,
 		status: isRunning ? h$1(Status$1, { actionInfo: actionInfo, icon: true,} ) : null,
 		body: (
 			h$1(ResultsEntry$1, {
 				reportId: reportId,
 				benchmarks: benchmarks,
+				resultsByMeasurement: resultsByMeasurement,
 				actionInfo: actionInfo,
 				commitInfo: commitInfo,}
 			)
 		),
-		summary: (
-			h$1(Summary$1, {
-				reportId: reportId,
-				title: title,
-				benchmarks: benchmarks,
-				prBenchName: inputs.prBenchName,
-				baseBenchName: inputs.baseBenchName,
-				actionInfo: actionInfo,
-				isRunning: isRunning,}
-			)
-		),
+		summaries,
 	};
 }
 
@@ -14488,17 +14897,21 @@ async function reportTachRunning(
 
 	await postOrUpdateComment$1(
 		github,
-		createCommentContext$1(context, actionInfo, _optionalChain$2([report, 'optionalAccess', _2 => _2.id]), inputs.initialize),
-		(comment) => getCommentBody$1(inputs, report, _optionalChain$2([comment, 'optionalAccess', _3 => _3.body]), logger),
+		createCommentContext$1(context, actionInfo, _optionalChain$2([report, 'optionalAccess', _ => _.id]), inputs.initialize),
+		(comment) => getCommentBody$1(inputs, report, _optionalChain$2([comment, 'optionalAccess', _2 => _2.body]), logger),
 		logger
 	);
 
 	if (report) {
 		return {
 			...report,
-			status: _optionalChain$2([report, 'access', _4 => _4.status, 'optionalAccess', _5 => _5.toString, 'call', _6 => _6()]),
-			body: _optionalChain$2([report, 'access', _7 => _7.body, 'optionalAccess', _8 => _8.toString, 'call', _9 => _9()]),
-			summary: _optionalChain$2([report, 'access', _10 => _10.summary, 'optionalAccess', _11 => _11.toString, 'call', _12 => _12()]),
+			status: _optionalChain$2([report, 'access', _3 => _3.status, 'optionalAccess', _4 => _4.toString, 'call', _5 => _5()]),
+			body: _optionalChain$2([report, 'access', _6 => _6.body, 'optionalAccess', _7 => _7.toString, 'call', _8 => _8()]),
+			summaries: _optionalChain$2([report, 'access', _9 => _9.summaries, 'optionalAccess', _10 => _10.map, 'call', _11 => _11((m) => ({
+				measurementId: m.measurementId,
+				measurement: m.measurement,
+				summary: m.summary.toString(),
+			}))]),
 		};
 	} else {
 		return null;
@@ -14554,15 +14967,19 @@ async function reportTachResults(
 	await postOrUpdateComment$1(
 		github,
 		createCommentContext$1(context, actionInfo, report.id, inputs.initialize),
-		(comment) => getCommentBody$1(inputs, report, _optionalChain$2([comment, 'optionalAccess', _13 => _13.body]), logger),
+		(comment) => getCommentBody$1(inputs, report, _optionalChain$2([comment, 'optionalAccess', _12 => _12.body]), logger),
 		logger
 	);
 
 	return {
 		...report,
-		status: _optionalChain$2([report, 'access', _14 => _14.status, 'optionalAccess', _15 => _15.toString, 'call', _16 => _16()]),
-		body: _optionalChain$2([report, 'access', _17 => _17.body, 'optionalAccess', _18 => _18.toString, 'call', _19 => _19()]),
-		summary: _optionalChain$2([report, 'access', _20 => _20.summary, 'optionalAccess', _21 => _21.toString, 'call', _22 => _22()]),
+		status: _optionalChain$2([report, 'access', _13 => _13.status, 'optionalAccess', _14 => _14.toString, 'call', _15 => _15()]),
+		body: _optionalChain$2([report, 'access', _16 => _16.body, 'optionalAccess', _17 => _17.toString, 'call', _18 => _18()]),
+		summaries: _optionalChain$2([report, 'access', _19 => _19.summaries, 'optionalAccess', _20 => _20.map, 'call', _21 => _21((m) => ({
+			measurementId: m.measurementId,
+			measurement: m.measurement,
+			summary: m.summary.toString(),
+		}))]),
 	};
 }
 

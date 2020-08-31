@@ -1,17 +1,19 @@
 const prettyBytes = require("pretty-bytes");
 const { UAParser } = require("ua-parser-js");
+const { defaultMeasure } = require("./hash");
 
 // Utilities from Tachometer, adapted from: https://github.com/Polymer/tachometer/blob/ff284b0329aa24249aa5ebce8bb009d88d0b057a/src/format.ts
 
 const lineBreak = "<br />";
 
 /**
+ * @param {(b: import('../global').BenchmarkResult) => string} labelFn
  * @param {import('../global').BenchmarkResult[]} benchmarks
+ * @returns {import('../global').Dimension[]}
  */
 function makeDifferenceDimensions(labelFn, benchmarks) {
 	return benchmarks.map((b, i) => {
-		/** @type {import('../global').Dimension} */
-		const dimension = {
+		return {
 			label: `vs ${labelFn(b)}`,
 			format: (b) => {
 				if (b.differences === undefined) {
@@ -31,8 +33,6 @@ function makeDifferenceDimensions(labelFn, benchmarks) {
 			// 	alignment: "right",
 			// },
 		};
-
-		return dimension;
 	});
 }
 
@@ -212,6 +212,75 @@ function makeUniqueLabelFn(results) {
 	};
 }
 
+/**
+ * Return a good-enough label for the given measurement, to disambiguate cases
+ * where there are multiple measurements on the same page.
+ * @param {import("../global").Measurement} measurement
+ * @returns {string}
+ */
+function measurementName(measurement) {
+	if (measurement.name) {
+		return measurement.name;
+	}
+
+	switch (measurement.mode) {
+		case "callback":
+			return "callback";
+		case "expression":
+			return measurement.expression;
+		case "performance":
+			return measurement.entryName === "first-contentful-paint"
+				? "fcp"
+				: measurement.entryName;
+	}
+	throw new Error(
+		`Internal error: unknown measurement type ` + JSON.stringify(measurement)
+	);
+}
+
+/**
+ * Patch tachometer results to include a `measurement` field parsed from the
+ * benchmark name. Ensure all measurement fields have a name if they exist.
+ * @param {import("../global").PatchedTachResults} tachResults
+ * @returns {import('../global').PatchedTachResults}
+ */
+function normalizeResults(tachResults) {
+	const nameRe = /(.+?)(?: \[(.+)\])?$/;
+
+	/** @type {import('../global').PatchedTachResults} */
+	const patchedResults = { benchmarks: [] };
+	for (let bench of tachResults.benchmarks) {
+		if (bench.measurement) {
+			if (!bench.measurement.name) {
+				bench.measurement.name = measurementName(bench.measurement);
+			}
+
+			continue;
+		}
+
+		let match = bench.name.match(nameRe);
+		if (!match) {
+			console.warn(`Could not parse benchmark name: ${bench.name}`);
+			continue;
+		}
+
+		const benchName = match[1];
+		const measureName = match[2];
+		patchedResults.benchmarks.push({
+			...bench,
+			name: benchName,
+			// @ts-ignore - can't determine mode when patching
+			measurement: measureName
+				? {
+						name: measureName,
+				  }
+				: defaultMeasure,
+		});
+	}
+
+	return patchedResults;
+}
+
 module.exports = {
 	formatDifference,
 	makeUniqueLabelFn,
@@ -222,4 +291,6 @@ module.exports = {
 	sampleSizeDimension,
 	bytesSentDimension,
 	runtimeConfidenceIntervalDimension,
+	measurementName,
+	normalizeResults,
 };

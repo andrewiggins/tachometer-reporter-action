@@ -8,10 +8,18 @@ const {
 	copyTestResults,
 	assertFixture,
 	shouldAssertFixtures,
+	testResultsHashId,
 } = require("./utils");
 const { invokeBuildReport } = require("./invokeBuildReport");
 
 const buildReportSuite = suite("buildReport");
+
+/**
+ * @param {import("../src/global").Report} report
+ */
+function getSummaryText(report) {
+	return report.summaries.map((m) => m.summary.toString()).join("\n");
+}
 
 buildReportSuite("Body snapshot", async () => {
 	const report = invokeBuildReport();
@@ -28,7 +36,7 @@ buildReportSuite("Body snapshot", async () => {
 
 buildReportSuite("Summary snapshot", async () => {
 	const report = invokeBuildReport();
-	const html = formatHtml(report.summary.toString());
+	const html = formatHtml(getSummaryText(report));
 
 	const fixturePath = testRoot("fixtures/test-results-summary.html");
 	const fixture = await readFile(fixturePath, "utf-8");
@@ -47,10 +55,8 @@ buildReportSuite("Uses input.reportId", () => {
 });
 
 buildReportSuite("Generates reportId if not given", () => {
-	const expectedId = "l5UdXHMZ2m10Bdp0kqRnW0cWarA";
 	const report = invokeBuildReport();
-
-	assert.is(report.id, expectedId, "report.id matches expectation");
+	assert.is(report.id, testResultsHashId, "report.id matches expectation");
 });
 
 buildReportSuite("Summarizes one benchmark correctly", () => {
@@ -59,7 +65,7 @@ buildReportSuite("Summarizes one benchmark correctly", () => {
 
 	const report = invokeBuildReport({ results });
 
-	const summaryText = report.summary.toString();
+	const summaryText = getSummaryText(report);
 	assert.ok(
 		summaryText.includes("32.09ms - 38.19ms"),
 		"Generates interval for single result"
@@ -69,9 +75,9 @@ buildReportSuite("Summarizes one benchmark correctly", () => {
 buildReportSuite("Default summary if base version is null", () => {
 	const report = invokeBuildReport({ inputs: { baseBenchName: null } });
 	assert.not.ok(report.baseBenchName, "report.baseBenchName is null");
-	assert.ok(report.summary, "report.summary is not null");
+	assert.not.equal(report.summaries.length, 0, "report.summary is not empty");
 
-	const summaryText = report.summary.toString();
+	const summaryText = getSummaryText(report);
 	assert.ok(
 		summaryText.includes("local-framework vs fast-framework"),
 		"Uses default values for pr bench and base bench"
@@ -87,9 +93,9 @@ buildReportSuite("Default summary if local version is null", () => {
 		inputs: { baseBenchName: "fast-framework", prBenchName: null },
 	});
 	assert.not.ok(report.prBenchName, "report.prBenchName is null");
-	assert.ok(report.summary, "report.summary is not null");
+	assert.not.equal(report.summaries.length, 0, "report.summary is not empty");
 
-	const summaryText = report.summary.toString();
+	const summaryText = getSummaryText(report);
 	assert.ok(
 		summaryText.includes("base-framework vs fast-framework"),
 		"Uses default values for pr bench and base bench"
@@ -106,9 +112,9 @@ buildReportSuite("Default summary if base and local version are null", () => {
 	});
 	assert.not.ok(report.prBenchName, "report.prBenchName is null");
 	assert.not.ok(report.baseBenchName, "report.baseBenchName is null");
-	assert.ok(report.summary, "report.summary is not null");
+	assert.not.equal(report.summaries.length, 0, "report.summary is not empty");
 
-	const summaryText = report.summary.toString();
+	const summaryText = getSummaryText(report);
 	assert.ok(
 		summaryText.includes("base-framework vs fast-framework"),
 		"Uses default values for pr bench and base bench"
@@ -125,7 +131,7 @@ buildReportSuite(
 		const report = invokeBuildReport({
 			inputs: { prBenchName: "Bench #1" },
 		});
-		const summaryText = report.summary.toString();
+		const summaryText = getSummaryText(report);
 		assert.ok(
 			summaryText.includes(
 				"Could not find benchmark matching <code>pr-bench-name</code>"
@@ -141,7 +147,7 @@ buildReportSuite(
 		const report = invokeBuildReport({
 			inputs: { baseBenchName: "Bench #1" },
 		});
-		const summaryText = report.summary.toString();
+		const summaryText = getSummaryText(report);
 		assert.ok(
 			summaryText.includes(
 				"Could not find benchmark matching <code>base-bench-name</code>"
@@ -157,7 +163,7 @@ buildReportSuite(
 		const report = invokeBuildReport({
 			inputs: { prBenchName: "fast-framework", baseBenchName: "test_bench" },
 		});
-		const summaryText = report.summary.toString();
+		const summaryText = getSummaryText(report);
 		assert.ok(
 			summaryText.includes("matched the same benchmark"),
 			"Error message for same pr-bench-name and base-bench-name"
@@ -173,10 +179,17 @@ buildReportSuite("Supports benchmarks with different names", () => {
 	const report = invokeBuildReport({ results, inputs: {} });
 	const bodyDoc =
 		report.body instanceof HTMLElement ? report.body : parse(report.body);
+
+	assert.equal(
+		report.summaries.length,
+		1,
+		`Expected only one summary. Got ${report.summaries.length} instead.`
+	);
+
 	const summaryDoc =
-		report.summary instanceof HTMLElement
-			? report.summary
-			: parse(report.summary);
+		report.summaries[0].summary instanceof HTMLElement
+			? report.summaries[0].summary
+			: parse(report.summaries[0].summary);
 
 	// console.log(formatHtml(report.body.toString()));
 
@@ -241,10 +254,17 @@ buildReportSuite("Lists all browsers used in details", () => {
 	const report = invokeBuildReport({ results });
 	const bodyDoc =
 		report.body instanceof HTMLElement ? report.body : parse(report.body);
+
+	assert.equal(
+		report.summaries.length,
+		1,
+		`Expected only one summary. Got ${report.summaries.length} instead.`
+	);
+
 	const summaryDoc =
-		report.summary instanceof HTMLElement
-			? report.summary
-			: parse(report.summary);
+		report.summaries[0].summary instanceof HTMLElement
+			? report.summaries[0].summary
+			: parse(report.summaries[0].summary);
 
 	// console.log(prettier.format(report.body.toString(), { parser: "html" }));
 
@@ -326,10 +346,17 @@ buildReportSuite(
 		});
 		const bodyDoc =
 			report.body instanceof HTMLElement ? report.body : parse(report.body);
+
+		assert.equal(
+			report.summaries.length,
+			1,
+			`Expected only one summary. Got ${report.summaries.length} instead.`
+		);
+
 		const summaryDoc =
-			report.summary instanceof HTMLElement
-				? report.summary
-				: parse(report.summary);
+			report.summaries[0].summary instanceof HTMLElement
+				? report.summaries[0].summary
+				: parse(report.summaries[0].summary);
 
 		// console.log(prettier.format(report.body, { parser: "html" }));
 

@@ -1,5 +1,4 @@
 const { readFile } = require("fs").promises;
-const crypto = require("crypto");
 const {
 	h,
 	getCommentBody,
@@ -9,33 +8,35 @@ const {
 } = require("./getCommentBody");
 const { getActionInfo, getCommit } = require("./utils/github");
 const { createCommentContext, postOrUpdateComment } = require("./comments");
+const { normalizeResults } = require("./utils/tachometer");
+const {
+	getMeasurementId,
+	getReportId,
+	defaultMeasure,
+	defaultMeasureId,
+} = require("./utils/hash");
 
 /**
- * @param {import('./global').BenchmarkResult[]} benchmarks
+ * Given an array and a list of indexes into that array, return a new array with
+ * just the values from the indexes specified
+ * @template T
+ * @param {T[]} array
+ * @param {number[]} indexes
+ * @returns {T[]}
  */
-function getReportId(benchmarks) {
-	/** @type {(b: import('./global').BenchmarkResult) => string} */
-	const getBrowserKey = (b) =>
-		b.browser.name + (b.browser.headless ? "-headless" : "");
-
-	const benchKeys = benchmarks.map((b) => {
-		return `${b.name},${b.version},${getBrowserKey(b)}`;
-	});
-
-	return crypto
-		.createHash("sha1")
-		.update(benchKeys.join("::"))
-		.digest("base64")
-		.replace(/\+/g, "-")
-		.replace(/\//g, "_")
-		.replace(/=*$/, "");
+function pickArray(array, indexes) {
+	let newArray = [];
+	for (let index of indexes) {
+		newArray.push(array[index]);
+	}
+	return newArray;
 }
 
 /**
  * @param {import("./global").CommitInfo} commitInfo
  * @param {import('./global').ActionInfo} actionInfo
  * @param {Pick<import('./global').Inputs, 'prBenchName' | 'baseBenchName' | 'defaultOpen' | 'reportId'>} inputs
- * @param {import('./global').TachResults} tachResults
+ * @param {import('./global').PatchedTachResults} tachResults
  * @param {boolean} [isRunning]
  * @returns {import('./global').Report}
  */
@@ -52,7 +53,54 @@ function buildReport(
 	//    - Allowing aliases
 	//    - replace `base-bench-name` with `branch@SHA`
 
-	const benchmarks = tachResults?.benchmarks;
+	/** @type {import("./global").PatchedBenchmarkResult[]} */
+	let benchmarks;
+
+	/** @type {import('./global').ResultsByMeasurement} */
+	let resultsByMeasurement;
+
+	/** @type {import("./global").MeasurementSummary[]} */
+	let summaries = [];
+
+	if (tachResults) {
+		tachResults = normalizeResults(tachResults);
+		benchmarks = tachResults.benchmarks;
+
+		// First, group bench indexes by same measurements
+		let measurementIndexes = new Map();
+		for (let i = 0; i < benchmarks.length; i++) {
+			let bench = benchmarks[i];
+			let measurementId =
+				bench.measurement === defaultMeasure
+					? defaultMeasureId
+					: getMeasurementId(bench.measurement);
+
+			if (!measurementIndexes.has(measurementId)) {
+				measurementIndexes.set(measurementId, []);
+			}
+
+			measurementIndexes.get(measurementId).push(i);
+		}
+
+		// Now, group the actual benchmark results by measurement. We modify the
+		// "differences" array to only include the differences with other benchmarks
+		// of the same measurement, using the indexes we determined in the loop
+		// above.
+		resultsByMeasurement = new Map();
+		for (let [measurementId, benchIndexes] of measurementIndexes.entries()) {
+			if (!resultsByMeasurement.has(measurementId)) {
+				resultsByMeasurement.set(measurementId, []);
+			}
+
+			for (let benchIndex of benchIndexes) {
+				let bench = benchmarks[benchIndex];
+				resultsByMeasurement.get(measurementId).push({
+					...bench,
+					differences: pickArray(bench.differences, benchIndexes),
+				});
+			}
+		}
+	}
 
 	let reportId;
 	let title;
@@ -68,6 +116,49 @@ function buildReport(
 		);
 	}
 
+	if (resultsByMeasurement) {
+		for (let [measurementId, benches] of resultsByMeasurement) {
+			// TODO: Need to adjust benches differences array to accommodate reduced
+			// comparisons to just benches of same measurement. Handcrafted test
+			// results file doesn't appropriately replicate this scenario
+			summaries.push({
+				measurementId,
+				measurement: benches[0].measurement,
+				summary: (
+					<Summary
+						reportId={reportId}
+						measurementId={measurementId}
+						title={title}
+						benchmarks={benches}
+						prBenchName={inputs.prBenchName}
+						baseBenchName={inputs.baseBenchName}
+						actionInfo={actionInfo}
+						isRunning={isRunning}
+					/>
+				),
+			});
+		}
+	} else if (isRunning) {
+		// We don't have results meaning we don't know what measurements this report
+		// will use, so default to defaultMeasure for now
+		summaries.push({
+			measurementId: defaultMeasureId,
+			measurement: defaultMeasure,
+			summary: (
+				<Summary
+					reportId={reportId}
+					measurementId={defaultMeasureId}
+					title={title}
+					benchmarks={benchmarks}
+					prBenchName={inputs.prBenchName}
+					baseBenchName={inputs.baseBenchName}
+					actionInfo={actionInfo}
+					isRunning={isRunning}
+				/>
+			),
+		});
+	}
+
 	return {
 		id: reportId,
 		title,
@@ -75,27 +166,17 @@ function buildReport(
 		baseBenchName: inputs.baseBenchName,
 		actionInfo: actionInfo,
 		isRunning,
-		// results: benchmarks,
 		status: isRunning ? <Status actionInfo={actionInfo} icon={true} /> : null,
 		body: (
 			<ResultsEntry
 				reportId={reportId}
 				benchmarks={benchmarks}
+				resultsByMeasurement={resultsByMeasurement}
 				actionInfo={actionInfo}
 				commitInfo={commitInfo}
 			/>
 		),
-		summary: (
-			<Summary
-				reportId={reportId}
-				title={title}
-				benchmarks={benchmarks}
-				prBenchName={inputs.prBenchName}
-				baseBenchName={inputs.baseBenchName}
-				actionInfo={actionInfo}
-				isRunning={isRunning}
-			/>
-		),
+		summaries,
 	};
 }
 
@@ -168,7 +249,11 @@ async function reportTachRunning(
 			...report,
 			status: report.status?.toString(),
 			body: report.body?.toString(),
-			summary: report.summary?.toString(),
+			summaries: report.summaries?.map((m) => ({
+				measurementId: m.measurementId,
+				measurement: m.measurement,
+				summary: m.summary.toString(),
+			})),
 		};
 	} else {
 		return null;
@@ -232,7 +317,11 @@ async function reportTachResults(
 		...report,
 		status: report.status?.toString(),
 		body: report.body?.toString(),
-		summary: report.summary?.toString(),
+		summaries: report.summaries?.map((m) => ({
+			measurementId: m.measurementId,
+			measurement: m.measurement,
+			summary: m.summary.toString(),
+		})),
 	};
 }
 
