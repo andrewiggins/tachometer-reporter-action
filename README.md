@@ -126,6 +126,15 @@ add a stopwatch icon (⏱) next to any benchmark that is currently running. If t
 action can determine the current job id, then the icon is a link to the action
 job that is running the benchmark (see #7).
 
+### Multiple measurements in one benchmark
+
+![Picture of a PR comment with multiple measurements per benchmark](./docs/multi-measurement-comment.png)
+
+Tachometer supports defining multiple measurements per benchmark configuration.
+In the summary section, we group summaries by measurements. In the result
+details for each benchmark, we build tables for each measurement in that
+benchmark.
+
 ## Inputs
 
 ### Required
