@@ -593,7 +593,14 @@ function updateSummary(inputs, report, summaryData, commentHtml, logger) {
 		const defaultItem = commentHtml.querySelector(`#${defaultId}`);
 		if (defaultItem) {
 			const defaultListItem = defaultItem.parentNode;
-			defaultListItem.parentNode.removeChild(defaultListItem);
+			const defaultList = defaultListItem.parentNode;
+			defaultList.removeChild(defaultListItem);
+
+			if (defaultList.innerHTML.trim() === "") {
+				// Remove default section if list is empty
+				let defaultMeasureContainer = defaultList.parentNode;
+				defaultMeasureContainer.parentNode.removeChild(defaultMeasureContainer);
+			}
 		}
 	}
 
