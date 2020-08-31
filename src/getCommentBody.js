@@ -19,6 +19,7 @@ const getId = (id) => `tachometer-reporter-action--${id}`;
 
 const getResultsContainerId = () => getId("results");
 const getBenchmarkSectionId = (reportId) => getId(`results-${reportId}`);
+const getResultTableClass = (measurementId) => `results::${measurementId}`;
 
 const getSummaryContainerId = () => getId("summaries");
 
@@ -131,15 +132,26 @@ function ResultsEntry({
 	let table;
 	if (resultsByMeasurement.size == 1) {
 		const labelFn = makeUniqueLabelFn(benchmarks);
-		table = <ResultsTable benchmarks={benchmarks} labelFn={labelFn} />;
+		const measurementId = Array.from(resultsByMeasurement.keys())[0];
+		table = (
+			<ResultsTable
+				benchmarks={benchmarks}
+				labelFn={labelFn}
+				measurementId={measurementId}
+			/>
+		);
 	} else {
 		table = [];
-		for (let group of resultsByMeasurement.values()) {
+		for (let [measurementId, group] of resultsByMeasurement.entries()) {
 			const metricName = measurementName(group[0].measurement);
 			const labelFn = makeUniqueLabelFn(group);
 			table.push(
 				<h4>{metricName}</h4>,
-				<ResultsTable benchmarks={group} labelFn={labelFn} />
+				<ResultsTable
+					benchmarks={group}
+					labelFn={labelFn}
+					measurementId={measurementId}
+				/>
 			);
 		}
 	}
@@ -167,7 +179,14 @@ function ResultsEntry({
 	);
 }
 
-function ResultsTable({ benchmarks, labelFn }) {
+/**
+ * @typedef ResultsTableProps
+ * @property {import('./global').BenchmarkResult[]} benchmarks
+ * @property {(b: import('./global').BenchmarkResult) => string} labelFn
+ * @property {string} measurementId
+ * @param {ResultsTableProps} props
+ */
+function ResultsTable({ benchmarks, labelFn, measurementId }) {
 	/** @type {import("./global").Dimension[]} */
 	const tableDimensions = [
 		// Custom dimension that combines Tachometer's benchmark & version dimensions
@@ -180,7 +199,7 @@ function ResultsTable({ benchmarks, labelFn }) {
 	];
 
 	return (
-		<table>
+		<table class={getResultTableClass(measurementId)}>
 			<thead>
 				<tr>
 					{tableDimensions.map((d) => (

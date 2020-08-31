@@ -88,7 +88,9 @@ function assertUIState(
 
 	let resultId = getBenchmarkSectionId(reportId);
 	let resultStatus = body.querySelector(`#${resultId} .status a`);
-	let resultData = body.querySelector(`#${resultId} table`);
+	let resultData = body.querySelector(
+		`#${resultId} table.results::${measurementId}`
+	);
 
 	const msg = (message) => `${label}: ${message}`;
 

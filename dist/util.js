@@ -8368,6 +8368,7 @@ const getId = (id) => `tachometer-reporter-action--${id}`;
 
 const getResultsContainerId = () => getId("results");
 const getBenchmarkSectionId = (reportId) => getId(`results-${reportId}`);
+const getResultTableClass = (measurementId) => `results::${measurementId}`;
 
 const getSummaryContainerId = () => getId("summaries");
 
@@ -8474,15 +8475,26 @@ function ResultsEntry({
 	let table;
 	if (resultsByMeasurement.size == 1) {
 		const labelFn = makeUniqueLabelFn$1(benchmarks);
-		table = h(ResultsTable, { benchmarks: benchmarks, labelFn: labelFn,} );
+		const measurementId = Array.from(resultsByMeasurement.keys())[0];
+		table = (
+			h(ResultsTable, {
+				benchmarks: benchmarks,
+				labelFn: labelFn,
+				measurementId: measurementId,}
+			)
+		);
 	} else {
 		table = [];
-		for (let group of resultsByMeasurement.values()) {
+		for (let [measurementId, group] of resultsByMeasurement.entries()) {
 			const metricName = measurementName$1(group[0].measurement);
 			const labelFn = makeUniqueLabelFn$1(group);
 			table.push(
 				h('h4', null, metricName),
-				h(ResultsTable, { benchmarks: group, labelFn: labelFn,} )
+				h(ResultsTable, {
+					benchmarks: group,
+					labelFn: labelFn,
+					measurementId: measurementId,}
+				)
 			);
 		}
 	}
@@ -8510,7 +8522,14 @@ function ResultsEntry({
 	);
 }
 
-function ResultsTable({ benchmarks, labelFn }) {
+/**
+ * @typedef ResultsTableProps
+ * @property {import('./global').BenchmarkResult[]} benchmarks
+ * @property {(b: import('./global').BenchmarkResult) => string} labelFn
+ * @property {string} measurementId
+ * @param {ResultsTableProps} props
+ */
+function ResultsTable({ benchmarks, labelFn, measurementId }) {
 	/** @type {import("./global").Dimension[]} */
 	const tableDimensions = [
 		// Custom dimension that combines Tachometer's benchmark & version dimensions
@@ -8523,7 +8542,7 @@ function ResultsTable({ benchmarks, labelFn }) {
 	];
 
 	return (
-		h('table', null
+		h('table', { class: getResultTableClass(measurementId),}
 , h('thead', null
 , h('tr', null
 , tableDimensions.map((d) => (
