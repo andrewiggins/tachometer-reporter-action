@@ -13970,7 +13970,8 @@ const randomInt = (min, max) => Math.floor(Math.random() * (max - min)) + min;
 /** @type {(ms: number) => Promise<void>} */
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
-const version =  2;
+const version =
+	 2;
 const versionStr = ` v${version}`;
 
 /** @type {(actionInfo: import('./global').ActionInfo) => string} */

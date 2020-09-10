@@ -31,7 +31,7 @@ jobs:
 
       # Read results and post comment
       - name: Report Tachometer Result
-        uses: andrewiggins/tachometer-reporter-action@v1
+        uses: andrewiggins/tachometer-reporter-action@v2
         with:
           path: results.json
           report-id: benchmark1
@@ -57,7 +57,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Initialize tachometer comment
-        uses: andrewiggins/tachometer-reporter-action@v1
+        uses: andrewiggins/tachometer-reporter-action@v2
         with:
           initialize: true
 
@@ -78,7 +78,7 @@ jobs:
 
       # Read results and post comment
       - name: Report Tachometer Result
-        uses: andrewiggins/tachometer-reporter-action@v1
+        uses: andrewiggins/tachometer-reporter-action@v2
         with:
           path: results.json
           report-id: benchmark1
@@ -95,7 +95,7 @@ jobs:
 
       # Report second benchmark results
       - name: Report Other Tachometer Result
-        uses: andrewiggins/tachometer-reporter-action@v1
+        uses: andrewiggins/tachometer-reporter-action@v2
         with:
           path: other-results.json
 ```
