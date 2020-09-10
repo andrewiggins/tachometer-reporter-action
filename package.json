@@ -1,6 +1,6 @@
 {
   "name": "tachometer-reporter-action",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "description": "Report the results of Polymer/tachometer in a comment for PRs",
   "main": "lib/index.js",
   "scripts": {
@@ -43,6 +43,7 @@
     "@actions/github": "^4.0.0",
     "@rollup/plugin-commonjs": "^13.0.0",
     "@rollup/plugin-node-resolve": "^8.1.0",
+    "@rollup/plugin-replace": "^2.3.3",
     "@rollup/plugin-sucrase": "^3.1.0",
     "@sinonjs/fake-timers": "^6.0.1",
     "c8": "^7.2.1",
