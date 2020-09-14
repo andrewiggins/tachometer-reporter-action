@@ -8088,17 +8088,17 @@ function makeDifferenceDimensions(labelFn, benchmarks) {
 	});
 }
 
-/** @type {import("../global").Dimension} */
-const benchmarkDimension = {
-	label: "Benchmark",
-	format: (b) => b.name,
-};
+// /** @type {import("../global").Dimension} */
+// const benchmarkDimension = {
+// 	label: "Benchmark",
+// 	format: (b) => b.name,
+// };
 
-/** @type {import("../global").Dimension} */
-const versionDimension = {
-	label: "Version",
-	format: (b) => b.version,
-};
+// /** @type {import("../global").Dimension} */
+// const versionDimension = {
+// 	label: "Version",
+// 	format: (b) => b.version,
+// };
 
 /** @type {import("../global").Dimension} */
 const browserDimension = {
@@ -8337,8 +8337,6 @@ var tachometer = {
 	formatDifference,
 	makeUniqueLabelFn,
 	makeDifferenceDimensions,
-	benchmarkDimension,
-	versionDimension,
 	browserDimension,
 	sampleSizeDimension,
 	bytesSentDimension,
