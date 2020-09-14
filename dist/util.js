@@ -8645,7 +8645,7 @@ function Summary({
 
 	if (benchLength === 1) {
 		const text = runtimeConfidenceIntervalDimension$1.format(benchmarks[0]);
-		summaryBody = h('span', null, ": " , text);
+		summaryBody = h(Fragment, null, ": " , text);
 	} else if (benchLength > 1) {
 		// Show message with instructions how to customize summary if default values used
 		usesDefaults = !prBenchName || !baseBenchName;
@@ -8675,21 +8675,21 @@ function Summary({
 
 		if (localIndex == -1) {
 			summaryBody = (
-				h('span', null, ": Could not find benchmark matching "
+				h(Fragment, null, ": Could not find benchmark matching "
       , h('code', null, "pr-bench-name"), " input:" , " "
 , h('code', null, prBenchName)
 )
 			);
 		} else if (baseIndex == -1) {
 			summaryBody = (
-				h('span', null, ": Could not find benchmark matching "
+				h(Fragment, null, ": Could not find benchmark matching "
       , h('code', null, "base-bench-name"), " ", "input: "
  , h('code', null, baseBenchName)
 )
 			);
 		} else if (localIndex == baseIndex) {
 			summaryBody = (
-				h('span', null, ": "
+				h(Fragment, null, ": "
  , h('code', null, "pr-bench-name"), " and "  , h('code', null, "base-bench-name"), " inputs matched the same benchmark so cannot show comparison."
 
 )
@@ -8697,7 +8697,7 @@ function Summary({
 		} else {
 			const diff = formatDifference$1(localResults.differences[baseIndex]);
 			summaryBody = (
-				h('span', null, ": "
+				h(Fragment, null, ": "
  , diff.label, " "
 , h('em', null
 , diff.relative, " (" , diff.absolute, ")"

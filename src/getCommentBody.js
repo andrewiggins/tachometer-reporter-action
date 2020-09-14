@@ -256,7 +256,7 @@ function BenchmarkSection({ report, open }) {
 function Status({ actionInfo, icon }) {
 	const href = actionInfo.job.htmlUrl;
 	const label = `Currently running in ${actionInfo.run.name}…`;
-	const tag = href ? "a" : "span";
+	const tag = href ? "a" : Fragment;
 	const props = {
 		href,
 		title: icon ? label : null,
@@ -298,7 +298,7 @@ function Summary({
 
 	if (benchLength === 1) {
 		const text = runtimeConfidenceIntervalDimension.format(benchmarks[0]);
-		summaryBody = <span>: {text}</span>;
+		summaryBody = <Fragment>: {text}</Fragment>;
 	} else if (benchLength > 1) {
 		// Show message with instructions how to customize summary if default values used
 		usesDefaults = !prBenchName || !baseBenchName;
@@ -328,34 +328,34 @@ function Summary({
 
 		if (localIndex == -1) {
 			summaryBody = (
-				<span>
+				<Fragment>
 					: Could not find benchmark matching <code>pr-bench-name</code> input:{" "}
 					<code>{prBenchName}</code>
-				</span>
+				</Fragment>
 			);
 		} else if (baseIndex == -1) {
 			summaryBody = (
-				<span>
+				<Fragment>
 					: Could not find benchmark matching <code>base-bench-name</code>{" "}
 					input: <code>{baseBenchName}</code>
-				</span>
+				</Fragment>
 			);
 		} else if (localIndex == baseIndex) {
 			summaryBody = (
-				<span>
+				<Fragment>
 					: <code>pr-bench-name</code> and <code>base-bench-name</code> inputs
 					matched the same benchmark so cannot show comparison.
-				</span>
+				</Fragment>
 			);
 		} else {
 			const diff = formatDifference(localResults.differences[baseIndex]);
 			summaryBody = (
-				<span>
+				<Fragment>
 					: {diff.label}{" "}
 					<em>
 						{diff.relative} ({diff.absolute})
 					</em>
-				</span>
+				</Fragment>
 			);
 		}
 	}
