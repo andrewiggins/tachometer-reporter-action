@@ -250,31 +250,40 @@ function normalizeResults(tachResults) {
 	/** @type {import('../global').PatchedTachResults} */
 	const patchedResults = { benchmarks: [] };
 	for (let bench of tachResults.benchmarks) {
-		if (bench.measurement) {
-			if (!bench.measurement.name) {
-				bench.measurement.name = measurementName(bench.measurement);
-			}
-
-			continue;
-		}
-
 		let match = bench.name.match(nameRe);
 		if (!match) {
 			console.warn(`Could not parse benchmark name: ${bench.name}`);
+			patchedResults.benchmarks.push(bench);
 			continue;
 		}
 
-		const benchName = match[1];
-		const measureName = match[2];
+		/** @type {import('../global').Measurement} */
+		let measurement;
+
+		// Ensure every measurement has a name field
+		if (bench.measurement) {
+			if (!bench.measurement.name) {
+				measurement = {
+					...bench.measurement,
+					name: measurementName(bench.measurement),
+				};
+			} else {
+				measurement = bench.measurement;
+			}
+		} else if (match[2]) {
+			// @ts-ignore Can't determine mode in this case
+			measurement = {
+				name: match[2],
+			};
+		} else {
+			measurement = defaultMeasure;
+		}
+
+		const name = match[1];
 		patchedResults.benchmarks.push({
 			...bench,
-			name: benchName,
-			// @ts-ignore - can't determine mode when patching
-			measurement: measureName
-				? {
-						name: measureName,
-				  }
-				: defaultMeasure,
+			name,
+			measurement,
 		});
 	}
 

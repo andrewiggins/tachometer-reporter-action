@@ -1541,6 +1541,67 @@ multiMeasure(
 	}
 );
 
+// Other measure options
+// ==============================
+
+multiMeasure("Multi-measures with name fields", async () => {
+	const resultPath = testRoot("results/multi-measure-names.json");
+	const results = JSON.parse(await readFile(resultPath, "utf8"));
+	const reportId = "multi-measure-names";
+
+	const multiMeasureIds = [
+		"Bq0B3-8_UWt48DqpmNB3lNnwTd4",
+		"gN4D636F9Ua7c6W5IuuBZhQaUoU",
+		"MBkGEFvQqNyyN0MCAmJK9BTIAxU",
+	];
+
+	/** @type {Partial<import('../src/global').Inputs>} */
+	const inputs = {
+		reportId,
+		baseBenchName: "tip-of-tree",
+		prBenchName: "this-change",
+	};
+	const report = invokeBuildReport({ results, inputs });
+	const body = parse(invokeGetCommentBody({ report, inputs }));
+
+	assertUIState(
+		"No default measures",
+		body,
+		{ isRunning: false, hasResults: false },
+		{ reportId, measurementId: defaultMeasureId }
+	);
+
+	assertUIState(
+		"Measure 1 results",
+		body,
+		{ isRunning: false, hasResults: true },
+		{ reportId, measurementId: multiMeasureIds[0] }
+	);
+
+	assertUIState(
+		"Measure 2 results",
+		body,
+		{ isRunning: false, hasResults: true },
+		{ reportId, measurementId: multiMeasureIds[1] }
+	);
+
+	assertUIState(
+		"Measure 3 results",
+		body,
+		{ isRunning: false, hasResults: true },
+		{ reportId, measurementId: multiMeasureIds[2] }
+	);
+
+	const actualHtml = formatHtml(body.toString());
+	const fixturePath = testRoot("fixtures/multi-measure-names.html");
+	const fixture = await readFile(fixturePath, "utf-8");
+
+	// Uncomment to update fixture
+	// await writeFile(fixturePath, actualHtml, "utf-8");
+
+	assertFixture(actualHtml, fixture, "Comment body matches fixture");
+});
+
 //#endregion
 
 newCommentSuite.run();

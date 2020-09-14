@@ -10,7 +10,11 @@
       "name": "getCommentBody Tests",
       "skipFiles": ["<node_internals>/**"],
       "program": "${workspaceFolder}/tests/getCommentBody.test.js",
-      "outFiles": ["${workspaceFolder}/**/*.js", "!**/node_modules/**"]
+      "outFiles": [
+        "${workspaceFolder}/**/*.js",
+        "!**/dist/**",
+        "!**/node_modules/**"
+      ]
     }
   ]
 }
