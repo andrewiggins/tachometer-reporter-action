@@ -369,6 +369,87 @@ const defaultJobInfo = {
 		"https://api.github.com/repos/andrewiggins/tachometer-reporter-action/check-runs/862215228",
 };
 
+// Job Data: curl -H "Accept: application/vnd.github.v3+json" https://api.github.com/repos/andrewiggins/tachometer-reporter-action/actions/jobs/1114818713
+// Job Index: curl -H "Accept: application/vnd.github.v3+json" https://api.github.com/repos/andrewiggins/tachometer-reporter-action/actions/runs/254664657/jobs
+const otherJobInfo = {
+	id: 1114818713,
+	run_id: 254664657,
+	run_url:
+		"https://api.github.com/repos/andrewiggins/tachometer-reporter-action/actions/runs/254664657",
+	node_id: "MDg6Q2hlY2tSdW4xMTE0ODE4NzEz",
+	head_sha: "1a4bbc148864b47e88f34af793ec66c4bf6fb7c0",
+	url:
+		"https://api.github.com/repos/andrewiggins/tachometer-reporter-action/actions/jobs/1114818713",
+	html_url:
+		"https://github.com/andrewiggins/tachometer-reporter-action/runs/1114818713",
+	status: "completed",
+	conclusion: "success",
+	started_at: "2020-09-14T22:47:59Z",
+	completed_at: "2020-09-14T22:48:28Z",
+	name: "First Bench Job",
+	steps: [
+		{
+			name: "Set up job",
+			status: "completed",
+			conclusion: "success",
+			number: 1,
+			started_at: "2020-09-14T22:47:59.000Z",
+			completed_at: "2020-09-14T22:48:02.000Z",
+		},
+		{
+			name: "Pre Report Tachometer Result",
+			status: "completed",
+			conclusion: "success",
+			number: 2,
+			started_at: "2020-09-14T22:48:02.000Z",
+			completed_at: "2020-09-14T22:48:18.000Z",
+		},
+		{
+			name: "Run actions/checkout@v2",
+			status: "completed",
+			conclusion: "success",
+			number: 3,
+			started_at: "2020-09-14T22:48:18.000Z",
+			completed_at: "2020-09-14T22:48:18.000Z",
+		},
+		{
+			name:
+				"Run # Could use this to simulate benchmark running for random number of seconds",
+			status: "completed",
+			conclusion: "success",
+			number: 4,
+			started_at: "2020-09-14T22:48:18.000Z",
+			completed_at: "2020-09-14T22:48:18.000Z",
+		},
+		{
+			name: "Report Tachometer Result",
+			status: "completed",
+			conclusion: "success",
+			number: 5,
+			started_at: "2020-09-14T22:48:18.000Z",
+			completed_at: "2020-09-14T22:48:28.000Z",
+		},
+		{
+			name: "Post Run actions/checkout@v2",
+			status: "completed",
+			conclusion: "success",
+			number: 10,
+			started_at: "2020-09-14T22:48:28.000Z",
+			completed_at: "2020-09-14T22:48:28.000Z",
+		},
+		{
+			name: "Complete job",
+			status: "completed",
+			conclusion: "success",
+			number: 11,
+			started_at: "2020-09-14T22:48:28.000Z",
+			completed_at: "2020-09-14T22:48:28.000Z",
+		},
+	],
+	check_run_url:
+		"https://api.github.com/repos/andrewiggins/tachometer-reporter-action/check-runs/1114818713",
+};
+
 /** @type {import('../../src/global').CommitInfo} */
 const fakeCommit = {
 	sha: "626e78c2446b8d1afc917fc9b0059aa65cc9a07d",
@@ -523,7 +604,7 @@ function createGitHubClient({ comments = [] } = {}) {
 
 	async function* paginateIterator(endpoint) {
 		if (endpoint.includes("/listJobsForWorkflowRun")) {
-			yield { data: [defaultJobInfo] };
+			yield { data: [otherJobInfo, defaultJobInfo] };
 		} else {
 			throw new Error("Not implemented");
 		}
