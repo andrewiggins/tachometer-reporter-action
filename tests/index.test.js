@@ -1,7 +1,6 @@
 const { writeFile } = require("fs/promises");
 const { suite } = require("uvu");
 const assert = require("uvu/assert");
-const fakeTimers = require("@sinonjs/fake-timers");
 const { reportTachRunning, reportTachResults } = require("../lib/index");
 const { fakeGitHubContext, defaultInputs } = require("./mocks/actions");
 const { createGitHubClient, defaultActionInfo } = require("./mocks/github");
@@ -20,16 +19,28 @@ const DEBUG = {
 	testTrace: false,
 };
 
-/** @type {import('@sinonjs/fake-timers').InstalledClock} */
-let clock;
 function setupClock(suite) {
-	suite.before.each(() => {
-		clock = fakeTimers.install();
+	suite.before.each((context) => {
+		// Sinon fake timers don't work with this suite of tests for some reason, so
+		// manually mocking setTimeout here. Likely because it results in a race
+		// condition between sinon fake timers and actual promise resolution. NodeJS
+		// won't continue the promise chains (await calls) until needed (some parent
+		// promise is awaited) but after that happens the inner function then calls
+		// setTimeout, which is faked by sinon and needs runAllAsync to be called.
+		// However the code that needs to call runAllAsync is currently awaiting the
+		// promise so that the setTImeout code be reached. Sigh... a deadlock.
+
+		context.originalSetTimeout = global.setTimeout;
+
+		const p = Promise.resolve();
+		// @ts-ignore
+		global.setTimeout = function (fn) {
+			p.then(() => fn());
+		};
 	});
 
-	suite.after.each(() => {
-		clock.uninstall();
-		clock = null;
+	suite.after.each((context) => {
+		global.setTimeout = context.originalSetTimeout;
 	});
 }
 
@@ -155,20 +166,16 @@ function invokeReportTachResults({
 }
 
 const runningCreateSuite = suite("reportTachRunning (new comment)");
-// const runningCreateSuite = skipSuite();
 setupClock(runningCreateSuite);
 
 runningCreateSuite(
 	"Does nothing if report id and initialize are null",
 	async () => {
 		const github = createGitHubClient();
-		const completion = invokeReportTachRunning({
+		await invokeReportTachRunning({
 			github,
 			inputs: { reportId: null, initialize: null },
 		});
-
-		await clock.runAllAsync();
-		await completion;
 
 		const comments = (await github.issues.listComments()).data;
 		assert.is(comments.length, 0, "Should not create any comments");
@@ -179,13 +186,10 @@ runningCreateSuite(
 	"Creates generic in progress comment if report id is null and initialize is true",
 	async () => {
 		const github = createGitHubClient();
-		const completion = invokeReportTachRunning({
+		await invokeReportTachRunning({
 			github,
 			inputs: { reportId: null, initialize: true },
 		});
-
-		await clock.runAllAsync();
-		await completion;
 
 		const comments = (await github.issues.listComments()).data;
 		assert.is(comments.length, 1, "Should create a comment");
@@ -200,13 +204,10 @@ runningCreateSuite(
 	"Does nothing if report id is null and initialize is false",
 	async () => {
 		const github = createGitHubClient();
-		const completion = invokeReportTachRunning({
+		await invokeReportTachRunning({
 			github,
 			inputs: { reportId: null, initialize: false },
 		});
-
-		await clock.runAllAsync();
-		await completion;
 
 		const comments = (await github.issues.listComments()).data;
 		assert.is(comments.length, 0, "Should not create any comments");
@@ -217,13 +218,10 @@ runningCreateSuite(
 	"Creates new comment with running status if report id is non-null and initialize is null",
 	async () => {
 		const github = createGitHubClient();
-		const completion = invokeReportTachRunning({
+		await invokeReportTachRunning({
 			github,
 			inputs: { reportId: testReportId, initialize: null },
 		});
-
-		await clock.runAllAsync();
-		await completion;
 
 		const comments = (await github.issues.listComments()).data;
 		assert.is(comments.length, 1, "Should create a comment");
@@ -238,13 +236,10 @@ runningCreateSuite(
 	"Creates new comment with running status if report id is non-null and initialize is true",
 	async () => {
 		const github = createGitHubClient();
-		const completion = invokeReportTachRunning({
+		await invokeReportTachRunning({
 			github,
 			inputs: { reportId: testReportId, initialize: true },
 		});
-
-		await clock.runAllAsync();
-		await completion;
 
 		const comments = (await github.issues.listComments()).data;
 		assert.is(comments.length, 1, "Should create a comment");
@@ -256,7 +251,6 @@ runningCreateSuite(
 );
 
 const runningUpdateSuite = suite("reportTachRunning (update comment)");
-// const runningUpdateSuite = skipSuite();
 setupClock(runningUpdateSuite);
 
 /**
@@ -270,10 +264,7 @@ async function runRunningUpdateDoNothingScenario(inputs) {
 	const github = createGitHubClient();
 	await github.issues.createComment({ body });
 
-	const completion = invokeReportTachRunning({ github, inputs });
-
-	await clock.runAllAsync();
-	await completion;
+	await invokeReportTachRunning({ github, inputs });
 
 	const comments = (await github.issues.listComments()).data;
 	assert.is(comments.length, 1, "Should not create any new comments");
@@ -281,7 +272,7 @@ async function runRunningUpdateDoNothingScenario(inputs) {
 }
 
 runningUpdateSuite(
-	"Does nothing if report id and initialize are null",
+	"Does nothing if comment exists and report id and initialize are null",
 	async () => {
 		await runRunningUpdateDoNothingScenario({
 			reportId: null,
@@ -304,7 +295,7 @@ runningUpdateSuite(
 );
 
 runningUpdateSuite(
-	"Does nothing if report id is null and initialize is false",
+	"Does nothing if comment exists and report id is null and initialize is false",
 	async () => {
 		// TODO: Hmm in this case we still acquire a lock on the comment even though
 		// there is nothing to update. Could we detect this and skip acquiring
@@ -326,13 +317,10 @@ runningUpdateSuite(
 		const github = createGitHubClient();
 		await github.issues.createComment({ body });
 
-		const completion = invokeReportTachRunning({
+		await invokeReportTachRunning({
 			github,
 			inputs: { reportId: "report-id", initialize: null },
 		});
-
-		await clock.runAllAsync();
-		await completion;
 
 		const comments = (await github.issues.listComments()).data;
 		assert.is(comments.length, 1, "Should not create a new comment");
@@ -353,13 +341,10 @@ runningUpdateSuite(
 		const github = createGitHubClient();
 		await github.issues.createComment({ body });
 
-		const completion = invokeReportTachRunning({
+		await invokeReportTachRunning({
 			github,
 			inputs: { reportId: "report-id", initialize: true },
 		});
-
-		await clock.runAllAsync();
-		await completion;
 
 		const comments = (await github.issues.listComments()).data;
 		assert.is(comments.length, 1, "Should not create a new comment");
@@ -371,7 +356,6 @@ runningUpdateSuite(
 );
 
 const newResultsSuite = suite("reportTachResults (new comment)");
-// const newResultsSuite = skipSuite();
 setupClock(newResultsSuite);
 
 newResultsSuite("Errors if path and initialize are null", async () => {
@@ -410,13 +394,10 @@ newResultsSuite(
 	"Does nothing if path is null and initialize is true",
 	async () => {
 		const github = createGitHubClient();
-		const completion = invokeReportTachResults({
+		await invokeReportTachResults({
 			github,
 			inputs: { path: null, initialize: true },
 		});
-
-		await clock.runAllAsync();
-		await completion;
 
 		const comments = (await github.issues.listComments()).data;
 
@@ -430,13 +411,10 @@ newResultsSuite(
 	"Creates a new comment if path is not null and initialize is null",
 	async () => {
 		const github = createGitHubClient();
-		const completion = invokeReportTachResults({
+		await invokeReportTachResults({
 			github,
 			inputs: { initialize: null },
 		});
-
-		await clock.runAllAsync();
-		await completion;
 
 		const comments = (await github.issues.listComments()).data;
 
@@ -452,13 +430,10 @@ newResultsSuite(
 	"Creates a new comment if path is not null and initialize is true",
 	async () => {
 		const github = createGitHubClient();
-		const completion = invokeReportTachResults({
+		await invokeReportTachResults({
 			github,
 			inputs: { initialize: true },
 		});
-
-		await clock.runAllAsync();
-		await completion;
 
 		const comments = (await github.issues.listComments()).data;
 
@@ -470,24 +445,8 @@ newResultsSuite(
 	}
 );
 
-let originalSetTimeout;
 const updatedResultsSuite = suite("reportTachResults (update comment)");
-updatedResultsSuite.before(() => {
-	// Sinon fake timers don't work with this suite of tests for some reason, so
-	// manually mocking setTimeout here.
-
-	const p = Promise.resolve();
-
-	originalSetTimeout = global.setTimeout;
-	// @ts-ignore
-	global.setTimeout = function (fn) {
-		p.then(() => fn());
-	};
-});
-
-updatedResultsSuite.after(() => {
-	global.setTimeout = originalSetTimeout;
-});
+setupClock(updatedResultsSuite);
 
 /**
  * @param {Partial<import('../src/global').Inputs>} inputs

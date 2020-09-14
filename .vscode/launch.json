@@ -11,7 +11,23 @@
       "skipFiles": ["<node_internals>/**"],
       "program": "${workspaceFolder}/tests/getCommentBody.test.js",
       "outFiles": [
-        "${workspaceFolder}/**/*.js",
+        "${workspaceFolder}/lib/**/*.js",
+        "${workspaceFolder}/src/**/*.js",
+        "${workspaceFolder}/tests/**/*.js",
+        "!**/dist/**",
+        "!**/node_modules/**"
+      ]
+    },
+    {
+      "type": "pwa-node",
+      "request": "launch",
+      "name": "index Tests",
+      "skipFiles": ["<node_internals>/**"],
+      "program": "${workspaceFolder}/tests/index.test.js",
+      "outFiles": [
+        "${workspaceFolder}/lib/**/*.js",
+        "${workspaceFolder}/src/**/*.js",
+        "${workspaceFolder}/tests/**/*.js",
         "!**/dist/**",
         "!**/node_modules/**"
       ]
