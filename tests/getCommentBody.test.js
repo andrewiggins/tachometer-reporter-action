@@ -325,15 +325,21 @@ newCommentSuite(
 		const bodyHtml = parse(invokeGetCommentBody({ report }));
 
 		const summaryId = getSummaryId({ reportId: testReportId });
-		const summaryStatus = bodyHtml.querySelector(`#${summaryId} .status span`);
+		const summaryStatus = bodyHtml.querySelector(`#${summaryId} .status`);
+		const summaryStatusLink = bodyHtml.querySelector(`#${summaryId} .status a`);
 
 		const resultId = getBenchmarkSectionId(testReportId);
-		const resultStatus = bodyHtml.querySelector(`#${resultId} .status span`);
+		const resultStatus = bodyHtml.querySelector(`#${resultId} .status`);
+		const resultStatusLink = bodyHtml.querySelector(`#${resultId} .status a`);
 
 		assert.ok(summaryStatus, "Summary status span exists");
 		assert.ok(resultStatus, "Result status span exists");
+
 		assert.ok(summaryStatus.text.includes("⏱"), "Summary status span has text");
 		assert.ok(resultStatus.text.includes("⏱"), "Result status span has text");
+
+		assert.not.ok(summaryStatusLink, "Summary status is not a link");
+		assert.not.ok(resultStatusLink, "Result status is not a link");
 	}
 );
 
@@ -658,17 +664,24 @@ updateCommentSuite(
 		const bodyHtml = parse(invokeGetCommentBody({ report, commentBody }));
 
 		const summaryId = getSummaryId({ reportId: testReportId });
-		const summaryStatus = bodyHtml.querySelector(`#${summaryId} .status span`);
+		const summaryStatus = bodyHtml.querySelector(`#${summaryId} .status`);
+		const summaryStatusLink = bodyHtml.querySelector(`#${summaryId} .status a`);
 		const summaryData = bodyHtml.querySelector(`#${summaryId} em`);
 
 		const resultId = getBenchmarkSectionId(testReportId);
-		const resultStatus = bodyHtml.querySelector(`#${resultId} .status span`);
+		const resultStatus = bodyHtml.querySelector(`#${resultId} .status`);
+		const resultStatusLink = bodyHtml.querySelector(`#${resultId} .status a`);
 		const resultData = bodyHtml.querySelector(`#${resultId} table`);
 
 		assert.ok(summaryStatus, "Summary status span exists");
 		assert.ok(resultStatus, "Result status span exists");
+
 		assert.ok(summaryStatus.text.includes("⏱"), "Summary status span has text");
 		assert.ok(resultStatus.text.includes("⏱"), "Result status span has text");
+
+		assert.not.ok(summaryStatusLink, "Summary status is not a link");
+		assert.not.ok(resultStatusLink, "Result status is not a link");
+
 		assert.ok(summaryData, "Summary data is still present");
 		assert.ok(resultData, "Result data is still present");
 	}

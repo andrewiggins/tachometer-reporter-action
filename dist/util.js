@@ -8088,17 +8088,17 @@ function makeDifferenceDimensions(labelFn, benchmarks) {
 	});
 }
 
-/** @type {import("../global").Dimension} */
-const benchmarkDimension = {
-	label: "Benchmark",
-	format: (b) => b.name,
-};
+// /** @type {import("../global").Dimension} */
+// const benchmarkDimension = {
+// 	label: "Benchmark",
+// 	format: (b) => b.name,
+// };
 
-/** @type {import("../global").Dimension} */
-const versionDimension = {
-	label: "Version",
-	format: (b) => b.version,
-};
+// /** @type {import("../global").Dimension} */
+// const versionDimension = {
+// 	label: "Version",
+// 	format: (b) => b.version,
+// };
 
 /** @type {import("../global").Dimension} */
 const browserDimension = {
@@ -8337,8 +8337,6 @@ var tachometer = {
 	formatDifference,
 	makeUniqueLabelFn,
 	makeDifferenceDimensions,
-	benchmarkDimension,
-	versionDimension,
 	browserDimension,
 	sampleSizeDimension,
 	bytesSentDimension,
@@ -8420,12 +8418,14 @@ function h(tag, attrs, ...children) {
 	return element;
 }
 
+function Fragment({ children }) {
+	return children;
+}
+
 function flattenChildren(children, parent, flattened) {
 	if (!flattened) flattened = [];
 
-	if (!children || typeof children == "boolean") ; else if (typeof children == "number" || typeof children == "string") {
-		flattened.push(new TextNode(children.toString()));
-	} else if (children instanceof HTMLElement) {
+	if (!children || typeof children == "boolean") ; else if (children instanceof HTMLElement) {
 		children.parentNode = parent;
 		flattened.push(children);
 	} else if (Array.isArray(children)) {
@@ -8433,7 +8433,8 @@ function flattenChildren(children, parent, flattened) {
 			flattenChildren(child, parent, flattened);
 		}
 	} else {
-		flattened.push(children);
+		// typeof children == "number" || typeof children == "string"
+		flattened.push(new TextNode(children.toString()));
 	}
 
 	return flattened;
@@ -8600,7 +8601,7 @@ function BenchmarkSection({ report, open }) {
 function Status({ actionInfo, icon }) {
 	const href = actionInfo.job.htmlUrl;
 	const label = `Currently running in ${actionInfo.run.name}…`;
-	const tag = href ? "a" : "span";
+	const tag = href ? "a" : Fragment;
 	const props = {
 		href,
 		title: icon ? label : null,
@@ -8642,7 +8643,7 @@ function Summary({
 
 	if (benchLength === 1) {
 		const text = runtimeConfidenceIntervalDimension$1.format(benchmarks[0]);
-		summaryBody = h('span', null, ": " , text);
+		summaryBody = h(Fragment, null, ": " , text);
 	} else if (benchLength > 1) {
 		// Show message with instructions how to customize summary if default values used
 		usesDefaults = !prBenchName || !baseBenchName;
@@ -8672,21 +8673,21 @@ function Summary({
 
 		if (localIndex == -1) {
 			summaryBody = (
-				h('span', null, ": Could not find benchmark matching "
+				h(Fragment, null, ": Could not find benchmark matching "
       , h('code', null, "pr-bench-name"), " input:" , " "
 , h('code', null, prBenchName)
 )
 			);
 		} else if (baseIndex == -1) {
 			summaryBody = (
-				h('span', null, ": Could not find benchmark matching "
+				h(Fragment, null, ": Could not find benchmark matching "
       , h('code', null, "base-bench-name"), " ", "input: "
  , h('code', null, baseBenchName)
 )
 			);
 		} else if (localIndex == baseIndex) {
 			summaryBody = (
-				h('span', null, ": "
+				h(Fragment, null, ": "
  , h('code', null, "pr-bench-name"), " and "  , h('code', null, "base-bench-name"), " inputs matched the same benchmark so cannot show comparison."
 
 )
@@ -8694,7 +8695,7 @@ function Summary({
 		} else {
 			const diff = formatDifference$1(localResults.differences[baseIndex]);
 			summaryBody = (
-				h('span', null, ": "
+				h(Fragment, null, ": "
  , diff.label, " "
 , h('em', null
 , diff.relative, " (" , diff.absolute, ")"
