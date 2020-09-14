@@ -125,6 +125,7 @@ async function getCommit(context, github) {
  * @param {import('../global').GitHubActionClient} github
  * @param {import('../global').GitHubActionContext} context
  */
+/* c8 ignore next 18 */
 async function createCheck(github, context) {
 	const check = await github.checks.create({
 		...context.repo,

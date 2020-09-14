@@ -180,23 +180,6 @@ function buildReport(
 	};
 }
 
-/** @type {import('./global').Logger} */
-const defaultLogger = {
-	warn(getMsg) {
-		console.warn(getMsg);
-	},
-	info(getMsg) {
-		console.log(getMsg);
-	},
-	debug() {},
-	startGroup(name) {
-		console.group(name);
-	},
-	endGroup() {
-		console.groupEnd();
-	},
-};
-
 /** @type {Partial<import('./global').Inputs>} */
 const defaultInputs = {
 	reportId: null,
@@ -214,12 +197,7 @@ const defaultInputs = {
  * @param {import('./global').Logger} [logger]
  * @returns {Promise<import('./global').SerializedReport | null>}
  */
-async function reportTachRunning(
-	github,
-	context,
-	inputs,
-	logger = defaultLogger
-) {
+async function reportTachRunning(github, context, inputs, logger) {
 	/** @type {[ import('./global').ActionInfo, import('./global').CommitInfo ]} */
 	const [actionInfo, commitInfo] = await Promise.all([
 		getActionInfo(context, github, logger),
@@ -267,12 +245,7 @@ async function reportTachRunning(
  * @param {import('./global').Logger} [logger]
  * @returns {Promise<import('./global').SerializedReport | null>}
  */
-async function reportTachResults(
-	github,
-	context,
-	inputs,
-	logger = defaultLogger
-) {
+async function reportTachResults(github, context, inputs, logger) {
 	inputs = { ...defaultInputs, ...inputs };
 
 	if (inputs.path == null) {

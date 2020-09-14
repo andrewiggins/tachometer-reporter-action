@@ -20,7 +20,7 @@ const { invokeBuildReport } = require("./invokeBuildReport");
 const { defaultInputs, testLogger } = require("./mocks/actions");
 const { defaultActionInfo } = require("./mocks/github");
 const { getCommentBody } = require("../lib/getCommentBody");
-const { defaultMeasureId } = require("../src/utils/hash");
+const { defaultMeasureId } = require("../lib/utils/hash");
 
 function generateNewTestResults() {
 	const results = copyTestResults();
