@@ -80,8 +80,6 @@ function flattenChildren(children, parent, flattened) {
 
 	if (!children || typeof children == "boolean") {
 		// skip null/undefined/booleans
-	} else if (typeof children == "number" || typeof children == "string") {
-		flattened.push(new TextNode(children.toString()));
 	} else if (children instanceof HTMLElement) {
 		children.parentNode = parent;
 		flattened.push(children);
@@ -90,7 +88,8 @@ function flattenChildren(children, parent, flattened) {
 			flattenChildren(child, parent, flattened);
 		}
 	} else {
-		flattened.push(children);
+		// typeof children == "number" || typeof children == "string"
+		flattened.push(new TextNode(children.toString()));
 	}
 
 	return flattened;

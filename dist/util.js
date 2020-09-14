@@ -8420,12 +8420,14 @@ function h(tag, attrs, ...children) {
 	return element;
 }
 
+function Fragment({ children }) {
+	return children;
+}
+
 function flattenChildren(children, parent, flattened) {
 	if (!flattened) flattened = [];
 
-	if (!children || typeof children == "boolean") ; else if (typeof children == "number" || typeof children == "string") {
-		flattened.push(new TextNode(children.toString()));
-	} else if (children instanceof HTMLElement) {
+	if (!children || typeof children == "boolean") ; else if (children instanceof HTMLElement) {
 		children.parentNode = parent;
 		flattened.push(children);
 	} else if (Array.isArray(children)) {
@@ -8433,7 +8435,8 @@ function flattenChildren(children, parent, flattened) {
 			flattenChildren(child, parent, flattened);
 		}
 	} else {
-		flattened.push(children);
+		// typeof children == "number" || typeof children == "string"
+		flattened.push(new TextNode(children.toString()));
 	}
 
 	return flattened;
@@ -8600,7 +8603,7 @@ function BenchmarkSection({ report, open }) {
 function Status({ actionInfo, icon }) {
 	const href = actionInfo.job.htmlUrl;
 	const label = `Currently running in ${actionInfo.run.name}…`;
-	const tag = href ? "a" : "span";
+	const tag = href ? "a" : Fragment;
 	const props = {
 		href,
 		title: icon ? label : null,
