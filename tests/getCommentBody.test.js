@@ -343,6 +343,24 @@ newCommentSuite(
 	}
 );
 
+newCommentSuite("Renders expected body for single results", async () => {
+	const results = JSON.parse(
+		await readFile(testRoot("results/single-results.json"), "utf8")
+	);
+
+	const report = invokeBuildReport({ results });
+	const body = invokeGetCommentBody({ report });
+	const html = formatHtml(body.toString());
+
+	const fixturePath = testRoot("fixtures/single-results.html");
+	const fixture = await readFile(fixturePath, "utf-8");
+
+	// Uncomment to update fixture
+	// await writeFile(fixturePath, html, "utf8");
+
+	assertFixture(html, fixture, "Report body matches fixture");
+});
+
 //#endregion
 
 //#region Update Comment Suite
