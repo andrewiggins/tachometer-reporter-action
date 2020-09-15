@@ -14035,6 +14035,7 @@ function getStateName(state) {
 		return state;
 	} else {
 		const keys = Object.keys(state);
+		/* c8 ignore next 3 */
 		if (keys.length !== 1) {
 			throw new Error(`Unexpected state shape object returned: ${state}`);
 		}
@@ -14431,6 +14432,7 @@ async function acquireCommentLock(github, context, getInitialBody, logger) {
 				break;
 			}
 
+			/* c8 ignore next 2 */
 			default:
 				throw new Error(`Unexpected stateName: ${JSON.stringify(stateName)}`);
 		}
@@ -14515,6 +14517,7 @@ async function readComment(github, context, logger) {
 				}
 			}
 		}
+		/* c8 ignore next 4 */
 	} catch (e) {
 		logger.warn("Error trying to read comments: " + e.message);
 		logger.debug(() => e.toString());
@@ -14531,6 +14534,7 @@ async function readComment(github, context, logger) {
  * @returns {Promise<import('./global').CommentData>}
  */
 async function updateComment(github, context, body, logger) {
+	/* c8 ignore next 3 */
 	if (context.commentId == null) {
 		throw new Error(`Cannot update comment if "context.commentId" is null`);
 	}
@@ -14616,6 +14620,8 @@ async function postOrUpdateComment(github, context, getCommentBody, logger) {
 	try {
 		const body = getFinalBody(context, getCommentBody, comment);
 		comment = await updateComment(github, context, body, logger);
+
+		/* c8 ignore next 4 */
 	} catch (e) {
 		logger.info(`Error updating comment: ${e.message}`);
 		logger.debug(() => e.toString());

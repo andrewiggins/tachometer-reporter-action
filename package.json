@@ -10,7 +10,7 @@
     "build:index": "sucrase --production -t jsx --jsx-pragma h -d lib ./src",
     "build:action": "rollup -c ./rollup.config.js",
     "test": "uvu tests",
-    "test:coverage": "c8 --reporter=html --reporter=text npm test"
+    "test:coverage": "c8 --check-coverage --statements 100 --reporter=html --reporter=text npm test"
   },
   "repository": {
     "type": "git",
