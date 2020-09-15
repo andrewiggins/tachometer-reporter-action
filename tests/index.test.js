@@ -1,6 +1,7 @@
 const { writeFile } = require("fs/promises");
 const { suite } = require("uvu");
 const assert = require("uvu/assert");
+const { parse } = require("node-html-parser");
 const { reportTachRunning, reportTachResults } = require("../lib/index");
 const { fakeGitHubContext, defaultInputs } = require("./mocks/actions");
 const { createGitHubClient, defaultActionInfo } = require("./mocks/github");
@@ -10,6 +11,8 @@ const {
 	testReportId,
 	formatHtml,
 	readFixture: readRawFixture,
+	getSummaryId,
+	getBenchmarkSectionId,
 } = require("./utils");
 const { createCommentContext } = require("../lib/comments");
 
@@ -55,20 +58,28 @@ function debug(namespace, msg) {
 }
 
 /**
- * @returns {import('../src/global').Logger}
+ * @returns {import('../src/global').Logger & { logs: { debug: string[]; info: string[]; }}}
  */
 function createTestLogger() {
 	return {
+		logs: {
+			debug: [],
+			info: [],
+		},
 		debug(getMsg) {
-			debug("debug", getMsg());
+			let msg = getMsg();
+			this.logs.debug.push(msg);
+			debug("debug", msg);
 		},
 		info(msg) {
+			this.logs.info.push(msg);
 			debug("info", msg);
 		},
 		warn(msg) {
 			throw new Error("Unexpected warning in test: " + msg);
 		},
 		startGroup(name) {
+			this.logs.info.push(name);
 			debug("info", name);
 		},
 		endGroup() {},
@@ -250,6 +261,44 @@ runningCreateSuite(
 	}
 );
 
+runningCreateSuite(
+	"Create new comment with running status if no matching job is found",
+	async () => {
+		const github = createGitHubClient({
+			workflowData: null,
+			runData: null,
+			runJobs: [],
+		});
+
+		await invokeReportTachRunning({
+			github,
+			inputs: { reportId: testReportId, initialize: true },
+		});
+
+		const comments = (await github.issues.listComments()).data;
+		assert.is(comments.length, 1, "Should create a comment");
+
+		const bodyHtml = parse(comments[0].body);
+
+		const summaryId = getSummaryId({ reportId: testReportId });
+		const summaryStatus = bodyHtml.querySelector(`#${summaryId} .status`);
+		const summaryStatusLink = bodyHtml.querySelector(`#${summaryId} .status a`);
+
+		const resultId = getBenchmarkSectionId(testReportId);
+		const resultStatus = bodyHtml.querySelector(`#${resultId} .status`);
+		const resultStatusLink = bodyHtml.querySelector(`#${resultId} .status a`);
+
+		assert.ok(summaryStatus, "Summary status span exists");
+		assert.ok(resultStatus, "Result status span exists");
+
+		assert.ok(summaryStatus.text.includes("⏱"), "Summary status span has text");
+		assert.ok(resultStatus.text.includes("⏱"), "Result status span has text");
+
+		assert.not.ok(summaryStatusLink, "Summary status is not a link");
+		assert.not.ok(resultStatusLink, "Result status is not a link");
+	}
+);
+
 const runningUpdateSuite = suite("reportTachRunning (update comment)");
 setupClock(runningUpdateSuite);
 
@@ -355,6 +404,50 @@ runningUpdateSuite(
 	}
 );
 
+runningUpdateSuite(
+	"Updates comment with status even if no matching job is found",
+	async () => {
+		const body = addFooter(
+			await readFixture("test-results-existing-comment.html", false)
+		);
+
+		const github = createGitHubClient({
+			workflowData: null,
+			runData: null,
+			runJobs: [],
+		});
+
+		await github.issues.createComment({ body });
+
+		await invokeReportTachRunning({
+			github,
+			inputs: { reportId: "report-id", initialize: true },
+		});
+
+		const comments = (await github.issues.listComments()).data;
+		assert.is(comments.length, 1, "Should create a comment");
+
+		const bodyHtml = parse(comments[0].body);
+
+		const summaryId = getSummaryId({ reportId: testReportId });
+		const summaryStatus = bodyHtml.querySelector(`#${summaryId} .status`);
+		const summaryStatusLink = bodyHtml.querySelector(`#${summaryId} .status a`);
+
+		const resultId = getBenchmarkSectionId(testReportId);
+		const resultStatus = bodyHtml.querySelector(`#${resultId} .status`);
+		const resultStatusLink = bodyHtml.querySelector(`#${resultId} .status a`);
+
+		assert.ok(summaryStatus, "Summary status span exists");
+		assert.ok(resultStatus, "Result status span exists");
+
+		assert.ok(summaryStatus.text.includes("⏱"), "Summary status span has text");
+		assert.ok(resultStatus.text.includes("⏱"), "Result status span has text");
+
+		assert.not.ok(summaryStatusLink, "Summary status is not a link");
+		assert.not.ok(resultStatusLink, "Result status is not a link");
+	}
+);
+
 const newResultsSuite = suite("reportTachResults (new comment)");
 setupClock(newResultsSuite);
 
@@ -442,6 +535,78 @@ newResultsSuite(
 		const actualBody = formatHtml(comments[0].body);
 		const fixture = await readFixture("test-results-new-comment.html");
 		assertFixture(actualBody, fixture, "Comment body matches fixture");
+	}
+);
+
+newResultsSuite(
+	"Creates a new comment with results even if workflow run API fails",
+	async () => {
+		const logger = createTestLogger();
+		const error = new Error("Test error: workflowRun request fails");
+		const github = createGitHubClient({ runData: error });
+
+		await invokeReportTachResults({ github, logger });
+
+		const comments = (await github.issues.listComments()).data;
+
+		assert.is(comments.length, 1, "Should create a new comment");
+
+		const actualBody = formatHtml(comments[0].body);
+		const fixture = await readFixture("test-results-new-comment.html");
+		assertFixture(actualBody, fixture, "Comment body matches fixture");
+
+		const infoLogs = logger.logs.info.join("\n");
+		assert.ok(infoLogs.includes(error.message), "Logs contain error message");
+	}
+);
+
+newResultsSuite(
+	"Creates a new comment with results even if workflow data API fails",
+	async () => {
+		const logger = createTestLogger();
+		const error = new Error("Test error: workflow data request fails");
+		const github = createGitHubClient({ workflowData: error });
+
+		await invokeReportTachResults({ github, logger });
+
+		const comments = (await github.issues.listComments()).data;
+
+		assert.is(comments.length, 1, "Should create a new comment");
+
+		const actualBody = formatHtml(comments[0].body);
+		const fixture = await readFixture("test-results-new-comment.html");
+		assertFixture(actualBody, fixture, "Comment body matches fixture");
+
+		const infoLogs = logger.logs.info.join("\n");
+		assert.ok(infoLogs.includes(error.message), "Logs contain error message");
+	}
+);
+
+newResultsSuite(
+	"Creates a new comment with results even if workflowRun jobs API fails",
+	async () => {
+		const logger = createTestLogger();
+		const error = new Error("Test error: workflowRun jobs request fails");
+		const github = createGitHubClient({ runJobs: error });
+
+		await invokeReportTachResults({ github, logger });
+
+		const comments = (await github.issues.listComments()).data;
+
+		assert.is(comments.length, 1, "Should create a new comment");
+
+		const actualBody = formatHtml(comments[0].body);
+		let fixture = await readFixture("test-results-new-comment.html");
+		// Replace the job URL with the workflow run URL since this test tests the
+		// job API failing
+		fixture = fixture.replace(
+			"https://github.com/andrewiggins/tachometer-reporter-action/runs/862215228",
+			"https://github.com/andrewiggins/tachometer-reporter-action/actions/runs/166203010"
+		);
+		assertFixture(actualBody, fixture, "Comment body matches fixture");
+
+		const infoLogs = logger.logs.info.join("\n");
+		assert.ok(infoLogs.includes(error.message), "Logs contain error message");
 	}
 );
 

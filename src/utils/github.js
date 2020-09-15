@@ -14,12 +14,6 @@ async function* getWorkflowJobs(context, github, logger) {
 	/** @type {import('../global').WorkflowRunJobsAsyncIterator} */
 	const iterator = github.paginate.iterator(endpoint);
 	for await (const page of iterator) {
-		if (page.status > 299) {
-			throw new Error(
-				`Non-success error code returned for workflow runs: ${page.status}`
-			);
-		}
-
 		logger.debug(() => {
 			return (
 				`Workflow Jobs (run id: ${context.runId}): ` +
@@ -38,24 +32,36 @@ async function* getWorkflowJobs(context, github, logger) {
  * @returns {Promise<import('../global').ActionInfo>}
  */
 async function getActionInfo(context, github, logger) {
-	const run = (
-		await github.actions.getWorkflowRun({
-			...context.repo,
-			run_id: context.runId,
-		})
-	).data;
+	let run;
+	try {
+		run = (
+			await github.actions.getWorkflowRun({
+				...context.repo,
+				run_id: context.runId,
+			})
+		).data;
+	} catch (e) {
+		logger.info(`Requesting workflow run failed: ` + e.stack);
+	}
 
 	/** @type {import('@octokit/types').ActionsGetWorkflowResponseData} */
-	const workflow = (
-		await github.request({
-			url: run.workflow_url,
-		})
-	).data;
+	let workflow;
+	try {
+		if (run?.workflow_url) {
+			workflow = (
+				await github.request({
+					url: run?.workflow_url,
+				})
+			).data;
+		}
+	} catch (e) {
+		logger.info(`Requesting workflow info failed: ` + e.stack);
+	}
 
 	const e = encodeURIComponent;
 	const workflowRunsHtmlUrl = `https://github.com/${e(context.repo.owner)}/${e(
 		context.repo.repo
-	)}/actions?query=workflow%3A%22${e(workflow.name)}%22`;
+	)}/actions?query=workflow%3A%22${e(context.workflow)}%22`;
 
 	/** @type {import('../global').WorkflowRunJob} */
 	let matchingJob;
@@ -63,15 +69,19 @@ async function getActionInfo(context, github, logger) {
 	/** @type {number | undefined} */
 	let jobIndex;
 
-	let i = 0;
-	for await (const job of getWorkflowJobs(context, github, logger)) {
-		if (job.name == context.job) {
-			matchingJob = job;
-			jobIndex = i;
-			break;
-		}
+	try {
+		let i = 0;
+		for await (const job of getWorkflowJobs(context, github, logger)) {
+			if (job.name == context.job) {
+				matchingJob = job;
+				jobIndex = i;
+				break;
+			}
 
-		i++;
+			i++;
+		}
+	} catch (e) {
+		logger.info(`Requesting workflow jobs failed: ` + e.stack);
 	}
 
 	if (matchingJob == null) {
@@ -84,21 +94,21 @@ async function getActionInfo(context, github, logger) {
 
 	return {
 		workflow: {
-			id: workflow.id,
-			name: workflow.name, // Also: context.workflow,
-			srcHtmlUrl: workflow.html_url,
+			id: workflow?.id,
+			name: context.workflow, // Also: workflow.name
+			srcHtmlUrl: workflow?.html_url,
 			runsHtmlUrl: workflowRunsHtmlUrl,
 		},
 		run: {
 			id: context.runId,
 			number: context.runNumber,
 			name: `${context.workflow} #${context.runNumber}`,
-			htmlUrl: run.html_url,
+			htmlUrl: run?.html_url,
 		},
 		job: {
 			id: matchingJob?.id,
 			name: matchingJob?.name ?? context.job,
-			htmlUrl: matchingJob?.html_url ?? run.html_url,
+			htmlUrl: matchingJob?.html_url ?? run?.html_url,
 			index: jobIndex,
 		},
 	};
