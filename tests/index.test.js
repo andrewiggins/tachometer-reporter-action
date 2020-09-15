@@ -610,6 +610,23 @@ newResultsSuite(
 	}
 );
 
+newResultsSuite(
+	"Errors if results contains invalid measure mode with no name",
+	async () => {
+		/** @type {Error} */
+		let error;
+		await invokeReportTachResults({
+			inputs: { path: testRoot("results/bad-measure-mode.json") },
+		}).catch((e) => (error = e));
+
+		assert.ok(error, "Should throw an error");
+		assert.ok(
+			error.message.includes(`unknown measurement type`),
+			"Throws expected error"
+		);
+	}
+);
+
 const updatedResultsSuite = suite("reportTachResults (update comment)");
 setupClock(updatedResultsSuite);
 
