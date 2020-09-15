@@ -1602,6 +1602,55 @@ multiMeasure("Multi-measures with name fields", async () => {
 	assertFixture(actualHtml, fixture, "Comment body matches fixture");
 });
 
+multiMeasure("Multi-measures without name fields", async () => {
+	const resultPath = testRoot("results/multi-measure-no-names.json");
+	const results = JSON.parse(await readFile(resultPath, "utf8"));
+	const reportId = "multi-measure-names";
+
+	const multiMeasureIds = [
+		{ id: "t8znIBA9KrQYNSyoz-4Jna9YCrQ", title: "callback" }, // callback
+		{ id: "12YIarwIZuZ5QWn8qfJ55ROrszY", title: "fcp" }, // fcp
+		{ id: "wiSX3EZEDoywSN8002Cnpy2_BjU", title: "window.expression" }, // expression
+		{ id: "hf-lVNr-03D24D1OXrvskvegFkM", title: "duration" }, // perf entry
+	];
+
+	/** @type {Partial<import('../src/global').Inputs>} */
+	const inputs = {
+		reportId,
+		baseBenchName: "tip-of-tree",
+		prBenchName: "this-change",
+	};
+	const report = invokeBuildReport({ results, inputs });
+	const body = parse(invokeGetCommentBody({ report, inputs }));
+
+	assertUIState(
+		"No default measures",
+		body,
+		{ isRunning: false, hasResults: false },
+		{ reportId, measurementId: defaultMeasureId }
+	);
+
+	for (let { id, title } of multiMeasureIds) {
+		// TODO: Complete the results file to match the perf entry measure
+		if (id !== "hf-lVNr-03D24D1OXrvskvegFkM") {
+			assertUIState(
+				`${title} measure results`,
+				body,
+				{ isRunning: false, hasResults: true },
+				{ reportId, measurementId: id }
+			);
+		}
+
+		const summaryId = getSummaryListId(id);
+		const summary = body.querySelector(`#${summaryId}`);
+		const parent = summary.parentNode;
+		assert.ok(
+			parent.attributes["data-sort-key"] == title,
+			`${title} has expected title`
+		);
+	}
+});
+
 //#endregion
 
 newCommentSuite.run();
