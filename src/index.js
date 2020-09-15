@@ -96,7 +96,12 @@ function buildReport(
 				let bench = benchmarks[benchIndex];
 				resultsByMeasurement.get(measurementId).push({
 					...bench,
-					differences: pickArray(bench.differences, benchIndexes),
+
+					// Results of a single benchmark may not have the differences array
+					// defined. Leave it as is in that case.
+					differences: bench.differences
+						? pickArray(bench.differences, benchIndexes)
+						: bench.differences,
 				});
 			}
 		}
