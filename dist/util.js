@@ -9061,12 +9061,6 @@ async function* getWorkflowJobs(context, github, logger) {
 	/** @type {import('../global').WorkflowRunJobsAsyncIterator} */
 	const iterator = github.paginate.iterator(endpoint);
 	for await (const page of iterator) {
-		if (page.status > 299) {
-			throw new Error(
-				`Non-success error code returned for workflow runs: ${page.status}`
-			);
-		}
-
 		logger.debug(() => {
 			return (
 				`Workflow Jobs (run id: ${context.runId}): ` +
@@ -9085,24 +9079,36 @@ async function* getWorkflowJobs(context, github, logger) {
  * @returns {Promise<import('../global').ActionInfo>}
  */
 async function getActionInfo(context, github, logger) {
-	const run = (
-		await github.actions.getWorkflowRun({
-			...context.repo,
-			run_id: context.runId,
-		})
-	).data;
+	let run;
+	try {
+		run = (
+			await github.actions.getWorkflowRun({
+				...context.repo,
+				run_id: context.runId,
+			})
+		).data;
+	} catch (e) {
+		logger.info(`Requesting workflow run failed: ` + e.stack);
+	}
 
 	/** @type {import('@octokit/types').ActionsGetWorkflowResponseData} */
-	const workflow = (
-		await github.request({
-			url: run.workflow_url,
-		})
-	).data;
+	let workflow;
+	try {
+		if (_optionalChain$1([run, 'optionalAccess', _ => _.workflow_url])) {
+			workflow = (
+				await github.request({
+					url: _optionalChain$1([run, 'optionalAccess', _2 => _2.workflow_url]),
+				})
+			).data;
+		}
+	} catch (e) {
+		logger.info(`Requesting workflow info failed: ` + e.stack);
+	}
 
 	const e = encodeURIComponent;
 	const workflowRunsHtmlUrl = `https://github.com/${e(context.repo.owner)}/${e(
 		context.repo.repo
-	)}/actions?query=workflow%3A%22${e(workflow.name)}%22`;
+	)}/actions?query=workflow%3A%22${e(context.workflow)}%22`;
 
 	/** @type {import('../global').WorkflowRunJob} */
 	let matchingJob;
@@ -9110,15 +9116,19 @@ async function getActionInfo(context, github, logger) {
 	/** @type {number | undefined} */
 	let jobIndex;
 
-	let i = 0;
-	for await (const job of getWorkflowJobs(context, github, logger)) {
-		if (job.name == context.job) {
-			matchingJob = job;
-			jobIndex = i;
-			break;
-		}
+	try {
+		let i = 0;
+		for await (const job of getWorkflowJobs(context, github, logger)) {
+			if (job.name == context.job) {
+				matchingJob = job;
+				jobIndex = i;
+				break;
+			}
 
-		i++;
+			i++;
+		}
+	} catch (e) {
+		logger.info(`Requesting workflow jobs failed: ` + e.stack);
 	}
 
 	if (matchingJob == null) {
@@ -9131,21 +9141,21 @@ async function getActionInfo(context, github, logger) {
 
 	return {
 		workflow: {
-			id: workflow.id,
-			name: workflow.name, // Also: context.workflow,
-			srcHtmlUrl: workflow.html_url,
+			id: _optionalChain$1([workflow, 'optionalAccess', _3 => _3.id]),
+			name: context.workflow, // Also: workflow.name
+			srcHtmlUrl: _optionalChain$1([workflow, 'optionalAccess', _4 => _4.html_url]),
 			runsHtmlUrl: workflowRunsHtmlUrl,
 		},
 		run: {
 			id: context.runId,
 			number: context.runNumber,
 			name: `${context.workflow} #${context.runNumber}`,
-			htmlUrl: run.html_url,
+			htmlUrl: _optionalChain$1([run, 'optionalAccess', _5 => _5.html_url]),
 		},
 		job: {
-			id: _optionalChain$1([matchingJob, 'optionalAccess', _ => _.id]),
-			name: _nullishCoalesce$1(_optionalChain$1([matchingJob, 'optionalAccess', _2 => _2.name]), () => ( context.job)),
-			htmlUrl: _nullishCoalesce$1(_optionalChain$1([matchingJob, 'optionalAccess', _3 => _3.html_url]), () => ( run.html_url)),
+			id: _optionalChain$1([matchingJob, 'optionalAccess', _6 => _6.id]),
+			name: _nullishCoalesce$1(_optionalChain$1([matchingJob, 'optionalAccess', _7 => _7.name]), () => ( context.job)),
+			htmlUrl: _nullishCoalesce$1(_optionalChain$1([matchingJob, 'optionalAccess', _8 => _8.html_url]), () => ( _optionalChain$1([run, 'optionalAccess', _9 => _9.html_url]))),
 			index: jobIndex,
 		},
 	};

@@ -532,10 +532,21 @@ const defaultActionInfo = {
  */
 
 /**
- * @param {{ comments?: Comment[] }} [options]
+ * @typedef GithubClientInitialData
+ * @property {Comment[]} [comments]
+ * @property {typeof workflow | Error} [workflowData]
+ * @property {typeof workflowRun | Error} [runData]
+ * @property {Array<typeof defaultJobInfo> | Error} [runJobs]
+ *
+ * @param {GithubClientInitialData} [options]
  */
-function createGitHubClient({ comments = [] } = {}) {
-	// From the log found in import('./invokeBuildReport').defaultActionInfo.job.htmlUrl
+function createGitHubClient({
+	comments = [],
+	workflowData = workflow,
+	runData = workflowRun,
+	runJobs = [otherJobInfo, defaultJobInfo],
+} = {}) {
+	// From the log found in defaultActionInfo.job.htmlUrl
 	let id = 656984357;
 
 	/**
@@ -590,7 +601,11 @@ function createGitHubClient({ comments = [] } = {}) {
 	}
 
 	async function getWorkflowRun() {
-		return { data: workflowRun };
+		if (runData instanceof Error) {
+			throw runData;
+		}
+
+		return { data: runData };
 	}
 
 	async function listJobsForWorkflowRun() {
@@ -604,7 +619,11 @@ function createGitHubClient({ comments = [] } = {}) {
 
 	async function* paginateIterator(endpoint) {
 		if (endpoint.includes("/listJobsForWorkflowRun")) {
-			yield { data: [otherJobInfo, defaultJobInfo] };
+			if (runJobs instanceof Error) {
+				throw runJobs;
+			}
+
+			yield { data: runJobs };
 		} else {
 			throw new Error("Not implemented");
 		}
@@ -612,7 +631,11 @@ function createGitHubClient({ comments = [] } = {}) {
 
 	async function request({ url }) {
 		if (url == workflowRun.workflow_url) {
-			return { data: workflow };
+			if (workflowData instanceof Error) {
+				throw workflowData;
+			}
+
+			return { data: workflowData };
 		} else {
 			throw new Error("Not implemented");
 		}
