@@ -361,6 +361,27 @@ newCommentSuite("Renders expected body for single results", async () => {
 	assertFixture(html, fixture, "Report body matches fixture");
 });
 
+newCommentSuite("Shows unsure if change is 0% - 0%", async () => {
+	const results = JSON.parse(
+		await readFile(testRoot("results/zero-percent-change.json"), "utf8")
+	);
+
+	const reportId = "report-id";
+	const report = invokeBuildReport({ results, inputs: { reportId } });
+	const body = invokeGetCommentBody({ report, inputs: { reportId } });
+	const html = parse(body.toString());
+
+	const summaryId = getSummaryId({ reportId });
+	const actual = html.querySelector(`#${summaryId}`).text;
+	const expected =
+		"report-id: unsure 🔍 -0% - -0% (-0.00ms - -0.00ms)local-framework vs base-framework";
+	assert.equal(
+		actual,
+		expected,
+		"Expected unsure to show for rounded 0% difference"
+	);
+});
+
 //#endregion
 
 //#region Update Comment Suite

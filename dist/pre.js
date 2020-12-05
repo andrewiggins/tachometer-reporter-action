@@ -2,8 +2,8 @@
 
 var util = require('./util.js');
 require('os');
-require('path');
 require('fs');
+require('path');
 require('url');
 require('http');
 require('https');

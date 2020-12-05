@@ -3,8 +3,8 @@
 function _interopDefault (ex) { return (ex && (typeof ex === 'object') && 'default' in ex) ? ex['default'] : ex; }
 
 var os = _interopDefault(require('os'));
-var path$1 = _interopDefault(require('path'));
 var fs = _interopDefault(require('fs'));
+var path$1 = _interopDefault(require('path'));
 var Url = _interopDefault(require('url'));
 var http = _interopDefault(require('http'));
 var https = _interopDefault(require('https'));
@@ -33,6 +33,27 @@ function commonjsRequire () {
 	throw new Error('Dynamic requires are not currently supported by @rollup/plugin-commonjs');
 }
 
+var utils = createCommonjsModule(function (module, exports) {
+// We use any as a valid input type
+/* eslint-disable @typescript-eslint/no-explicit-any */
+Object.defineProperty(exports, "__esModule", { value: true });
+/**
+ * Sanitizes an input into a string so it can be passed into issueCommand safely
+ * @param input input to sanitize into a string
+ */
+function toCommandValue(input) {
+    if (input === null || input === undefined) {
+        return '';
+    }
+    else if (typeof input === 'string' || input instanceof String) {
+        return input;
+    }
+    return JSON.stringify(input);
+}
+exports.toCommandValue = toCommandValue;
+
+});
+
 var command = createCommonjsModule(function (module, exports) {
 var __importStar = (commonjsGlobal && commonjsGlobal.__importStar) || function (mod) {
     if (mod && mod.__esModule) return mod;
@@ -43,6 +64,7 @@ var __importStar = (commonjsGlobal && commonjsGlobal.__importStar) || function (
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const os$1 = __importStar(os);
+
 /**
  * Commands
  *
@@ -96,34 +118,51 @@ class Command {
         return cmdStr;
     }
 }
-/**
- * Sanitizes an input into a string so it can be passed into issueCommand safely
- * @param input input to sanitize into a string
- */
-function toCommandValue(input) {
-    if (input === null || input === undefined) {
-        return '';
-    }
-    else if (typeof input === 'string' || input instanceof String) {
-        return input;
-    }
-    return JSON.stringify(input);
-}
-exports.toCommandValue = toCommandValue;
 function escapeData(s) {
-    return toCommandValue(s)
+    return utils.toCommandValue(s)
         .replace(/%/g, '%25')
         .replace(/\r/g, '%0D')
         .replace(/\n/g, '%0A');
 }
 function escapeProperty(s) {
-    return toCommandValue(s)
+    return utils.toCommandValue(s)
         .replace(/%/g, '%25')
         .replace(/\r/g, '%0D')
         .replace(/\n/g, '%0A')
         .replace(/:/g, '%3A')
         .replace(/,/g, '%2C');
 }
+
+});
+
+var fileCommand = createCommonjsModule(function (module, exports) {
+// For internal use, subject to change.
+var __importStar = (commonjsGlobal && commonjsGlobal.__importStar) || function (mod) {
+    if (mod && mod.__esModule) return mod;
+    var result = {};
+    if (mod != null) for (var k in mod) if (Object.hasOwnProperty.call(mod, k)) result[k] = mod[k];
+    result["default"] = mod;
+    return result;
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+// We use any as a valid input type
+/* eslint-disable @typescript-eslint/no-explicit-any */
+const fs$1 = __importStar(fs);
+const os$1 = __importStar(os);
+
+function issueCommand(command, message) {
+    const filePath = process.env[`GITHUB_${command}`];
+    if (!filePath) {
+        throw new Error(`Unable to find environment variable for file command ${command}`);
+    }
+    if (!fs$1.existsSync(filePath)) {
+        throw new Error(`Missing file at path: ${filePath}`);
+    }
+    fs$1.appendFileSync(filePath, `${utils.toCommandValue(message)}${os$1.EOL}`, {
+        encoding: 'utf8'
+    });
+}
+exports.issueCommand = issueCommand;
 
 });
 
@@ -145,6 +184,8 @@ var __importStar = (commonjsGlobal && commonjsGlobal.__importStar) || function (
     return result;
 };
 Object.defineProperty(exports, "__esModule", { value: true });
+
+
 
 const os$1 = __importStar(os);
 const path = __importStar(path$1);
@@ -172,9 +213,17 @@ var ExitCode;
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function exportVariable(name, val) {
-    const convertedVal = command.toCommandValue(val);
+    const convertedVal = utils.toCommandValue(val);
     process.env[name] = convertedVal;
-    command.issueCommand('set-env', { name }, convertedVal);
+    const filePath = process.env['GITHUB_ENV'] || '';
+    if (filePath) {
+        const delimiter = '_GitHubActionsFileCommandDelimeter_';
+        const commandValue = `${name}<<${delimiter}${os$1.EOL}${convertedVal}${os$1.EOL}${delimiter}`;
+        fileCommand.issueCommand('ENV', commandValue);
+    }
+    else {
+        command.issueCommand('set-env', { name }, convertedVal);
+    }
 }
 exports.exportVariable = exportVariable;
 /**
@@ -190,7 +239,13 @@ exports.setSecret = setSecret;
  * @param inputPath
  */
 function addPath(inputPath) {
-    command.issueCommand('add-path', {}, inputPath);
+    const filePath = process.env['GITHUB_PATH'] || '';
+    if (filePath) {
+        fileCommand.issueCommand('PATH', inputPath);
+    }
+    else {
+        command.issueCommand('add-path', {}, inputPath);
+    }
     process.env['PATH'] = `${inputPath}${path.delimiter}${process.env['PATH']}`;
 }
 exports.addPath = addPath;
@@ -1260,7 +1315,7 @@ class HttpClient {
 exports.HttpClient = HttpClient;
 });
 
-var utils = createCommonjsModule(function (module, exports) {
+var utils$1 = createCommonjsModule(function (module, exports) {
 var __createBinding = (commonjsGlobal && commonjsGlobal.__createBinding) || (Object.create ? (function(o, m, k, k2) {
     if (k2 === undefined) k2 = k;
     Object.defineProperty(o, k2, { enumerable: true, get: function() { return m[k]; } });
@@ -2329,6 +2384,12 @@ function convertBody(buffer, headers) {
 	// html4
 	if (!res && str) {
 		res = /<meta[\s]+?http-equiv=(['"])content-type\1[\s]+?content=(['"])(.+?)\2/i.exec(str);
+		if (!res) {
+			res = /<meta[\s]+?content=(['"])(.+?)\1[\s]+?http-equiv=(['"])content-type\3/i.exec(str);
+			if (res) {
+				res.pop(); // drop last quote
+			}
+		}
 
 		if (res) {
 			res = /charset=(.*)/i.exec(res.pop());
@@ -3336,7 +3397,7 @@ function fetch(url, opts) {
 				// HTTP fetch step 5.5
 				switch (request.redirect) {
 					case 'error':
-						reject(new FetchError(`redirect mode is set to error: ${request.url}`, 'no-redirect'));
+						reject(new FetchError(`uri requested responds with a redirect, redirect mode is set to error: ${request.url}`, 'no-redirect'));
 						finalize();
 						return;
 					case 'manual':
@@ -3375,7 +3436,8 @@ function fetch(url, opts) {
 							method: request.method,
 							body: request.body,
 							signal: request.signal,
-							timeout: request.timeout
+							timeout: request.timeout,
+							size: request.size
 						};
 
 						// HTTP-redirect fetch step 9
@@ -5393,7 +5455,7 @@ var distWeb$2 = /*#__PURE__*/Object.freeze({
 	paginateRest: paginateRest
 });
 
-var utils$1 = createCommonjsModule(function (module, exports) {
+var utils$2 = createCommonjsModule(function (module, exports) {
 var __createBinding = (commonjsGlobal && commonjsGlobal.__createBinding) || (Object.create ? (function(o, m, k, k2) {
     if (k2 === undefined) k2 = k;
     Object.defineProperty(o, k2, { enumerable: true, get: function() { return m[k]; } });
@@ -5416,7 +5478,7 @@ var __importStar = (commonjsGlobal && commonjsGlobal.__importStar) || function (
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.getOctokitOptions = exports.GitHub = exports.context = void 0;
 const Context = __importStar(context);
-const Utils = __importStar(utils);
+const Utils = __importStar(utils$1);
 // octokit + plugins
 
 
@@ -5481,7 +5543,7 @@ exports.context = new Context.Context();
  * @param     options  other options to set
  */
 function getOctokit(token, options) {
-    return new utils$1.GitHub(utils$1.getOctokitOptions(token, options));
+    return new utils$2.GitHub(utils$2.getOctokitOptions(token, options));
 }
 exports.getOctokit = getOctokit;
 
@@ -8179,7 +8241,15 @@ const colorizeSign = (n, format) => {
  */
 function formatDifference({ absolute, percentChange: relative }) {
 	let word, rel, abs;
-	if (absolute.low > 0 && relative.low > 0) {
+	if (Math.round(relative.low) == 0 && Math.round(relative.high) == 0) {
+		// Our formatting for percents uses `.toFixed(0)`. In cases where we would
+		// show 0% - 0% but the actual result is actually not zero (i.e. -0.5 - 0.4)
+		// let's still show the result as unsure to avoid a situation where we would
+		// display something like "slower ❌ 0% - 0% (0.00ms - 0.00ms)"
+		word = `<strong>unsure 🔍</strong>`; // bold blue
+		rel = formatConfidenceInterval(relative, (n) => colorizeSign(n, percent));
+		abs = formatConfidenceInterval(absolute, (n) => colorizeSign(n, milli));
+	} else if (absolute.low > 0 && relative.low > 0) {
 		word = `<strong>slower ❌</strong>`; // bold red
 		rel = formatConfidenceInterval(relative, percent);
 		abs = formatConfidenceInterval(absolute, milli);
