@@ -8243,9 +8243,9 @@ function formatDifference({ absolute, percentChange: relative }) {
 	let word, rel, abs;
 	if (Math.round(relative.low) == 0 && Math.round(relative.high) == 0) {
 		// Our formatting for percents uses `.toFixed(0)`. In cases where we would
-		// show 0% - 0% but the actual result is actually not zero (i.e. -0.5 - 0.4)
-		// let's still show the result as unsure to avoid a situation where we would
-		// display something like "slower ❌ 0% - 0% (0.00ms - 0.00ms)"
+		// show 0% - 0% but the actual result is actually not zero (i.e. -0.5% to
+		// 0.4%) let's still show the result as unsure to avoid a situation where we
+		// would display something like "slower ❌ 0% - 0% (0.00ms - 0.00ms)"
 		word = `<strong>unsure ❔</strong>`; // bold blue
 		rel = formatConfidenceInterval(relative, (n) => colorizeSign(n, percent));
 		abs = formatConfidenceInterval(absolute, (n) => colorizeSign(n, milli));
