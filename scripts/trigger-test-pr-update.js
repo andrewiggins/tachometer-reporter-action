@@ -1,14 +1,39 @@
 const path = require("path");
-const { readFile, writeFile } = require("fs").promises;
+const { readFile, writeFile, readdir } = require("fs").promises;
 const { execSync } = require("child_process");
 
-const repoRoot = (...args) => path.join("__dirname", "..", ...args);
+const repoRoot = (...args) => path.join(__dirname, "..", ...args);
+const workflow = (...args) => repoRoot(".github/workflows", ...args);
 
 /** @type {import('child_process').ExecSyncOptions} */
 const execOpts = {
 	cwd: repoRoot(),
 	stdio: "inherit",
 };
+
+/**
+ * @param {string} newBranchName
+ * @returns {Promise<string[]>}
+ */
+async function updateActionDefs(newBranchName) {
+	const workflowDir = workflow();
+	const workflowPaths = (await readdir(workflowDir))
+		.filter((fileName) => fileName.endsWith(".yml"))
+		.map((fileName) => workflow(fileName));
+
+	for (let workflowPath of workflowPaths) {
+		let contents = await readFile(workflowPath, "utf8");
+		let newContents = contents.replace(
+			/uses: andrewiggins\/tachometer-reporter-action@master/g,
+			`uses: andrewiggins/tachometer-reporter-action@${newBranchName}`
+		);
+
+		console.log(`Updating ${path.basename(workflowPath)} ...`);
+		await writeFile(workflowPath, newContents, "utf8");
+	}
+
+	return workflowPaths;
+}
 
 async function updateResultsFile() {
 	const resultsPath = repoRoot("tests/results/test-results.json");
@@ -77,11 +102,14 @@ async function main() {
 
 	await updateResultsFile();
 
+	const updatedFiles = await updateActionDefs(currentBranch);
+
 	[
-		"git add tests/results/test-results.json",
-		"git status -s",
-		'git commit -m "Trigger PR action run"',
-		"git push",
+		`git add tests/results/test-results.json`,
+		...updatedFiles.map((filePath) => `git add ${filePath}`),
+		`git status -s`,
+		`git commit -m "Trigger PR action run: ${currentBranch}"`,
+		`git push`,
 		`git checkout ${currentBranch}`,
 	].forEach((command) => execSync(command, execOpts));
 }
