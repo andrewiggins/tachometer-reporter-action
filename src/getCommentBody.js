@@ -263,7 +263,7 @@ function Status({ actionInfo, icon }) {
 		"aria-label": icon ? label : null,
 	};
 
-	return h(tag, props, icon ? "⏱ " : label);
+	return h(tag, props, icon ? "⏳ " : label);
 }
 
 /**
