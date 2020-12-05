@@ -1,0 +1,68 @@
+{
+  "benchmarks": [
+    {
+      "name": "test_bench",
+      "bytesSent": 17786,
+      "version": "base-framework",
+      "browser": {
+        "name": "chrome",
+        "headless": true,
+        "windowSize": {
+          "width": 1024,
+          "height": 768
+        },
+        "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/83.0.4103.116 Safari/537.36"
+      },
+      "mean": {
+        "low": 0.821915,
+        "high": 0.821915
+      },
+      "differences": [
+        null,
+        {
+          "absolute": {
+            "low": 0.00019900000000006024,
+            "high": 0.00019900000000006024
+          },
+          "percentChange": {
+            "low": 0.0002421174939015108,
+            "high": 0.0002421174939015108
+          }
+        }
+      ],
+      "samples": [0.821915, 0.821915, 0.821915, 0.821915, 0.821915]
+    },
+    {
+      "name": "test_bench",
+      "bytesSent": 10276,
+      "version": "local-framework",
+      "browser": {
+        "name": "chrome",
+        "headless": true,
+        "windowSize": {
+          "width": 1024,
+          "height": 768
+        },
+        "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/83.0.4103.116 Safari/537.36"
+      },
+      "mean": {
+        "low": 0.822114,
+        "high": 0.822114
+      },
+      "differences": [
+        {
+          "absolute": {
+            "low": -0.00019900000000006024,
+            "high": -0.00019900000000006024
+          },
+          "percentChange": {
+            "low": -0.00024205888721036284,
+            "high": -0.00024205888721036284
+          }
+        },
+        null
+      ],
+      "samples": [0.822114, 0.822114, 0.822114, 0.822114, 0.822114]
+    }
+  ]
+}

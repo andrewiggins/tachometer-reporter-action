@@ -135,8 +135,7 @@ function formatDifference({ absolute, percentChange: relative }) {
 		word = `<strong>unsure 🔍</strong>`; // bold blue
 		rel = formatConfidenceInterval(relative, (n) => colorizeSign(n, percent));
 		abs = formatConfidenceInterval(absolute, (n) => colorizeSign(n, milli));
-	}
-	if (absolute.low > 0 && relative.low > 0) {
+	} else if (absolute.low > 0 && relative.low > 0) {
 		word = `<strong>slower ❌</strong>`; // bold red
 		rel = formatConfidenceInterval(relative, percent);
 		abs = formatConfidenceInterval(absolute, milli);
