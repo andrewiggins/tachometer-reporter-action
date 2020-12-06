@@ -11,6 +11,7 @@ const { buildReport } = require("../lib/index");
  * @property {import('../src/global').TachResults} [results]
  * @property {boolean} [isRunning]
  * @param {BuildReportParams} params
+ * @returns {import('../src/global').Report}
  */
 function invokeBuildReport({
 	commit = fakeCommit,

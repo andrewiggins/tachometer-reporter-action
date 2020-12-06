@@ -14,14 +14,18 @@ inputs:
   initialize:
     description: "Whether this action should initialize the comment to report results. Use this option with report-id. Useful if multiple jobs are sharing the same comment. Pass in 'true' if this job should always create the comment"
     require: false
+  summarize:
+    description: "Specify whether to summarize (true), don't summarize any measurements (false), or which measurements to summarize (list of measurement names)"
+    require: false
+    default: "true"
   default-open:
     description: "Whether to open this action's results table by default"
     required: false
     default: "false"
-  keep-old-results:
-    description: Whether to keep old results in the comment on re-runs
-    required: false
-    default: "false"
+  # keep-old-results:
+  #   description: Whether to keep old results in the comment on re-runs
+  #   required: false
+  #   default: "false"
   pr-bench-name:
     description: "The name of the benchmark/version in tachometer results (i.e. benchmark.name or benchmark.version) that represents the code produced by this PR"
     required: false

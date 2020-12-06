@@ -117,6 +117,12 @@ the comment.
 By default, if `pr-bench-name` or `base-bench-name` are not provided, then the
 first two benchmarks in the tachometer results will be compared.
 
+You can also define which measures are summarized in the summary section. Pass
+the names of the measures you want to summarize to the `summarize` option. It
+accepts the value `true` (the default) to summarize all measures, `false`
+meaning to summarize nothing from this run, or a string of comma separated
+measurement names (e.g. `measure1, measure2`) to include in the summary.
+
 ### In-progress benchmarks
 
 ![Picture of a PR comment with icons indicating in progress benchmarks](./docs/in-progress-comment-with-results.png)
@@ -170,6 +176,24 @@ the comment by passing initialize: true. Then each other job that actually
 reports benchmark results must declare the "setup" job as a dependency in its
 "needs" array. See the [Multiple benchmark jobs](#multiple-benchmark-jobs) usage
 sample for an example.
+
+### summarize
+
+Specify which measurements to include in the summary for this benchmark. Accepts
+the following values:
+
+<dl>
+  <dt><code>true</code> (default)</dt>
+  <dd>Include all measurements from this run in the summary section</dd>
+  <dt><code>false</code></dt>
+  <dd>Summarize nothing from this run</dd>
+  <dt>include string</dt>
+  <dd>
+		Only include the listed measurements in the summary string.
+		Must be a string of comma-separated measurement names
+		(e.g. <code>summarize: measure1, measure2</code>)
+  </dd>
+</dl>
 
 #### default-open
 

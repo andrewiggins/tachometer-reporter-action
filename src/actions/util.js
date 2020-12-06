@@ -35,6 +35,7 @@ function getInputs(logger) {
 	const defaultOpen = core.getInput("default-open", { required: false });
 	const prBenchName = core.getInput("pr-bench-name", { required: false });
 	const baseBenchName = core.getInput("base-bench-name", { required: false });
+	const summarize = core.getInput("summarize", { required: false });
 
 	/** @type {import('../global').Inputs} */
 	const inputs = {
@@ -45,7 +46,18 @@ function getInputs(logger) {
 		defaultOpen: defaultOpen !== "false",
 		prBenchName: prBenchName ? prBenchName : null,
 		baseBenchName: baseBenchName ? baseBenchName : null,
+		summarize: true,
 	};
+
+	if (summarize == "true") {
+		inputs.summarize = true;
+	} else if (summarize == "false") {
+		inputs.summarize = [];
+	} else if (typeof summarize == "string") {
+		inputs.summarize = summarize.split(",").map((s) => s.trim());
+	} else {
+		inputs.summarize = true;
+	}
 
 	if (inputs.prBenchName != null && inputs.baseBenchName == null) {
 		logger.warn(

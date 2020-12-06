@@ -35,7 +35,7 @@ function pickArray(array, indexes) {
 /**
  * @param {import("./global").CommitInfo} commitInfo
  * @param {import('./global').ActionInfo} actionInfo
- * @param {Pick<import('./global').Inputs, 'prBenchName' | 'baseBenchName' | 'defaultOpen' | 'reportId'>} inputs
+ * @param {Pick<import('./global').Inputs, 'prBenchName' | 'baseBenchName' | 'defaultOpen' | 'reportId' | 'summarize'>} inputs
  * @param {import('./global').PatchedTachResults} tachResults
  * @param {boolean} [isRunning]
  * @returns {import('./global').Report}
@@ -123,25 +123,31 @@ function buildReport(
 
 	if (resultsByMeasurement) {
 		for (let [measurementId, benches] of resultsByMeasurement) {
-			// TODO: Need to adjust benches differences array to accommodate reduced
-			// comparisons to just benches of same measurement. Handcrafted test
-			// results file doesn't appropriately replicate this scenario
-			summaries.push({
-				measurementId,
-				measurement: benches[0].measurement,
-				summary: (
-					<Summary
-						reportId={reportId}
-						measurementId={measurementId}
-						title={title}
-						benchmarks={benches}
-						prBenchName={inputs.prBenchName}
-						baseBenchName={inputs.baseBenchName}
-						actionInfo={actionInfo}
-						isRunning={isRunning}
-					/>
-				),
-			});
+			const measurement = benches[0].measurement;
+			if (
+				inputs.summarize === true ||
+				inputs.summarize.includes(measurement.name ?? "")
+			) {
+				// TODO: Need to adjust benches differences array to accommodate reduced
+				// comparisons to just benches of same measurement. Handcrafted test
+				// results file doesn't appropriately replicate this scenario
+				summaries.push({
+					measurementId,
+					measurement,
+					summary: (
+						<Summary
+							reportId={reportId}
+							measurementId={measurementId}
+							title={title}
+							benchmarks={benches}
+							prBenchName={inputs.prBenchName}
+							baseBenchName={inputs.baseBenchName}
+							actionInfo={actionInfo}
+							isRunning={isRunning}
+						/>
+					),
+				});
+			}
 		}
 	} else if (isRunning) {
 		// We don't have results meaning we don't know what measurements this report
@@ -191,6 +197,7 @@ const defaultInputs = {
 	initialize: null,
 	prBenchName: null,
 	baseBenchName: null,
+	summarize: true,
 	keepOldResults: false,
 	defaultOpen: false,
 };
