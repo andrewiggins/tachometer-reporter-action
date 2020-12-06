@@ -191,6 +191,7 @@ const defaultInputs = {
 	initialize: null,
 	prBenchName: null,
 	baseBenchName: null,
+	summarize: true,
 	keepOldResults: false,
 	defaultOpen: false,
 };

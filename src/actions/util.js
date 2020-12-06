@@ -35,6 +35,9 @@ function getInputs(logger) {
 	const defaultOpen = core.getInput("default-open", { required: false });
 	const prBenchName = core.getInput("pr-bench-name", { required: false });
 	const baseBenchName = core.getInput("base-bench-name", { required: false });
+	const summarize = core.getInput("summarize", { required: false });
+
+	console.log("summarize:", JSON.stringify(summarize));
 
 	/** @type {import('../global').Inputs} */
 	const inputs = {
