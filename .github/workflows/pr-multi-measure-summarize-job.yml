@@ -25,12 +25,13 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - name: Report Tachometer Result
-        uses: andrewiggins/tachometer-reporter-action@master
+        uses: andrewiggins/tachometer-reporter-action@summarize-option
         with:
           path: tests/results/multi-measure-results.json
           report-id: multi-bench-1
           pr-bench-name: local-framework
           base-bench-name: base-framework
+          summarize: duration
 
   bench_2:
     name: Second Bench Job
@@ -39,10 +40,10 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - name: Report Other Tachometer Result
-        uses: andrewiggins/tachometer-reporter-action@master
+        uses: andrewiggins/tachometer-reporter-action@summarize-option
         with:
           path: tests/results/multi-measure-names.json
           report-id: multi-measure-names
-          pr-bench-name: local-framework
-          base-bench-name: base-framework
+          pr-bench-name: this-change
+          base-bench-name: tip-of-tree
           summarize: render, update
