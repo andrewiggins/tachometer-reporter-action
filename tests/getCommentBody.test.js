@@ -377,11 +377,11 @@ newCommentSuite("Shows unsure if change is 0% - 0%", async () => {
 	const summaryId = getSummaryId({ reportId });
 	const actual = html.querySelector(`#${summaryId}`).text;
 	const expected =
-		"report-id: unsure ❔ -0% - -0% (-0.00ms - -0.00ms)local-framework vs base-framework";
+		"report-id: same -0% - -0% (-0.00ms - -0.00ms)local-framework vs base-framework";
 	assert.equal(
 		actual,
 		expected,
-		"Expected unsure to show for rounded 0% difference"
+		"Expected same to show for rounded 0% difference"
 	);
 });
 
