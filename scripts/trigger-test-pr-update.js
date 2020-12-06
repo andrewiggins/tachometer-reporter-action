@@ -24,7 +24,7 @@ async function updateActionDefs(newBranchName) {
 	for (let workflowPath of workflowPaths) {
 		let contents = await readFile(workflowPath, "utf8");
 		let newContents = contents.replace(
-			/uses: andrewiggins\/tachometer-reporter-action@master/g,
+			/uses: andrewiggins\/tachometer-reporter-action@[A-Za-z0-9_-]+/g,
 			`uses: andrewiggins/tachometer-reporter-action@${newBranchName}`
 		);
 
