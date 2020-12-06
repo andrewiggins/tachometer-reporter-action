@@ -8,6 +8,7 @@ const defaultInputs = Object.freeze({
 	reportId: null,
 	prBenchName,
 	baseBenchName,
+	summarize: true,
 	defaultOpen: false,
 	keepOldResults: false,
 });

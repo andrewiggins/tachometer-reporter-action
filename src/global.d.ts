@@ -75,7 +75,7 @@ interface Inputs {
 	initialize?: boolean;
 	prBenchName?: string;
 	baseBenchName?: string;
-	summarize?: boolean | string[];
+	summarize?: true | string[];
 	keepOldResults?: boolean;
 	defaultOpen?: boolean;
 }

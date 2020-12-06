@@ -14747,7 +14747,7 @@ var comments = {
 	postOrUpdateComment,
 };
 
-function _optionalChain$2(ops) { let lastAccessLHS = undefined; let value = ops[0]; let i = 1; while (i < ops.length) { const op = ops[i]; const fn = ops[i + 1]; i += 2; if ((op === 'optionalAccess' || op === 'optionalCall') && value == null) { return undefined; } if (op === 'access' || op === 'optionalAccess') { lastAccessLHS = value; value = fn(value); } else if (op === 'call' || op === 'optionalCall') { value = fn((...args) => value.call(lastAccessLHS, ...args)); lastAccessLHS = undefined; } } return value; }const { readFile } = fs.promises;
+function _nullishCoalesce$2(lhs, rhsFn) { if (lhs != null) { return lhs; } else { return rhsFn(); } } function _optionalChain$2(ops) { let lastAccessLHS = undefined; let value = ops[0]; let i = 1; while (i < ops.length) { const op = ops[i]; const fn = ops[i + 1]; i += 2; if ((op === 'optionalAccess' || op === 'optionalCall') && value == null) { return undefined; } if (op === 'access' || op === 'optionalAccess') { lastAccessLHS = value; value = fn(value); } else if (op === 'call' || op === 'optionalCall') { value = fn((...args) => value.call(lastAccessLHS, ...args)); lastAccessLHS = undefined; } } return value; }const { readFile } = fs.promises;
 const {
 	h: h$1,
 	getCommentBody: getCommentBody$1,
@@ -14784,7 +14784,7 @@ function pickArray(array, indexes) {
 /**
  * @param {import("./global").CommitInfo} commitInfo
  * @param {import('./global').ActionInfo} actionInfo
- * @param {Pick<import('./global').Inputs, 'prBenchName' | 'baseBenchName' | 'defaultOpen' | 'reportId'>} inputs
+ * @param {Pick<import('./global').Inputs, 'prBenchName' | 'baseBenchName' | 'defaultOpen' | 'reportId' | 'summarize'>} inputs
  * @param {import('./global').PatchedTachResults} tachResults
  * @param {boolean} [isRunning]
  * @returns {import('./global').Report}
@@ -14872,25 +14872,31 @@ function buildReport(
 
 	if (resultsByMeasurement) {
 		for (let [measurementId, benches] of resultsByMeasurement) {
-			// TODO: Need to adjust benches differences array to accommodate reduced
-			// comparisons to just benches of same measurement. Handcrafted test
-			// results file doesn't appropriately replicate this scenario
-			summaries.push({
-				measurementId,
-				measurement: benches[0].measurement,
-				summary: (
-					h$1(Summary$1, {
-						reportId: reportId,
-						measurementId: measurementId,
-						title: title,
-						benchmarks: benches,
-						prBenchName: inputs.prBenchName,
-						baseBenchName: inputs.baseBenchName,
-						actionInfo: actionInfo,
-						isRunning: isRunning,}
-					)
-				),
-			});
+			const measurement = benches[0].measurement;
+			if (
+				inputs.summarize === true ||
+				inputs.summarize.includes(_nullishCoalesce$2(measurement.name, () => ( "")))
+			) {
+				// TODO: Need to adjust benches differences array to accommodate reduced
+				// comparisons to just benches of same measurement. Handcrafted test
+				// results file doesn't appropriately replicate this scenario
+				summaries.push({
+					measurementId,
+					measurement,
+					summary: (
+						h$1(Summary$1, {
+							reportId: reportId,
+							measurementId: measurementId,
+							title: title,
+							benchmarks: benches,
+							prBenchName: inputs.prBenchName,
+							baseBenchName: inputs.baseBenchName,
+							actionInfo: actionInfo,
+							isRunning: isRunning,}
+						)
+					),
+				});
+			}
 		}
 	} else if (isRunning) {
 		// We don't have results meaning we don't know what measurements this report
@@ -15096,8 +15102,6 @@ function getInputs(logger) {
 	const baseBenchName = core.getInput("base-bench-name", { required: false });
 	const summarize = core.getInput("summarize", { required: false });
 
-	console.log("summarize:", JSON.stringify(summarize));
-
 	/** @type {import('../global').Inputs} */
 	const inputs = {
 		path: path ? path : null,
@@ -15107,7 +15111,18 @@ function getInputs(logger) {
 		defaultOpen: defaultOpen !== "false",
 		prBenchName: prBenchName ? prBenchName : null,
 		baseBenchName: baseBenchName ? baseBenchName : null,
+		summarize: true,
 	};
+
+	if (summarize == "true") {
+		inputs.summarize = true;
+	} else if (summarize == "false") {
+		inputs.summarize = [];
+	} else if (typeof summarize == "string") {
+		inputs.summarize = summarize.split(",").map((s) => s.trim());
+	} else {
+		inputs.summarize = true;
+	}
 
 	if (inputs.prBenchName != null && inputs.baseBenchName == null) {
 		logger.warn(
