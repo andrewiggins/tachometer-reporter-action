@@ -18,6 +18,7 @@ require('crypto');
 
 const { reportTachRunning } = util.src;
 const { getLogger, getInputs } = util.util;
+const { fullVersion } = util.version;
 
 (async function () {
 	const token = util.core.getInput("github-token", { required: true });
@@ -25,6 +26,8 @@ const { getLogger, getInputs } = util.util;
 	const logger = getLogger();
 	const inputs = getInputs(logger);
 	const context = util.github.context;
+
+	logger.info(`Running tachometer-reporter-action ${fullVersion}`);
 
 	logger.debug(() => "Running pre tachometer-reporter-action...");
 	logger.debug(() => "Report ID: " + JSON.stringify(inputs.reportId));

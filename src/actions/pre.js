@@ -2,6 +2,7 @@ const core = require("@actions/core");
 const github = require("@actions/github");
 const { reportTachRunning } = require("../index");
 const { getLogger, getInputs } = require("./util");
+const { fullVersion } = require("../utils/version");
 
 (async function () {
 	const token = core.getInput("github-token", { required: true });
@@ -9,6 +10,8 @@ const { getLogger, getInputs } = require("./util");
 	const logger = getLogger();
 	const inputs = getInputs(logger);
 	const context = github.context;
+
+	logger.info(`Running tachometer-reporter-action ${fullVersion}`);
 
 	logger.debug(() => "Running pre tachometer-reporter-action...");
 	logger.debug(() => "Report ID: " + JSON.stringify(inputs.reportId));
