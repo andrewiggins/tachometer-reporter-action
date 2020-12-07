@@ -25,7 +25,7 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - name: Report Tachometer Result
-        uses: andrewiggins/tachometer-reporter-action@summarize-option
+        uses: andrewiggins/tachometer-reporter-action@master
         with:
           path: tests/results/multi-measure-results.json
           report-id: multi-bench-1
@@ -40,7 +40,7 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - name: Report Other Tachometer Result
-        uses: andrewiggins/tachometer-reporter-action@summarize-option
+        uses: andrewiggins/tachometer-reporter-action@master
         with:
           path: tests/results/multi-measure-names.json
           report-id: multi-measure-names
