@@ -14042,8 +14042,21 @@ var escapeStringRegexp = string => {
 		.replace(/-/g, '\\x2d');
 };
 
+const fullVersion = `v${
+	 "2.1.0"
+}`;
+const majorVersion = ` v${
+	 2
+}`;
+
+var version = {
+	fullVersion,
+	majorVersion,
+};
+
 const { createMachine: createMachine$1, interpret: interpret$1, assign: assign$2 } = es;
 
+const { majorVersion: majorVersion$1 } = version;
 
 /** @type {(min: number, max: number) => number} */
 const randomInt = (min, max) => Math.floor(Math.random() * (max - min)) + min;
@@ -14051,13 +14064,9 @@ const randomInt = (min, max) => Math.floor(Math.random() * (max - min)) + min;
 /** @type {(ms: number) => Promise<void>} */
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
-const version =
-	 2;
-const versionStr = ` v${version}`;
-
 /** @type {(actionInfo: import('./global').ActionInfo) => string} */
 const getFooter = (actionInfo) =>
-	`\n\n<sub><a href="https://github.com/andrewiggins/tachometer-reporter-action" target="_blank">tachometer-reporter-action${versionStr}</a> for <a href="${actionInfo.workflow.runsHtmlUrl}" target="_blank">${actionInfo.workflow.name}</a></sub>`;
+	`\n\n<sub><a href="https://github.com/andrewiggins/tachometer-reporter-action" target="_blank">tachometer-reporter-action${majorVersion$1}</a> for <a href="${actionInfo.workflow.runsHtmlUrl}" target="_blank">${actionInfo.workflow.name}</a></sub>`;
 
 /** @type {(writerId: string) => string} */
 const getLockHtml = (writerId) =>
@@ -15154,3 +15163,4 @@ exports.core = core;
 exports.github = github;
 exports.src = src;
 exports.util = util;
+exports.version = version;

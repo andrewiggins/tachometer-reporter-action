@@ -10,7 +10,8 @@ const pkg = JSON.parse(
 	readFileSync(path.join(__dirname, "package.json"), "utf8")
 );
 
-const [major] = pkg.version.split(".").map(Number);
+const fullVersion = pkg.version;
+const [major] = fullVersion.split(".").map(Number);
 
 module.exports = {
 	input: ["src/actions/main.js", "src/actions/pre.js"],
@@ -27,6 +28,7 @@ module.exports = {
 			production: true,
 		}),
 		replace({
+			__PKG_FULL_VERSION__: JSON.stringify(fullVersion),
 			__PKG_MAJOR_VERSION__: major,
 		}),
 		nodeResolve(),

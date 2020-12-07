@@ -18,6 +18,7 @@ require('crypto');
 
 const { reportTachResults } = util.src;
 const { getLogger, getInputs } = util.util;
+const { fullVersion } = util.version;
 
 (async () => {
 	const token = util.core.getInput("github-token", { required: true });
@@ -25,6 +26,8 @@ const { getLogger, getInputs } = util.util;
 	const logger = getLogger();
 	const inputs = getInputs(logger);
 	const octokit = util.github.getOctokit(token);
+
+	logger.info(`Running tachometer-reporter-action ${fullVersion}`);
 
 	if (util.github.context.eventName !== "pull_request") {
 		logger.info(
