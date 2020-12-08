@@ -156,10 +156,7 @@ function assertUIState(
 		}
 
 		assert.ok(resultStatus, msg(`Result running link should exist`));
-		let summaryText = summaryStatus?.text.includes("⏳");
 		let resultText = resultStatus?.text.includes("⏳");
-
-		assert.ok(summaryText, msg(`Summary running status link has text`));
 		assert.ok(resultText, msg(`Result running status link has text`));
 	} else {
 		assert.not.ok(summaryStatus, msg(`summary status link should not exist`));
