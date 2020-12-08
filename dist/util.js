@@ -14042,8 +14042,21 @@ var escapeStringRegexp = string => {
 		.replace(/-/g, '\\x2d');
 };
 
+const fullVersion = `v${
+	 "2.2.0"
+}`;
+const majorVersion = ` v${
+	 2
+}`;
+
+var version = {
+	fullVersion,
+	majorVersion,
+};
+
 const { createMachine: createMachine$1, interpret: interpret$1, assign: assign$2 } = es;
 
+const { majorVersion: majorVersion$1 } = version;
 
 /** @type {(min: number, max: number) => number} */
 const randomInt = (min, max) => Math.floor(Math.random() * (max - min)) + min;
@@ -14051,13 +14064,9 @@ const randomInt = (min, max) => Math.floor(Math.random() * (max - min)) + min;
 /** @type {(ms: number) => Promise<void>} */
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
-const version =
-	 2;
-const versionStr = ` v${version}`;
-
 /** @type {(actionInfo: import('./global').ActionInfo) => string} */
 const getFooter = (actionInfo) =>
-	`\n\n<sub><a href="https://github.com/andrewiggins/tachometer-reporter-action" target="_blank">tachometer-reporter-action${versionStr}</a> for <a href="${actionInfo.workflow.runsHtmlUrl}" target="_blank">${actionInfo.workflow.name}</a></sub>`;
+	`\n\n<sub><a href="https://github.com/andrewiggins/tachometer-reporter-action" target="_blank">tachometer-reporter-action${majorVersion$1}</a> for <a href="${actionInfo.workflow.runsHtmlUrl}" target="_blank">${actionInfo.workflow.name}</a></sub>`;
 
 /** @type {(writerId: string) => string} */
 const getLockHtml = (writerId) =>
@@ -14323,6 +14332,15 @@ function createAcquireLockMachine(lockConfig) {
  * @returns {Promise<import('./global').CommentData>}
  */
 async function acquireCommentLock(github, context, getInitialBody, logger) {
+	// TODO: This current implementation can quickly get rate limited. Need to
+	// understand if this rate limit is shared across all
+	// tachometer-reporter-action's or if each workflow has its own. The rate
+	// limit id for andrewiggins/tachometer-reporter-action is 7542410:
+	//
+	// Sample error from andrewiggins/tachometer-reporter-action:
+	//		Error: API rate limit exceeded for installation ID 7542410.
+	//
+
 	logger.startGroup("Acquiring comment lock...");
 
 	const config = defaultLockConfig;
@@ -14747,7 +14765,7 @@ var comments = {
 	postOrUpdateComment,
 };
 
-function _optionalChain$2(ops) { let lastAccessLHS = undefined; let value = ops[0]; let i = 1; while (i < ops.length) { const op = ops[i]; const fn = ops[i + 1]; i += 2; if ((op === 'optionalAccess' || op === 'optionalCall') && value == null) { return undefined; } if (op === 'access' || op === 'optionalAccess') { lastAccessLHS = value; value = fn(value); } else if (op === 'call' || op === 'optionalCall') { value = fn((...args) => value.call(lastAccessLHS, ...args)); lastAccessLHS = undefined; } } return value; }const { readFile } = fs.promises;
+function _nullishCoalesce$2(lhs, rhsFn) { if (lhs != null) { return lhs; } else { return rhsFn(); } } function _optionalChain$2(ops) { let lastAccessLHS = undefined; let value = ops[0]; let i = 1; while (i < ops.length) { const op = ops[i]; const fn = ops[i + 1]; i += 2; if ((op === 'optionalAccess' || op === 'optionalCall') && value == null) { return undefined; } if (op === 'access' || op === 'optionalAccess') { lastAccessLHS = value; value = fn(value); } else if (op === 'call' || op === 'optionalCall') { value = fn((...args) => value.call(lastAccessLHS, ...args)); lastAccessLHS = undefined; } } return value; }const { readFile } = fs.promises;
 const {
 	h: h$1,
 	getCommentBody: getCommentBody$1,
@@ -14784,7 +14802,7 @@ function pickArray(array, indexes) {
 /**
  * @param {import("./global").CommitInfo} commitInfo
  * @param {import('./global').ActionInfo} actionInfo
- * @param {Pick<import('./global').Inputs, 'prBenchName' | 'baseBenchName' | 'defaultOpen' | 'reportId'>} inputs
+ * @param {Pick<import('./global').Inputs, 'prBenchName' | 'baseBenchName' | 'defaultOpen' | 'reportId' | 'summarize'>} inputs
  * @param {import('./global').PatchedTachResults} tachResults
  * @param {boolean} [isRunning]
  * @returns {import('./global').Report}
@@ -14872,25 +14890,31 @@ function buildReport(
 
 	if (resultsByMeasurement) {
 		for (let [measurementId, benches] of resultsByMeasurement) {
-			// TODO: Need to adjust benches differences array to accommodate reduced
-			// comparisons to just benches of same measurement. Handcrafted test
-			// results file doesn't appropriately replicate this scenario
-			summaries.push({
-				measurementId,
-				measurement: benches[0].measurement,
-				summary: (
-					h$1(Summary$1, {
-						reportId: reportId,
-						measurementId: measurementId,
-						title: title,
-						benchmarks: benches,
-						prBenchName: inputs.prBenchName,
-						baseBenchName: inputs.baseBenchName,
-						actionInfo: actionInfo,
-						isRunning: isRunning,}
-					)
-				),
-			});
+			const measurement = benches[0].measurement;
+			if (
+				inputs.summarize === true ||
+				inputs.summarize.includes(_nullishCoalesce$2(measurement.name, () => ( "")))
+			) {
+				// TODO: Need to adjust benches differences array to accommodate reduced
+				// comparisons to just benches of same measurement. Handcrafted test
+				// results file doesn't appropriately replicate this scenario
+				summaries.push({
+					measurementId,
+					measurement,
+					summary: (
+						h$1(Summary$1, {
+							reportId: reportId,
+							measurementId: measurementId,
+							title: title,
+							benchmarks: benches,
+							prBenchName: inputs.prBenchName,
+							baseBenchName: inputs.baseBenchName,
+							actionInfo: actionInfo,
+							isRunning: isRunning,}
+						)
+					),
+				});
+			}
 		}
 	} else if (isRunning) {
 		// We don't have results meaning we don't know what measurements this report
@@ -14940,6 +14964,7 @@ const defaultInputs = {
 	initialize: null,
 	prBenchName: null,
 	baseBenchName: null,
+	summarize: true,
 	keepOldResults: false,
 	defaultOpen: false,
 };
@@ -15093,6 +15118,7 @@ function getInputs(logger) {
 	const defaultOpen = core.getInput("default-open", { required: false });
 	const prBenchName = core.getInput("pr-bench-name", { required: false });
 	const baseBenchName = core.getInput("base-bench-name", { required: false });
+	const summarize = core.getInput("summarize", { required: false });
 
 	/** @type {import('../global').Inputs} */
 	const inputs = {
@@ -15103,7 +15129,18 @@ function getInputs(logger) {
 		defaultOpen: defaultOpen !== "false",
 		prBenchName: prBenchName ? prBenchName : null,
 		baseBenchName: baseBenchName ? baseBenchName : null,
+		summarize: true,
 	};
+
+	if (summarize == "true") {
+		inputs.summarize = true;
+	} else if (summarize == "false") {
+		inputs.summarize = [];
+	} else if (typeof summarize == "string") {
+		inputs.summarize = summarize.split(",").map((s) => s.trim());
+	} else {
+		inputs.summarize = true;
+	}
 
 	if (inputs.prBenchName != null && inputs.baseBenchName == null) {
 		logger.warn(
@@ -15135,3 +15172,4 @@ exports.core = core;
 exports.github = github;
 exports.src = src;
 exports.util = util;
+exports.version = version;

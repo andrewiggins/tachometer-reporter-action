@@ -1,5 +1,6 @@
 const { createMachine, interpret, assign } = require("xstate");
 const escapeRe = require("escape-string-regexp");
+const { majorVersion } = require("./utils/version");
 
 /** @type {(min: number, max: number) => number} */
 const randomInt = (min, max) => Math.floor(Math.random() * (max - min)) + min;
@@ -7,13 +8,9 @@ const randomInt = (min, max) => Math.floor(Math.random() * (max - min)) + min;
 /** @type {(ms: number) => Promise<void>} */
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
-const version =
-	typeof __PKG_MAJOR_VERSION__ == "undefined" ? 1 : __PKG_MAJOR_VERSION__;
-const versionStr = ` v${version}`;
-
 /** @type {(actionInfo: import('./global').ActionInfo) => string} */
 const getFooter = (actionInfo) =>
-	`\n\n<sub><a href="https://github.com/andrewiggins/tachometer-reporter-action" target="_blank">tachometer-reporter-action${versionStr}</a> for <a href="${actionInfo.workflow.runsHtmlUrl}" target="_blank">${actionInfo.workflow.name}</a></sub>`;
+	`\n\n<sub><a href="https://github.com/andrewiggins/tachometer-reporter-action" target="_blank">tachometer-reporter-action${majorVersion}</a> for <a href="${actionInfo.workflow.runsHtmlUrl}" target="_blank">${actionInfo.workflow.name}</a></sub>`;
 
 /** @type {(writerId: string) => string} */
 const getLockHtml = (writerId) =>
@@ -279,6 +276,15 @@ function createAcquireLockMachine(lockConfig) {
  * @returns {Promise<import('./global').CommentData>}
  */
 async function acquireCommentLock(github, context, getInitialBody, logger) {
+	// TODO: This current implementation can quickly get rate limited. Need to
+	// understand if this rate limit is shared across all
+	// tachometer-reporter-action's or if each workflow has its own. The rate
+	// limit id for andrewiggins/tachometer-reporter-action is 7542410:
+	//
+	// Sample error from andrewiggins/tachometer-reporter-action:
+	//		Error: API rate limit exceeded for installation ID 7542410.
+	//
+
 	logger.startGroup("Acquiring comment lock...");
 
 	const config = defaultLockConfig;

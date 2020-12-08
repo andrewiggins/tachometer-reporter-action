@@ -74,7 +74,8 @@ interface Inputs {
 	reportId?: string;
 	initialize?: boolean;
 	prBenchName?: string;
-	baseBenchName: ?string;
+	baseBenchName?: string;
+	summarize?: true | string[];
 	keepOldResults?: boolean;
 	defaultOpen?: boolean;
 }

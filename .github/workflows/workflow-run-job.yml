@@ -1,12 +1,16 @@
-name: PR Single Job
+name: Workflow Run Event Example
 
 on:
-  pull_request:
-    branches:
-      - "**"
+  workflow_run:
+    workflows: ["PR Setup Job Flow"]
+    branches: ["**"]
+    types:
+      - completed
+      - requested
 
+# Just testing to see what happens...
 jobs:
-  pr_test:
+  workflow_example:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
@@ -14,15 +18,7 @@ jobs:
         with:
           node-version: "14.x"
       - run: npm ci
+      - run: npm test
+      - run: git show HEAD
       - name: Log GitHub Context
         run: node -e 'var github = require("@actions/github"); var context = github.context; console.log("context.issue =", JSON.stringify(context.issue, null, 2)); console.log("context.repo =", JSON.stringify(context.repo, null, 2)); console.log("context = ", JSON.stringify(context, null, 2));'
-      - run: npm test
-      - run: |
-          # Could use this to simulate benchmark running for random number of seconds
-          echo $((($RANDOM%(5000-1000))+1000))
-      - name: Report Tachometer Result
-        uses: ./
-        with:
-          path: tests/results/test-results.json
-          pr-bench-name: local-framework
-          base-bench-name: base-framework

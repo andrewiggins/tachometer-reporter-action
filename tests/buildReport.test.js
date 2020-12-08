@@ -9,6 +9,8 @@ const {
 	assertFixture,
 	shouldAssertFixtures,
 	testResultsHashId,
+	getMultiMeasureResults,
+	getSummaryId,
 } = require("./utils");
 const { invokeBuildReport } = require("./invokeBuildReport");
 
@@ -407,5 +409,66 @@ buildReportSuite(
 		);
 	}
 );
+
+buildReportSuite("Includes no summaries if summarize input is false", () => {
+	const report = invokeBuildReport({
+		inputs: { summarize: [] }, // "false" => []
+	});
+	assert.equal(report.summaries.length, 0, "report.summary is empty");
+
+	const summaryText = getSummaryText(report);
+	assert.equal(summaryText, "", "Summary is empty string");
+});
+
+buildReportSuite(
+	"Includes summaries of all measurements if summarize input is true",
+	async () => {
+		const report = invokeBuildReport({
+			inputs: { summarize: true },
+			results: getMultiMeasureResults(),
+		});
+
+		assert.equal(
+			report.summaries.length,
+			2,
+			"report.summary contains all measurements"
+		);
+
+		const html = parse(getSummaryText(report));
+		report.summaries.map((summary, i) => {
+			const summaryId = getSummaryId({
+				reportId: report.id,
+				measurementId: summary.measurementId,
+			});
+			const node = html.querySelector(`#${summaryId}`);
+
+			assert.ok(node, `Summary with id "${summaryId}" (index: ${i}) exists`);
+		});
+	}
+);
+
+buildReportSuite("Only includes measurements listed in summarize input", () => {
+	const report = invokeBuildReport({
+		inputs: { summarize: ["duration"] },
+		results: getMultiMeasureResults(),
+	});
+
+	assert.equal(
+		report.summaries.length,
+		1,
+		"report.summary contains only 1 measurement"
+	);
+
+	const summary = report.summaries[0];
+	const summaryId = getSummaryId({
+		reportId: report.id,
+		measurementId: summary.measurementId,
+	});
+
+	const html = parse(getSummaryText(report));
+	const node = html.querySelector(`#${summaryId}`);
+
+	assert.ok(node, `Summary with id "${summaryId} exists"`);
+});
 
 buildReportSuite.run();

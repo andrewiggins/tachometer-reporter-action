@@ -125,13 +125,13 @@ function invokeGetCommentBody({
 /**
  * @param {string} label
  * @param {import('node-html-parser').HTMLElement} body
- * @param {{ isRunning?: boolean; hasResults?: boolean; }} [options]
+ * @param {{ isRunning?: boolean; hasResults?: boolean; summarize?: boolean }} [options]
  * @param {{ reportId?: string; measurementId?: string; }} [ids]
  */
 function assertUIState(
 	label,
 	body,
-	{ isRunning = false, hasResults = true } = {},
+	{ isRunning = false, hasResults = true, summarize = true } = {},
 	{ reportId = testReportId, measurementId = defaultMeasureId } = {}
 ) {
 	let summaryId = getSummaryId({ reportId, measurementId });
@@ -147,9 +147,15 @@ function assertUIState(
 	const msg = (message) => `${label}: ${message}`;
 
 	if (isRunning) {
-		assert.ok(summaryStatus, msg(`Summary running status link should exist`));
-		assert.ok(resultStatus, msg(`Result running link should exist`));
+		if (summarize) {
+			assert.ok(summaryStatus, msg(`Summary running status link should exist`));
+			let summaryText = summaryStatus?.text.includes("⏳");
+			assert.ok(summaryText, msg(`Summary running status link has text`));
+		} else {
+			assert.not.ok(summaryStatus, msg(`summary status link should not exist`));
+		}
 
+		assert.ok(resultStatus, msg(`Result running link should exist`));
 		let summaryText = summaryStatus?.text.includes("⏳");
 		let resultText = resultStatus?.text.includes("⏳");
 
@@ -161,7 +167,12 @@ function assertUIState(
 	}
 
 	if (hasResults) {
-		assert.ok(summaryData, msg(`summary results should exist`));
+		if (summarize) {
+			assert.ok(summaryData, msg(`summary results should exist`));
+		} else {
+			assert.not.ok(summaryData, msg(`summary results should not exist`));
+		}
+
 		assert.ok(resultData, msg(`result data should exist`));
 	} else {
 		assert.not.ok(summaryData, msg(`summary results should not exist`));
@@ -1694,6 +1705,56 @@ multiMeasure("Multi-measures without name fields", async () => {
 			`${title} has expected title`
 		);
 	}
+});
+
+multiMeasure("Multi-measures with summarize option", async () => {
+	const resultPath = testRoot("results/multi-measure-names.json");
+	const results = JSON.parse(await readFile(resultPath, "utf8"));
+	const reportId = "multi-measure-names";
+
+	const multiMeasureIds = [
+		"Bq0B3-8_UWt48DqpmNB3lNnwTd4",
+		"gN4D636F9Ua7c6W5IuuBZhQaUoU",
+		"MBkGEFvQqNyyN0MCAmJK9BTIAxU",
+	];
+
+	/** @type {Partial<import('../src/global').Inputs>} */
+	const inputs = {
+		reportId,
+		baseBenchName: "tip-of-tree",
+		prBenchName: "this-change",
+		summarize: ["update", "nop-update"],
+	};
+	const report = invokeBuildReport({ results, inputs });
+	const body = parse(invokeGetCommentBody({ report, inputs }));
+
+	assertUIState(
+		"No default measures",
+		body,
+		{ isRunning: false, hasResults: false },
+		{ reportId, measurementId: defaultMeasureId }
+	);
+
+	assertUIState(
+		"Measure 1 results",
+		body,
+		{ isRunning: false, hasResults: true, summarize: false },
+		{ reportId, measurementId: multiMeasureIds[0] }
+	);
+
+	assertUIState(
+		"Measure 2 results",
+		body,
+		{ isRunning: false, hasResults: true },
+		{ reportId, measurementId: multiMeasureIds[1] }
+	);
+
+	assertUIState(
+		"Measure 3 results",
+		body,
+		{ isRunning: false, hasResults: true },
+		{ reportId, measurementId: multiMeasureIds[2] }
+	);
 });
 
 //#endregion
