@@ -14332,6 +14332,15 @@ function createAcquireLockMachine(lockConfig) {
  * @returns {Promise<import('./global').CommentData>}
  */
 async function acquireCommentLock(github, context, getInitialBody, logger) {
+	// TODO: This current implementation can quickly get rate limited. Need to
+	// understand if this rate limit is shared across all
+	// tachometer-reporter-action's or if each workflow has its own. The rate
+	// limit id for andrewiggins/tachometer-reporter-action is 7542410:
+	//
+	// Sample error from andrewiggins/tachometer-reporter-action:
+	//		Error: API rate limit exceeded for installation ID 7542410.
+	//
+
 	logger.startGroup("Acquiring comment lock...");
 
 	const config = defaultLockConfig;
