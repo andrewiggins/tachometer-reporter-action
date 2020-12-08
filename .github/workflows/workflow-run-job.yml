@@ -2,7 +2,7 @@ name: Workflow Run Event Example
 
 on:
   workflow_run:
-    workflows: ["PR Single Job"]
+    workflows: ["PR Setup Job Flow"]
     branches: ["**"]
     types:
       - completed
@@ -10,7 +10,7 @@ on:
 
 # Just testing to see what happens...
 jobs:
-  pr_test:
+  workflow_example:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
