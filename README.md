@@ -128,9 +128,9 @@ measurement names (e.g. `measure1, measure2`) to include in the summary.
 ![Picture of a PR comment with icons indicating in progress benchmarks](./docs/in-progress-comment-with-results.png)
 
 If the `report-id` option is provided, then `tachometer-reporter-action` will
-add a stopwatch icon (⏱) next to any benchmark that is currently running. If the
-action can determine the current job id, then the icon is a link to the action
-job that is running the benchmark (see #7).
+add an hourglass icon (⏳) next to any benchmark that is currently running. If
+the action can determine the current job id, then the icon is a link to the
+action job that is running the benchmark (see #7).
 
 ### Multiple measurements in one benchmark
 

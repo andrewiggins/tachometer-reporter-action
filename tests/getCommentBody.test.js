@@ -149,14 +149,14 @@ function assertUIState(
 	if (isRunning) {
 		if (summarize) {
 			assert.ok(summaryStatus, msg(`Summary running status link should exist`));
-			let summaryText = summaryStatus?.text.includes("⏱");
+			let summaryText = summaryStatus?.text.includes("⏳");
 			assert.ok(summaryText, msg(`Summary running status link has text`));
 		} else {
 			assert.not.ok(summaryStatus, msg(`summary status link should not exist`));
 		}
 
 		assert.ok(resultStatus, msg(`Result running link should exist`));
-		let resultText = resultStatus?.text.includes("⏱");
+		let resultText = resultStatus?.text.includes("⏳");
 		assert.ok(resultText, msg(`Result running status link has text`));
 	} else {
 		assert.not.ok(summaryStatus, msg(`summary status link should not exist`));
@@ -343,8 +343,11 @@ newCommentSuite(
 		assert.ok(summaryStatus, "Summary status span exists");
 		assert.ok(resultStatus, "Result status span exists");
 
-		assert.ok(summaryStatus.text.includes("⏱"), "Summary status span has text");
-		assert.ok(resultStatus.text.includes("⏱"), "Result status span has text");
+		assert.ok(
+			summaryStatus.text.includes("⏳"),
+			"Summary status span has text"
+		);
+		assert.ok(resultStatus.text.includes("⏳"), "Result status span has text");
 
 		assert.not.ok(summaryStatusLink, "Summary status is not a link");
 		assert.not.ok(resultStatusLink, "Result status is not a link");
@@ -382,11 +385,11 @@ newCommentSuite("Shows unsure if change is 0% - 0%", async () => {
 	const summaryId = getSummaryId({ reportId });
 	const actual = html.querySelector(`#${summaryId}`).text;
 	const expected =
-		"report-id: unsure 🔍 -0% - -0% (-0.00ms - -0.00ms)local-framework vs base-framework";
+		"report-id: same -0% - -0% (-0.00ms - -0.00ms)local-framework vs base-framework";
 	assert.equal(
 		actual,
 		expected,
-		"Expected unsure to show for rounded 0% difference"
+		"Expected same to show for rounded 0% difference"
 	);
 });
 
@@ -723,8 +726,11 @@ updateCommentSuite(
 		assert.ok(summaryStatus, "Summary status span exists");
 		assert.ok(resultStatus, "Result status span exists");
 
-		assert.ok(summaryStatus.text.includes("⏱"), "Summary status span has text");
-		assert.ok(resultStatus.text.includes("⏱"), "Result status span has text");
+		assert.ok(
+			summaryStatus.text.includes("⏳"),
+			"Summary status span has text"
+		);
+		assert.ok(resultStatus.text.includes("⏳"), "Result status span has text");
 
 		assert.not.ok(summaryStatusLink, "Summary status is not a link");
 		assert.not.ok(resultStatusLink, "Result status is not a link");

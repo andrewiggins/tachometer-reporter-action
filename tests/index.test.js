@@ -291,8 +291,11 @@ runningCreateSuite(
 		assert.ok(summaryStatus, "Summary status span exists");
 		assert.ok(resultStatus, "Result status span exists");
 
-		assert.ok(summaryStatus.text.includes("⏱"), "Summary status span has text");
-		assert.ok(resultStatus.text.includes("⏱"), "Result status span has text");
+		assert.ok(
+			summaryStatus.text.includes("⏳"),
+			"Summary status span has text"
+		);
+		assert.ok(resultStatus.text.includes("⏳"), "Result status span has text");
 
 		assert.not.ok(summaryStatusLink, "Summary status is not a link");
 		assert.not.ok(resultStatusLink, "Result status is not a link");
@@ -440,8 +443,11 @@ runningUpdateSuite(
 		assert.ok(summaryStatus, "Summary status span exists");
 		assert.ok(resultStatus, "Result status span exists");
 
-		assert.ok(summaryStatus.text.includes("⏱"), "Summary status span has text");
-		assert.ok(resultStatus.text.includes("⏱"), "Result status span has text");
+		assert.ok(
+			summaryStatus.text.includes("⏳"),
+			"Summary status span has text"
+		);
+		assert.ok(resultStatus.text.includes("⏳"), "Result status span has text");
 
 		assert.not.ok(summaryStatusLink, "Summary status is not a link");
 		assert.not.ok(resultStatusLink, "Result status is not a link");
