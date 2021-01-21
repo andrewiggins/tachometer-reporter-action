@@ -1,0 +1,526 @@
+{
+  "benchmarks": [
+    {
+      "name": "test_bench_2 [duration]",
+      "bytesSent": 75556,
+      "version": "fast-framework",
+      "browser": {
+        "name": "chrome",
+        "headless": true,
+        "windowSize": {
+          "width": 1024,
+          "height": 768
+        },
+        "addArguments": [
+          "--js-flags=--expose-gc",
+          "--enable-precise-memory-info"
+        ],
+        "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/84.0.4147.125 Safari/537.36"
+      },
+      "mean": {
+        "low": 137.70816944307438,
+        "high": 141.7278305540022
+      },
+      "differences": [
+        null,
+        {
+          "absolute": {
+            "low": 135.09530779767445,
+            "high": 139.11496979940213
+          },
+          "percentChange": {
+            "low": 5170.348699656536,
+            "high": 5324.287509763106
+          }
+        },
+        {
+          "absolute": {
+            "low": -39.26433995487811,
+            "high": -34.688660047196876
+          },
+          "percentChange": {
+            "low": -22.164980023699094,
+            "high": -19.688614741419535
+          }
+        },
+        {
+          "absolute": {
+            "low": 134.14376295210675,
+            "high": 138.16342584496985
+          },
+          "percentChange": {
+            "low": 3763.3875152550095,
+            "high": 3876.236572336949
+          }
+        },
+        {
+          "absolute": {
+            "low": -31.061395727826664,
+            "high": -23.256604270048058
+          },
+          "percentChange": {
+            "low": -18.34055669350537,
+            "high": -14.209165556233296
+          }
+        },
+        {
+          "absolute": {
+            "low": 130.89034858410963,
+            "high": 134.91003261296697
+          },
+          "percentChange": {
+            "low": 1919.7596429104628,
+            "high": 1978.8588957227325
+          }
+        }
+      ],
+      "samples": [
+        139.11000000371132,
+        143.42999999644235,
+        137.15999999840278,
+        135.9950000041863,
+        140.79499999934342,
+        143.6800000083167,
+        137.28999999875668,
+        137.39999999233987,
+        139.70999998855405,
+        142.60999999532942
+      ]
+    },
+    {
+      "name": "test_bench_2 [window.usedJSHeapSize]",
+      "bytesSent": 75556,
+      "version": "fast-framework",
+      "browser": {
+        "name": "chrome",
+        "headless": true,
+        "windowSize": {
+          "width": 1024,
+          "height": 768
+        },
+        "addArguments": [
+          "--js-flags=--expose-gc",
+          "--enable-precise-memory-info"
+        ],
+        "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/84.0.4147.125 Safari/537.36"
+      },
+      "mean": {
+        "low": 2.6115231577717837,
+        "high": 2.6141992422282168
+      },
+      "differences": [
+        {
+          "absolute": {
+            "low": -139.11496979940213,
+            "high": -135.09530779767445
+          },
+          "percentChange": {
+            "low": -98.15682186760624,
+            "high": -98.10298545854023
+          }
+        },
+        null,
+        {
+          "absolute": {
+            "low": -175.17470539547475,
+            "high": -172.98857220367682
+          },
+          "percentChange": {
+            "low": -98.530434022484,
+            "high": -98.51207584623714
+          }
+        },
+        {
+          "absolute": {
+            "low": -0.9538621026937305,
+            "high": -0.9492266973062676
+          },
+          "percentChange": {
+            "low": -26.749811728273936,
+            "high": -26.641665380840656
+          }
+        },
+        {
+          "absolute": {
+            "low": -167.60917621931927,
+            "high": -160.91910137563204
+          },
+          "percentChange": {
+            "low": -98.4656546432488,
+            "high": -98.4028638463699
+          }
+        },
+        {
+          "absolute": {
+            "low": -4.211865688230341,
+            "high": -4.1980307117696585
+          },
+          "percentChange": {
+            "low": -61.718844532254025,
+            "high": -61.63304031216534
+          }
+        }
+      ],
+      "samples": [
+        2.612786,
+        2.611782,
+        2.615806,
+        2.612562,
+        2.611674,
+        2.611698,
+        2.611694,
+        2.611674,
+        2.612138,
+        2.616798
+      ]
+    },
+    {
+      "name": "test_bench_2 [duration]",
+      "bytesSent": 15685,
+      "version": "base-framework",
+      "browser": {
+        "name": "chrome",
+        "headless": true,
+        "windowSize": {
+          "width": 1024,
+          "height": 768
+        },
+        "addArguments": [
+          "--js-flags=--expose-gc",
+          "--enable-precise-memory-info"
+        ],
+        "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/84.0.4147.125 Safari/537.36"
+      },
+      "mean": {
+        "low": 175.60143422263775,
+        "high": 177.78756577651382
+      },
+      "differences": [
+        {
+          "absolute": {
+            "low": 34.688660047196876,
+            "high": 39.26433995487811
+          },
+          "percentChange": {
+            "low": 24.484816475078162,
+            "high": 28.445371476974312
+          }
+        },
+        {
+          "absolute": {
+            "low": 172.98857220367682,
+            "high": 175.17470539547475
+          },
+          "percentChange": {
+            "low": 6620.513718912598,
+            "high": 6704.468013724083
+          }
+        },
+        null,
+        {
+          "absolute": {
+            "low": 172.03702698440787,
+            "high": 174.22316181474372
+          },
+          "percentChange": {
+            "low": 4826.4151043022885,
+            "high": 4887.972865438071
+          }
+        },
+        {
+          "absolute": {
+            "low": 6.29839978245729,
+            "high": 13.336600221742975
+          },
+          "percentChange": {
+            "low": 3.661881770943688,
+            "high": 8.104269349041262
+          }
+        },
+        {
+          "absolute": {
+            "low": 168.78360375307201,
+            "high": 170.96977744607958
+          },
+          "percentChange": {
+            "low": 2475.422139602365,
+            "high": 2507.899646998939
+          }
+        }
+      ],
+      "samples": [
+        178.02999999548774,
+        176.9300000014482,
+        176.55499999818858,
+        175.74000000604428,
+        175.95000000437722,
+        180.4299999930663,
+        175.3549999993993,
+        175.54500000551343,
+        176.4699999912409,
+        175.94000000099186
+      ]
+    },
+    {
+      "name": "test_bench_2 [window.usedJSHeapSize]",
+      "bytesSent": 15685,
+      "version": "base-framework",
+      "browser": {
+        "name": "chrome",
+        "headless": true,
+        "windowSize": {
+          "width": 1024,
+          "height": 768
+        },
+        "addArguments": [
+          "--js-flags=--expose-gc",
+          "--enable-precise-memory-info"
+        ],
+        "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/84.0.4147.125 Safari/537.36"
+      },
+      "mean": {
+        "low": 3.5625131442483267,
+        "high": 3.566298055751672
+      },
+      "differences": [
+        {
+          "absolute": {
+            "low": -138.16342584496985,
+            "high": -134.14376295210675
+          },
+          "percentChange": {
+            "low": -97.48558021046013,
+            "high": -97.4121343287728
+          }
+        },
+        {
+          "absolute": {
+            "low": 0.9492266973062676,
+            "high": 0.9538621026937305
+          },
+          "percentChange": {
+            "low": 36.31708803890455,
+            "high": 36.518346158671584
+          }
+        },
+        {
+          "absolute": {
+            "low": -174.22316181474372,
+            "high": -172.03702698440787
+          },
+          "percentChange": {
+            "low": -97.9952548336987,
+            "high": -97.97020464578873
+          }
+        },
+        null,
+        {
+          "absolute": {
+            "low": -166.65763208703402,
+            "high": -159.9675567079173
+          },
+          "percentChange": {
+            "low": -97.90688213814481,
+            "high": -97.82122227402236
+          }
+        },
+        {
+          "absolute": {
+            "low": -3.2604495558277637,
+            "high": -3.2463580441722373
+          },
+          "percentChange": {
+            "low": -47.77817854497769,
+            "high": -47.66021256052903
+          }
+        }
+      ],
+      "samples": [
+        3.56521,
+        3.556886,
+        3.565254,
+        3.565154,
+        3.565514,
+        3.565078,
+        3.565278,
+        3.565298,
+        3.565334,
+        3.56505
+      ]
+    },
+    {
+      "name": "test_bench_2 [duration]",
+      "bytesSent": 9484,
+      "version": "local-framework",
+      "browser": {
+        "name": "chrome",
+        "headless": true,
+        "windowSize": {
+          "width": 1024,
+          "height": 768
+        },
+        "addArguments": [
+          "--js-flags=--expose-gc",
+          "--enable-precise-memory-info"
+        ],
+        "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/84.0.4147.125 Safari/537.36"
+      },
+      "mean": {
+        "low": 163.53196284324594,
+        "high": 170.22203715170536
+      },
+      "differences": [
+        {
+          "absolute": {
+            "low": 23.256604270048058,
+            "high": 31.061395727826664
+          },
+          "percentChange": {
+            "low": 16.49161379979324,
+            "high": 22.385266772819442
+          }
+        },
+        {
+          "absolute": {
+            "low": 160.91910137563204,
+            "high": 167.60917621931927
+          },
+          "percentChange": {
+            "low": 6158.689570176349,
+            "high": 6414.817112649025
+          }
+        },
+        {
+          "absolute": {
+            "low": -13.336600221742975,
+            "high": -6.29839978245729
+          },
+          "percentChange": {
+            "low": -7.53742308210959,
+            "high": -3.5749771364865777
+          }
+        },
+        {
+          "absolute": {
+            "low": 159.9675567079173,
+            "high": 166.65763208703402
+          },
+          "percentChange": {
+            "low": 4487.883872346482,
+            "high": 4675.640862182927
+          }
+        },
+        null,
+        {
+          "absolute": {
+            "low": 156.71414655823438,
+            "high": 163.40423463671695
+          },
+          "percentChange": {
+            "low": 2298.5393392089472,
+            "high": 2396.7867166199435
+          }
+        }
+      ],
+      "samples": [
+        164.95500000019092,
+        164.60499999811873,
+        176.4499999990221,
+        170.05000000062864,
+        166.05999998864718,
+        165.11000000173226,
+        161.05499998957384,
+        172.46499999600928,
+        163.35000000253785,
+        164.66999999829568
+      ]
+    },
+    {
+      "name": "test_bench_2 [window.usedJSHeapSize]",
+      "bytesSent": 9484,
+      "version": "local-framework",
+      "browser": {
+        "name": "chrome",
+        "headless": true,
+        "windowSize": {
+          "width": 1024,
+          "height": 768
+        },
+        "addArguments": [
+          "--js-flags=--expose-gc",
+          "--enable-precise-memory-info"
+        ],
+        "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/84.0.4147.125 Safari/537.36"
+      },
+      "mean": {
+        "low": 6.811022553426485,
+        "high": 6.824596246573514
+      },
+      "differences": [
+        {
+          "absolute": {
+            "low": -134.91003261296697,
+            "high": -130.89034858410963
+          },
+          "percentChange": {
+            "low": -95.19066885421891,
+            "high": -95.04994523978284
+          }
+        },
+        {
+          "absolute": {
+            "low": 4.1980307117696585,
+            "high": 4.211865688230341
+          },
+          "percentChange": {
+            "low": 160.6406019538039,
+            "high": 161.22480750613983
+          }
+        },
+        {
+          "absolute": {
+            "low": -170.96977744607958,
+            "high": -168.78360375307201
+          },
+          "percentChange": {
+            "low": -96.16564716643013,
+            "high": -96.11729384190191
+          }
+        },
+        {
+          "absolute": {
+            "low": 3.2463580441722373,
+            "high": 3.2604495558277637
+          },
+          "percentChange": {
+            "low": 91.05899662476533,
+            "high": 91.49058751908188
+          }
+        },
+        {
+          "absolute": {
+            "low": -163.40423463671695,
+            "high": -156.71414655823438
+          },
+          "percentChange": {
+            "low": -95.99646536349728,
+            "high": -95.83247523334575
+          }
+        },
+        null
+      ],
+      "samples": [
+        6.815703,
+        6.812183,
+        6.844491,
+        6.815483,
+        6.815987,
+        6.815487,
+        6.815279,
+        6.815731,
+        6.812103,
+        6.815647
+      ]
+    }
+  ]
+}

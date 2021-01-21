@@ -11,6 +11,13 @@ const testReportId = "report-id";
 const testResultsPath = testRoot("results/test-results.json");
 const multiMeasureResultsPath = testRoot("results/multi-measure-results.json");
 
+const multiMeasureReportId = "multi-measure-report-id";
+const otherMultiMeasureReportId = "other-multi-measure-report-id";
+const multiMeasureIds = [
+	"R-VSUDBIvX9oa7OhG2Td6w-LuY4", // duration
+	"AmH0KOJP8BUNrat2VaC_V3DY9mI", // window.usedJSHeapSize
+];
+
 /** @type {import('../src/global').TachResults} */
 const testResults = JSON.parse(readFileSync(testResultsPath, "utf8"));
 
@@ -121,4 +128,7 @@ module.exports = {
 	getSummaryId,
 	getSummaryListId,
 	getResultsContainerId,
+	multiMeasureReportId,
+	otherMultiMeasureReportId,
+	multiMeasureIds,
 };

@@ -14,6 +14,9 @@ const {
 	getSummaryId,
 	getSummaryListId,
 	getResultsContainerId,
+	multiMeasureIds,
+	multiMeasureReportId,
+	otherMultiMeasureReportId,
 	skipSuite,
 } = require("./utils");
 const { invokeBuildReport } = require("./invokeBuildReport");
@@ -975,13 +978,6 @@ updateCommentSuite(
 
 //#region Multi-measure tests
 const multiMeasure = suite("Multiple measures in one benchmark");
-
-const multiMeasureReportId = "multi-measure-report-id";
-const otherMultiMeasureReportId = "other-multi-measure-report-id";
-const multiMeasureIds = [
-	"R-VSUDBIvX9oa7OhG2Td6w-LuY4", // duration
-	"AmH0KOJP8BUNrat2VaC_V3DY9mI", // window.usedJSHeapSize
-];
 
 // Create/add with results
 // ==============================

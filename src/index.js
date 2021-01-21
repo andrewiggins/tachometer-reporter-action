@@ -286,21 +286,39 @@ async function reportTachResults(github, context, inputs, logger) {
 	const globber = await glob.create(inputs.path, {
 		followSymbolicLinks: inputs.followSymbolicLinks,
 	});
+	const files = await globber.glob();
+	if (files.length == 0) {
+		logger.warn(`No files were found matching the pattern "${inputs.path}".`);
+		return [];
+	}
 
 	const reports = [];
-	for await (const file of globber.globGenerator()) {
+	for (const file of files) {
 		/** @type {import('./global').TachResults} */
 		const tachResults = await readFile(file, "utf8").then((contents) =>
 			JSON.parse(contents)
 		);
 
-		// TODO: if multiple reports are globbed, then the report-id input should be
-		// ignored since all reports will share the same reportId which is used in
-		// matching the HTML. If multiple reports are globbed then each report needs
-		// a unique id. As such the report-id input cannot be used for every result.
-		reports.push(
-			buildReport(commitInfo, actionInfo, inputs, tachResults, false)
-		);
+		let report;
+		if (files.length == 1) {
+			// Only use report ID if one result file is matched
+			report = buildReport(commitInfo, actionInfo, inputs, tachResults, false);
+		} else {
+			// If multiple reports are globbed, then the report-id input should be
+			// ignored since all reports will share the same reportId which is used in
+			// matching the HTML. In other words, if multiple reports are globbed then
+			// each report needs a unique id. As such, the report-id input cannot be
+			// used for every globbed result file.
+			report = buildReport(
+				commitInfo,
+				actionInfo,
+				{ ...inputs, reportId: null },
+				tachResults,
+				false
+			);
+		}
+
+		reports.push(report);
 	}
 
 	await postOrUpdateComment(
