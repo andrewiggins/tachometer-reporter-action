@@ -8841,9 +8841,12 @@ function NewCommentBody({ inputs, report }) {
 		h('div', null
 , h('h2', null, "📊 Tachometer Benchmark Results"   )
 , h('h3', null, "Summary")
-, h('p', { class: globalStatusClass,}
-, report == null &&
-					"A summary of the benchmark results will show here once they finish."
+, h('div', { class: globalStatusClass,}
+, report == null && (
+					h('p', null, "A summary of the benchmark results will show here once they finish."
+
+)
+				)
 )
 , h('div', { id: getSummaryContainerId(),}
 , report != null &&
@@ -8852,9 +8855,12 @@ function NewCommentBody({ inputs, report }) {
 					))
 )
 , h('h3', null, "Results")
-, h('p', { class: globalStatusClass,}
-, report == null &&
-					"The full results of your benchmarks will show here once they finish."
+, h('div', { class: globalStatusClass,}
+, report == null && (
+					h('p', null, "The full results of your benchmarks will show here once they finish."
+
+)
+				)
 )
 , h('div', { id: getResultsContainerId(),}
 , report != null && (
@@ -9003,15 +9009,10 @@ function updateSummary(inputs, report, summaryData, commentHtml, logger) {
 
 	const summaryId = getSummaryId(summaryData.measurementId, report.id);
 	const summary = commentHtml.querySelector(`#${summaryId}`);
-	// const summaryStatus = summary?.querySelector(`.${statusClass}`);
 
 	if (summary) {
 		const htmlRunNumber = parseInt(summary.getAttribute("data-run-number"), 10);
 
-		// if (report.isRunning) {
-		// 	logger.info(`Adding status info to summary with id "${summaryId}"...`);
-		// 	summaryStatus.set_content(report.status);
-		// } else if (htmlRunNumber > report.actionInfo.run.number) {
 		if (htmlRunNumber > report.actionInfo.run.number) {
 			logger.info(
 				`Existing summary is from a run (#${htmlRunNumber}) that is more recent than the` +
