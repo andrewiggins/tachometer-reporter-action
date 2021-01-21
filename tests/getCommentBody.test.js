@@ -1136,7 +1136,7 @@ multiMeasure("New comment with multi-measure running status", async () => {
 	);
 
 	const actualHtml = formatHtml(body.toString());
-	const fixturePath = testRoot("fixtures/multi-measure-running.html");
+	const fixturePath = testRoot("fixtures/multi-measure-new-running.html");
 	const fixture = await readFile(fixturePath, "utf-8");
 
 	// Uncomment to update fixture
@@ -1194,7 +1194,7 @@ multiMeasure(
 		// Code should remove it and put results in grouped section
 
 		const results = getMultiMeasureResults();
-		const commentBody = await readFixture("multi-measure-running.html");
+		const commentBody = await readFixture("multi-measure-new-running.html");
 
 		assertUIState(
 			"Multi-measure is running",

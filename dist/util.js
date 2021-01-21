@@ -8931,10 +8931,23 @@ function getCommentBody(inputs, report, commentBody, logger) {
 	logger.info("Parsing existing comment...");
 	const commentHtml = parse$1(commentBody);
 
-	// Clear global status messages
-	commentHtml
-		.querySelectorAll(`.${globalStatusClass}`)
-		.forEach((el) => el.set_content(""));
+	// Update global status messages if the report is running and there are
+	// existing results
+	if (report.isRunning && commentHtml.querySelector("table") != null) {
+		commentHtml
+			.querySelectorAll(`.${globalStatusClass}`)
+			.forEach((el) =>
+				el.set_content(
+					h('blockquote', null, "⏳ Benchmarks are currently running. Results below are out of date."
+
+)
+				)
+			);
+	} else {
+		commentHtml
+			.querySelectorAll(`.${globalStatusClass}`)
+			.forEach((el) => el.set_content(""));
+	}
 
 	report.summaries.forEach((summaryData) =>
 		updateSummary(inputs, report, summaryData, commentHtml, logger)
