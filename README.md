@@ -13,7 +13,6 @@ Pull Requests.
 >   report-id is required for)
 > - Update examples to demonstrate new pattern of updating multi-job workflow
 >   benchmarks at one time using artifacts
-> - Add test workflow for new artifact upload pattern
 
 ## Usage
 
@@ -36,7 +35,7 @@ jobs:
 
       # Run benchmarks
       - name: Run tachometer and generate results file
-      - run: npm run tach --config benchmarks.json --json-file results.json
+        run: npm run tach --config benchmarks.json --json-file results.json
 
       # Read results and post comment
       - name: Report Tachometer Result
