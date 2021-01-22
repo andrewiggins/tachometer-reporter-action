@@ -380,7 +380,7 @@ function Summary({
 					{usesDefaults && [
 						" ",
 						<a
-							href="https://github.com/andrewiggins/tachometer-reporter-action/blob/master/README.md#summary"
+							href="https://github.com/andrewiggins/tachometer-reporter-action/blob/main/README.md#summary"
 							target="_blank"
 						>
 							Customize summary

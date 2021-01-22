@@ -12,7 +12,7 @@ const workflow = {
 	url:
 		"https://api.github.com/repos/andrewiggins/tachometer-reporter-action/actions/workflows/1850458",
 	html_url:
-		"https://github.com/andrewiggins/tachometer-reporter-action/blob/master/.github/workflows/pr.yml",
+		"https://github.com/andrewiggins/tachometer-reporter-action/blob/main/.github/workflows/pr.yml",
 	badge_url:
 		"https://github.com/andrewiggins/tachometer-reporter-action/workflows/Pull%20Request%20Test/badge.svg",
 };

@@ -14,7 +14,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Initialize tachometer comment
-        uses: andrewiggins/tachometer-reporter-action@master
+        uses: andrewiggins/tachometer-reporter-action@main
         with:
           initialize: true
 
@@ -25,7 +25,7 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - name: Report Tachometer Result
-        uses: andrewiggins/tachometer-reporter-action@master
+        uses: andrewiggins/tachometer-reporter-action@main
         with:
           path: tests/results/multi-measure-results.json
           report-id: multi-bench-1
@@ -40,7 +40,7 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - name: Report Other Tachometer Result
-        uses: andrewiggins/tachometer-reporter-action@master
+        uses: andrewiggins/tachometer-reporter-action@main
         with:
           path: tests/results/multi-measure-names.json
           report-id: multi-measure-names

@@ -7,7 +7,7 @@ on:
       - "**"
   push:
     branches:
-      - master
+      - main
 
 jobs:
   test:
@@ -27,7 +27,7 @@ jobs:
           pr-bench-name: local-framework
           base-bench-name: base-framework
 
-  master:
+  main:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
@@ -37,7 +37,7 @@ jobs:
       - run: npm ci
       - run: npm run test:coverage
       - name: Report Other Tachometer Result
-        uses: andrewiggins/tachometer-reporter-action@master
+        uses: andrewiggins/tachometer-reporter-action@main
         with:
           path: tests/results/other-results.json
           report-id: other-results

@@ -45,5 +45,5 @@ Acquiring comment lock uses a state machine. See comments in comments.js for det
 3. Create release in GitHub with notes on changes
 4. Check out new tag (e.g. "v2.1.0")
 5. Move major version to new tag (e.g. "v2"):
-   - `git push origin :refs/tags/<major_ver_tagname>; git tag -fa <major_ver_tagname>; git push origin master --tags`
+   - `git push origin :refs/tags/<major_ver_tagname>; git tag -fa <major_ver_tagname>; git push origin main --tags`
    - Message for major tag should be something like `Latest release of the v2 line`

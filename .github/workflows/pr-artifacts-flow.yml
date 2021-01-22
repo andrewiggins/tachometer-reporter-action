@@ -13,7 +13,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Initialize tachometer comment
-        uses: andrewiggins/tachometer-reporter-action@allow-globs
+        uses: andrewiggins/tachometer-reporter-action@main
         with:
           initialize: true
 
@@ -54,6 +54,6 @@ jobs:
       - run: ls -al
       - run: ls -al results
       - name: Report Tachometer Results
-        uses: andrewiggins/tachometer-reporter-action@allow-globs
+        uses: andrewiggins/tachometer-reporter-action@main
         with:
           path: results/*.json

@@ -10920,7 +10920,7 @@ function Summary({
 , usesDefaults && [
 						" ",
 						h('a', {
-							href: "https://github.com/andrewiggins/tachometer-reporter-action/blob/master/README.md#summary",
+							href: "https://github.com/andrewiggins/tachometer-reporter-action/blob/main/README.md#summary",
 							target: "_blank",}
 						, "Customize summary"
 
@@ -16204,7 +16204,7 @@ var escapeStringRegexp = string => {
 };
 
 const fullVersion = `v${
-	 "2.2.0"
+	 "2.3.0"
 }`;
 const majorVersion = ` v${
 	 2
