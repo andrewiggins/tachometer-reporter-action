@@ -502,23 +502,45 @@ function insertNewBenchData(container, newSortKey, newNode) {
  * @returns {string}
  */
 function getCommentBody(inputs, report, commentBody, logger) {
+	// If no comment exists - let's create a new one and exit
 	if (!commentBody) {
 		logger.info("Generating new comment body...");
 		const newHtml = <NewCommentBody report={report} inputs={inputs} />;
 		return newHtml.toString();
-	} else if (!report) {
-		logger.info(
-			"Comment exists but there is no report to update with so doing nothing."
-		);
-		return commentBody;
 	}
 
 	logger.info("Parsing existing comment...");
 	const commentHtml = parse(commentBody);
+	const hasResults = commentHtml.querySelector("table") != null;
 
-	// Update global status messages if the report is running and there are
-	// existing results
-	if (report.isRunning && commentHtml.querySelector("table") != null) {
+	// If report is null, that means we don't have an results to report
+	if (report == null) {
+		// If results exist and we are running in an initialize job, update global
+		// status that the results are out of date.
+		if (inputs.initialize && hasResults) {
+			commentHtml
+				.querySelectorAll(`.${globalStatusClass}`)
+				.forEach((el) =>
+					el.set_content(
+						<blockquote>
+							⏳ Benchmarks are currently running. Results below are out of
+							date.
+						</blockquote>
+					)
+				);
+
+			return commentHtml.toString();
+		} else {
+			logger.info(
+				"Comment exists but there is no report to update with so doing nothing."
+			);
+			return commentBody;
+		}
+	}
+
+	// If the report is currently running and old results exist, update global
+	// status messages that the existing results are out of date.
+	if (report.isRunning && hasResults) {
 		commentHtml
 			.querySelectorAll(`.${globalStatusClass}`)
 			.forEach((el) =>

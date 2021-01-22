@@ -317,7 +317,10 @@ async function runRunningUpdateDoNothingScenario(inputs) {
 
 	const comments = (await github.issues.listComments()).data;
 	assert.is(comments.length, 1, "Should not create any new comments");
-	assert.is(comments[0].body, body, "Body of comment should not change");
+
+	const actualBody = formatHtml(comments[0].body);
+	const expectedBody = formatHtml(body);
+	assert.is(actualBody, expectedBody, "Body of comment should not change");
 }
 
 runningUpdateSuite(
@@ -333,13 +336,28 @@ runningUpdateSuite(
 runningUpdateSuite(
 	"Does nothing if comment exists and report id is null and initialize is true",
 	async () => {
-		// TODO: Hmm in this case we still acquire a lock on the comment even though
-		// there is nothing to update. Could we detect this and skip acquiring
-		// comment lock?
-		await runRunningUpdateDoNothingScenario({
-			reportId: null,
-			initialize: true,
+		const body = addFooter(
+			await readFixture("test-results-existing-comment.html", false)
+		);
+
+		const github = createGitHubClient();
+		await github.issues.createComment({ body });
+
+		await invokeReportTachRunning({
+			github,
+			inputs: { reportId: null, initialize: true },
 		});
+
+		const comments = (await github.issues.listComments()).data;
+		assert.is(comments.length, 1, "Should not create a new comment");
+
+		const actualBody = formatHtml(comments[0].body);
+		const fixture = await readFixture("test-results-existing-running.html");
+		const fixtureHtml = parse(fixture);
+		fixtureHtml.querySelectorAll(".status").forEach((el) => el.set_content(""));
+		const expectedBody = formatHtml(fixtureHtml.toString());
+
+		assertFixture(actualBody, expectedBody, "Comment body matches fixture");
 	}
 );
 
