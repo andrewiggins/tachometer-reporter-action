@@ -668,6 +668,35 @@ newResultsSuite(
 	}
 );
 
+newResultsSuite(
+	"Does not create a new comment and instead prints a warning if path doesn't match any files",
+	async () => {
+		let warnCalled = false;
+
+		/** @type {ReturnType<typeof createTestLogger>} */
+		const logger = {
+			...createTestLogger(),
+			warn(msg) {
+				warnCalled = true;
+			},
+		};
+
+		const github = createGitHubClient();
+		await invokeReportTachResults({
+			github,
+			logger,
+			inputs: {
+				path: testRoot("results/does-not-exist-*.json"),
+			},
+		});
+
+		const comments = (await github.issues.listComments()).data;
+
+		assert.is(comments.length, 0, "Should not create a new comment");
+		assert.ok(warnCalled, "logger.warn should be called");
+	}
+);
+
 const updatedResultsSuite = suite("reportTachResults (update comment)");
 setupClock(updatedResultsSuite);
 
@@ -677,14 +706,15 @@ setupClock(updatedResultsSuite);
 async function runUpdatedResultsUpdateScenario(
 	inputs,
 	initialFixture = "test-results-new-comment.html",
-	expectedFixture = "test-results-2-updated-comment.html"
+	expectedFixture = "test-results-2-updated-comment.html",
+	logger = undefined
 ) {
 	const body = addFooter(await readFixture(initialFixture, false));
 
 	const github = createGitHubClient();
 	await github.issues.createComment({ body });
 
-	await invokeReportTachResults({ github, inputs });
+	await invokeReportTachResults({ github, inputs, logger });
 
 	const comments = (await github.issues.listComments()).data;
 	assert.is(comments.length, 1, "Should not create any new comments");
@@ -739,6 +769,32 @@ updatedResultsSuite(
 			"glob-results.html",
 			"glob-results2.html"
 		);
+	}
+);
+
+updatedResultsSuite(
+	"Does not update a comment when path doesn't match any files",
+	async () => {
+		let warnCalled = false;
+
+		/** @type {ReturnType<typeof createTestLogger>} */
+		const logger = {
+			...createTestLogger(),
+			warn(msg) {
+				warnCalled = true;
+			},
+		};
+
+		await runUpdatedResultsUpdateScenario(
+			{
+				path: "results/does-not-exist-*.json",
+			},
+			"test-results-new-comment.html",
+			"test-results-new-comment.html",
+			logger
+		);
+
+		assert.ok(warnCalled, "Warning should be printed to console");
 	}
 );
 
