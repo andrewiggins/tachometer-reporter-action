@@ -13,6 +13,7 @@ const {
 	readFixture: readRawFixture,
 	getSummaryId,
 	getBenchmarkSectionId,
+	multiMeasureReportId,
 } = require("./utils");
 const { createCommentContext } = require("../lib/comments");
 
@@ -645,24 +646,43 @@ newResultsSuite(
 	}
 );
 
+newResultsSuite(
+	"Creates a new comment if path is a glob and a report-id is provided",
+	async () => {
+		const github = createGitHubClient();
+		await invokeReportTachResults({
+			github,
+			inputs: {
+				path: testRoot("results/glob-results-*.json"),
+				reportId: multiMeasureReportId,
+			},
+		});
+
+		const comments = (await github.issues.listComments()).data;
+
+		assert.is(comments.length, 1, "Should create a new comment");
+
+		const actualBody = formatHtml(comments[0].body);
+		const fixture = await readFixture("glob-results.html");
+		assertFixture(actualBody, fixture, "Comment body matches fixture");
+	}
+);
+
 const updatedResultsSuite = suite("reportTachResults (update comment)");
 setupClock(updatedResultsSuite);
 
 /**
  * @param {Partial<import('../src/global').Inputs>} inputs
  */
-async function runUpdatedResultsUpdateScenario(inputs) {
-	const body = addFooter(
-		await readFixture("test-results-new-comment.html", false)
-	);
+async function runUpdatedResultsUpdateScenario(
+	inputs,
+	initialFixture = "test-results-new-comment.html",
+	expectedFixture = "test-results-2-updated-comment.html"
+) {
+	const body = addFooter(await readFixture(initialFixture, false));
 
 	const github = createGitHubClient();
 	await github.issues.createComment({ body });
-
-	inputs = {
-		path: testRoot("results/test-results-2.json"),
-		...inputs,
-	};
 
 	await invokeReportTachResults({ github, inputs });
 
@@ -670,33 +690,55 @@ async function runUpdatedResultsUpdateScenario(inputs) {
 	assert.is(comments.length, 1, "Should not create any new comments");
 
 	const actualBody = formatHtml(comments[0].body);
-	const fixtureName = "test-results-2-updated-comment.html";
-	const fixture = await readFixture(fixtureName);
+	const fixture = await readFixture(expectedFixture);
 
 	// Uncomment to update fixture
-	// await writeFile(testRoot(`fixtures/${fixtureName}`), actualBody, "utf8");
+	// await writeFile(testRoot(`fixtures/${expectedFixture}`), actualBody, "utf8");
 
-	assert.is(actualBody, fixture, "Body of comment should not change");
+	assert.is(actualBody, fixture, "Body of comment should match fixture");
 }
 
 updatedResultsSuite(
 	"Updates a comment when path is non null and initialize is null",
 	async () => {
-		await runUpdatedResultsUpdateScenario({ initialize: null });
+		await runUpdatedResultsUpdateScenario({
+			path: testRoot("results/test-results-2.json"),
+			initialize: null,
+		});
 	}
 );
 
 updatedResultsSuite(
 	"Updates a comment when path is non null and initialize is true",
 	async () => {
-		await runUpdatedResultsUpdateScenario({ initialize: true });
+		await runUpdatedResultsUpdateScenario({
+			path: testRoot("results/test-results-2.json"),
+			initialize: true,
+		});
 	}
 );
 
 updatedResultsSuite(
 	"Updates a comment when path is non null and initialize is false",
 	async () => {
-		await runUpdatedResultsUpdateScenario({ initialize: false });
+		await runUpdatedResultsUpdateScenario({
+			path: testRoot("results/test-results-2.json"),
+			initialize: false,
+		});
+	}
+);
+
+updatedResultsSuite(
+	"Updates a comment when path is glob and a report-id is provided",
+	async () => {
+		await runUpdatedResultsUpdateScenario(
+			{
+				path: testRoot("results/glob-results2-*"),
+				reportId: multiMeasureReportId,
+			},
+			"glob-results.html",
+			"glob-results2.html"
+		);
 	}
 );
 

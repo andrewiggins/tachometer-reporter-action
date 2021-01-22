@@ -27,31 +27,33 @@ jobs:
 
       # Run benchmarks
       - name: Run tachometer and generate results file
-      - run: npm run tach --config benchmarks.json --json-file results.json
+        run: npm run tach --config benchmarks.json --json-file results.json
 
       # Read results and post comment
       - name: Report Tachometer Result
         uses: andrewiggins/tachometer-reporter-action@v2
         with:
           path: results.json
-          report-id: benchmark1
 ```
 
 ### Multiple benchmark jobs
 
 ```yaml
-name: PR Setup Job Flow
+name: Multiple benchmark jobs example
 
 on: [pull_request]
 
-# Demo how to use the setup job flow
+# Demo how to report results for multiple benchmarks that run in different jobs
 #
-# In this flow, a workflow must create a separate "setup" job that initializes
-# the comment by passing initialize: true. Then each other job that actually
-# reports benchmark results must declare the "setup" job as a dependency in its
-# "needs" array.
+# In this flow, a workflow must upload the results from each benchmark job as
+# artifacts. Once all the jobs have finished, then run this action in a final
+# job that downloads the results artifact and reports the results from all the
+# jobs
 
 jobs:
+  # If you'd like a message to appear in existing results comment that the
+  # benchmarks are current running and the shown results are out of date, run a
+  # job before the benchmarks with the initialize option set to true.
   setup:
     name: Setup Tachometer Reporting
     runs-on: ubuntu-latest
@@ -63,7 +65,6 @@ jobs:
 
   bench_1:
     name: First Bench Job
-    # Wait for setup job to complete before running this job
     needs: [setup]
     runs-on: ubuntu-latest
     steps:
@@ -72,32 +73,53 @@ jobs:
       - uses: actions/setup-node@v1
       - run: npm ci
 
-      # Run benchmarks
+      # Run benchmarks. Ensure each job's results file has a unique name
       - name: Run tachometer and generate results file
-      - run: npm run tach --config benchmarks.json --json-file results.json
+      - run: npm run tach --config benchmarks.json --json-file bench_1.json
 
-      # Read results and post comment
-      - name: Report Tachometer Result
-        uses: andrewiggins/tachometer-reporter-action@v2
+      # Upload this benchmarks results
+      - uses: actions/upload-artifact@v2
         with:
-          path: results.json
-          report-id: benchmark1
+          name: results
+          path: bench_1.json
 
   bench_2:
     name: Second Bench Job
-    # Wait for setup job to complete before running this job
     needs: [setup]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
 
-      # Add other tasks similar to bench_1 job to run the second benchmark
+      # Add other tasks similar to bench_1 job to run the second benchmark. Make
+      # sure each job results file has a unique name
 
-      # Report second benchmark results
-      - name: Report Other Tachometer Result
+      # Upload this benchmarks results
+      #
+      # Since each result file has a unique name, we can upload to the same
+      # artifact. GitHub Actions will append the new files to the existing
+      # artifact. See the docs for upload-artifact to understand this behavior:
+      # https://git.io/JtOak
+      - uses: actions/upload-artifact@v2
+        with:
+          name: results
+          path: bench_2.json
+
+  report_results:
+    name: Report Results
+    needs: [bench_1, bench_2]
+    runs-on: ubuntu-latest
+    steps:
+      # Download the results artifact
+      - uses: actions/download-artifact@v2
+        with:
+          name: results
+          path: results
+
+      # Read all the results and post comment
+      - name: Report Tachometer Result
         uses: andrewiggins/tachometer-reporter-action@v2
         with:
-          path: other-results.json
+          path: results/*.json
 ```
 
 ## Features
@@ -125,12 +147,16 @@ measurement names (e.g. `measure1, measure2`) to include in the summary.
 
 ### In-progress benchmarks
 
-![Picture of a PR comment with icons indicating in progress benchmarks](./docs/in-progress-comment-with-results.png)
+![Picture of a PR comment with icons indicating in progress benchmarks](./docs/in-progress-global-status.png)
 
-If the `report-id` option is provided, then `tachometer-reporter-action` will
-add a stopwatch icon (⏱) next to any benchmark that is currently running. If the
-action can determine the current job id, then the icon is a link to the action
-job that is running the benchmark (see #7).
+To get a message in your comment to inform you if your benchmarks are currently
+running, add a job before your benchmarks that uses this action with the
+`initialize: true` input. This instance of `tachometer-reporter-action` will
+create a comment if none exists, or update an existing one with a message that
+the benchmarks are currently running.
+
+See the [Multiple benchmark jobs](#multiple-benchmark-jobs) usage sample for an
+example of how to set this up.
 
 ### Multiple measurements in one benchmark
 
@@ -151,19 +177,12 @@ The path to the results JSON file of the tachometer run.
 
 ### Optional
 
-#### report-id
-
-Give this report (i.e. results file) an ID to uniquely identify it against other
-instances of tachometer-reporter action. If you have multiple jobs or steps all
-running tachometer-reporter action for the same PR, use this field so that the
-actions don't collide with each other
-
 #### initialize
 
-Use this option with `report-id`.
-
 Determines whether this action instance should initialize the comment to report
-results. Useful if multiple jobs are sharing the same comment. Pass in `true` if
+results. Will also add "Benchmarks are running" text to existing comments.
+
+Useful if multiple jobs are sharing the same comment. Pass in `true` if
 this job should always create the comment, `false` if this job should never
 create the comment, or leave empty if the default behavior is desired (wait a
 random time before creating comment if it doesn't exist. Due to race conditions,
@@ -239,9 +258,9 @@ jobs](#multiple-benchmark-jobs) usage sample for an example.
 
 The results are inserted into the comment based on the title of the benchmark
 that produced the results. So a workflow that has multiple jobs reporting
-results will show the results in the lexical order of their `report-id` inputs.
-If no `report-id` is provided, a title is determined based on the name and
-version fields of the tachometer benchmark results.
+results will show the results in the lexical order of their titles. The title
+for a result file is determined based on the name and version fields of the
+tachometer benchmark results.
 
 ### Only latest updates are shown
 
@@ -256,7 +275,7 @@ equal or higher to the current run number in the comment will be written.
 
 ### Cooperative comment locking
 
-If you action has multiple benchmarks running in different jobs, it is possible
+If your action has multiple benchmarks running in different jobs, it is possible
 that the reporter-action will try to overwrite each other's results if both jobs
 read the comment before either has updated it with their results. In this
 situation, both jobs get a view of the comment with no results and only adds

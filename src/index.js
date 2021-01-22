@@ -1,4 +1,5 @@
 const { readFile } = require("fs").promises;
+const glob = require("@actions/glob");
 const {
 	h,
 	getCommentBody,
@@ -255,7 +256,7 @@ async function reportTachRunning(github, context, inputs, logger) {
  * @param {import('./global').GitHubActionContext} context
  * @param {import('./global').Inputs} inputs
  * @param {import('./global').Logger} [logger]
- * @returns {Promise<import('./global').SerializedReport | null>}
+ * @returns {Promise<import('./global').SerializedReport[] | null>}
  */
 async function reportTachResults(github, context, inputs, logger) {
 	inputs = { ...defaultInputs, ...inputs };
@@ -273,9 +274,8 @@ async function reportTachResults(github, context, inputs, logger) {
 		}
 	}
 
-	/** @type {[ import('./global').TachResults, import('./global').ActionInfo, import('./global').CommitInfo ]} */
-	const [tachResults, actionInfo, commitInfo] = await Promise.all([
-		readFile(inputs.path, "utf8").then((contents) => JSON.parse(contents)),
+	/** @type {[import('./global').ActionInfo, import('./global').CommitInfo ]} */
+	const [actionInfo, commitInfo] = await Promise.all([
 		getActionInfo(context, github, logger),
 		getCommit(context, github),
 	]);
@@ -283,22 +283,59 @@ async function reportTachResults(github, context, inputs, logger) {
 	logger.debug(() => "Action Info: " + JSON.stringify(actionInfo, null, 2));
 	logger.debug(() => "Commit Info " + JSON.stringify(commitInfo, null, 2));
 
-	const report = buildReport(
-		commitInfo,
-		actionInfo,
-		inputs,
-		tachResults,
-		false
-	);
+	const globber = await glob.create(inputs.path, {
+		followSymbolicLinks: inputs.followSymbolicLinks,
+	});
+	const files = await globber.glob();
+	if (files.length == 0) {
+		logger.warn(`No files were found matching the pattern "${inputs.path}".`);
+		return [];
+	}
+
+	const reports = [];
+	for (const file of files) {
+		/** @type {import('./global').TachResults} */
+		const tachResults = await readFile(file, "utf8").then((contents) =>
+			JSON.parse(contents)
+		);
+
+		let report;
+		if (files.length == 1) {
+			// Only use report ID if one result file is matched
+			report = buildReport(commitInfo, actionInfo, inputs, tachResults, false);
+		} else {
+			// If multiple reports are globbed, then the report-id input should be
+			// ignored since all reports will share the same reportId which is used in
+			// matching the HTML. In other words, if multiple reports are globbed then
+			// each report needs a unique id. As such, the report-id input cannot be
+			// used for every globbed result file.
+			report = buildReport(
+				commitInfo,
+				actionInfo,
+				{ ...inputs, reportId: null },
+				tachResults,
+				false
+			);
+		}
+
+		reports.push(report);
+	}
 
 	await postOrUpdateComment(
 		github,
-		createCommentContext(context, actionInfo, report.id, inputs.initialize),
-		(comment) => getCommentBody(inputs, report, comment?.body, logger),
+		createCommentContext(context, actionInfo, reports[0].id, inputs.initialize),
+		(comment) => {
+			let body = comment?.body;
+			for (let report of reports) {
+				body = getCommentBody(inputs, report, body, logger);
+			}
+
+			return body;
+		},
 		logger
 	);
 
-	return {
+	return reports.map((report) => ({
 		...report,
 		status: report.status?.toString(),
 		body: report.body?.toString(),
@@ -307,7 +344,7 @@ async function reportTachResults(github, context, inputs, logger) {
 			measurement: m.measurement,
 			summary: m.summary.toString(),
 		})),
-	};
+	}));
 }
 
 module.exports = {

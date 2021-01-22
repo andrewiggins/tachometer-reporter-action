@@ -30,12 +30,21 @@ function getLogger() {
 function getInputs(logger) {
 	const path = core.getInput("path", { required: false });
 	const reportId = core.getInput("report-id", { required: false });
-	const initialize = core.getInput("initialize", { required: false });
-	const keepOldResults = core.getInput("keep-old-results", { required: false });
-	const defaultOpen = core.getInput("default-open", { required: false });
+	const initialize = core
+		.getInput("initialize", { required: false })
+		?.toLowerCase();
+	const keepOldResults = core
+		.getInput("keep-old-results", { required: false })
+		?.toLowerCase();
+	const defaultOpen = core
+		.getInput("default-open", { required: false })
+		?.toLowerCase();
 	const prBenchName = core.getInput("pr-bench-name", { required: false });
 	const baseBenchName = core.getInput("base-bench-name", { required: false });
 	const summarize = core.getInput("summarize", { required: false });
+	const followSymbolicLinks = core
+		.getInput("follow-symbolic-links")
+		?.toLowerCase();
 
 	/** @type {import('../global').Inputs} */
 	const inputs = {
@@ -47,11 +56,12 @@ function getInputs(logger) {
 		prBenchName: prBenchName ? prBenchName : null,
 		baseBenchName: baseBenchName ? baseBenchName : null,
 		summarize: true,
+		followSymbolicLinks: followSymbolicLinks !== "false",
 	};
 
-	if (summarize == "true") {
+	if (summarize?.toLowerCase() == "true") {
 		inputs.summarize = true;
-	} else if (summarize == "false") {
+	} else if (summarize?.toLowerCase() == "false") {
 		inputs.summarize = [];
 	} else if (typeof summarize == "string") {
 		inputs.summarize = summarize.split(",").map((s) => s.trim());

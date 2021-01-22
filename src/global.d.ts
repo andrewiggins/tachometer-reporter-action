@@ -78,6 +78,7 @@ interface Inputs {
 	summarize?: true | string[];
 	keepOldResults?: boolean;
 	defaultOpen?: boolean;
+	followSymbolicLinks: boolean;
 }
 
 type Measurement = import("tachometer/lib/types").Measurement & {
