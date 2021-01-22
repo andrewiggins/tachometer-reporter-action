@@ -8841,9 +8841,12 @@ function NewCommentBody({ inputs, report }) {
 		h('div', null
 , h('h2', null, "📊 Tachometer Benchmark Results"   )
 , h('h3', null, "Summary")
-, h('p', { class: globalStatusClass,}
-, report == null &&
-					"A summary of the benchmark results will show here once they finish."
+, h('div', { class: globalStatusClass,}
+, report == null && (
+					h('p', null, "A summary of the benchmark results will show here once they finish."
+
+)
+				)
 )
 , h('div', { id: getSummaryContainerId(),}
 , report != null &&
@@ -8852,9 +8855,12 @@ function NewCommentBody({ inputs, report }) {
 					))
 )
 , h('h3', null, "Results")
-, h('p', { class: globalStatusClass,}
-, report == null &&
-					"The full results of your benchmarks will show here once they finish."
+, h('div', { class: globalStatusClass,}
+, report == null && (
+					h('p', null, "The full results of your benchmarks will show here once they finish."
+
+)
+				)
 )
 , h('div', { id: getResultsContainerId(),}
 , report != null && (
@@ -8911,24 +8917,59 @@ function insertNewBenchData(container, newSortKey, newNode) {
  * @returns {string}
  */
 function getCommentBody(inputs, report, commentBody, logger) {
+	// If no comment exists - let's create a new one and exit
 	if (!commentBody) {
 		logger.info("Generating new comment body...");
 		const newHtml = h(NewCommentBody, { report: report, inputs: inputs,} );
 		return newHtml.toString();
-	} else if (!report) {
-		logger.info(
-			"Comment exists but there is no report to update with so doing nothing."
-		);
-		return commentBody;
 	}
 
 	logger.info("Parsing existing comment...");
 	const commentHtml = parse$1(commentBody);
+	const hasResults = commentHtml.querySelector("table") != null;
 
-	// Clear global status messages
-	commentHtml
-		.querySelectorAll(`.${globalStatusClass}`)
-		.forEach((el) => el.set_content(""));
+	// If report is null, that means we don't have an results to report
+	if (report == null) {
+		// If results exist and we are running in an initialize job, update global
+		// status that the results are out of date.
+		if (inputs.initialize && hasResults) {
+			commentHtml
+				.querySelectorAll(`.${globalStatusClass}`)
+				.forEach((el) =>
+					el.set_content(
+						h('blockquote', null, "⏳ Benchmarks are currently running. Results below are out of date."
+
+
+)
+					)
+				);
+
+			return commentHtml.toString();
+		} else {
+			logger.info(
+				"Comment exists but there is no report to update with so doing nothing."
+			);
+			return commentBody;
+		}
+	}
+
+	// If the report is currently running and old results exist, update global
+	// status messages that the existing results are out of date.
+	if (report.isRunning && hasResults) {
+		commentHtml
+			.querySelectorAll(`.${globalStatusClass}`)
+			.forEach((el) =>
+				el.set_content(
+					h('blockquote', null, "⏳ Benchmarks are currently running. Results below are out of date."
+
+)
+				)
+			);
+	} else {
+		commentHtml
+			.querySelectorAll(`.${globalStatusClass}`)
+			.forEach((el) => el.set_content(""));
+	}
 
 	report.summaries.forEach((summaryData) =>
 		updateSummary(inputs, report, summaryData, commentHtml, logger)
@@ -9003,15 +9044,10 @@ function updateSummary(inputs, report, summaryData, commentHtml, logger) {
 
 	const summaryId = getSummaryId(summaryData.measurementId, report.id);
 	const summary = commentHtml.querySelector(`#${summaryId}`);
-	// const summaryStatus = summary?.querySelector(`.${statusClass}`);
 
 	if (summary) {
 		const htmlRunNumber = parseInt(summary.getAttribute("data-run-number"), 10);
 
-		// if (report.isRunning) {
-		// 	logger.info(`Adding status info to summary with id "${summaryId}"...`);
-		// 	summaryStatus.set_content(report.status);
-		// } else if (htmlRunNumber > report.actionInfo.run.number) {
 		if (htmlRunNumber > report.actionInfo.run.number) {
 			logger.info(
 				`Existing summary is from a run (#${htmlRunNumber}) that is more recent than the` +

@@ -426,10 +426,13 @@ function NewCommentBody({ inputs, report }) {
 		<div>
 			<h2>📊 Tachometer Benchmark Results</h2>
 			<h3>Summary</h3>
-			<p class={globalStatusClass}>
-				{report == null &&
-					"A summary of the benchmark results will show here once they finish."}
-			</p>
+			<div class={globalStatusClass}>
+				{report == null && (
+					<p>
+						A summary of the benchmark results will show here once they finish.
+					</p>
+				)}
+			</div>
 			<div id={getSummaryContainerId()}>
 				{report != null &&
 					report.summaries.map((summary) => (
@@ -437,10 +440,13 @@ function NewCommentBody({ inputs, report }) {
 					))}
 			</div>
 			<h3>Results</h3>
-			<p class={globalStatusClass}>
-				{report == null &&
-					"The full results of your benchmarks will show here once they finish."}
-			</p>
+			<div class={globalStatusClass}>
+				{report == null && (
+					<p>
+						The full results of your benchmarks will show here once they finish.
+					</p>
+				)}
+			</div>
 			<div id={getResultsContainerId()}>
 				{report != null && (
 					<BenchmarkSection report={report} open={inputs.defaultOpen} />
@@ -496,24 +502,59 @@ function insertNewBenchData(container, newSortKey, newNode) {
  * @returns {string}
  */
 function getCommentBody(inputs, report, commentBody, logger) {
+	// If no comment exists - let's create a new one and exit
 	if (!commentBody) {
 		logger.info("Generating new comment body...");
 		const newHtml = <NewCommentBody report={report} inputs={inputs} />;
 		return newHtml.toString();
-	} else if (!report) {
-		logger.info(
-			"Comment exists but there is no report to update with so doing nothing."
-		);
-		return commentBody;
 	}
 
 	logger.info("Parsing existing comment...");
 	const commentHtml = parse(commentBody);
+	const hasResults = commentHtml.querySelector("table") != null;
 
-	// Clear global status messages
-	commentHtml
-		.querySelectorAll(`.${globalStatusClass}`)
-		.forEach((el) => el.set_content(""));
+	// If report is null, that means we don't have an results to report
+	if (report == null) {
+		// If results exist and we are running in an initialize job, update global
+		// status that the results are out of date.
+		if (inputs.initialize && hasResults) {
+			commentHtml
+				.querySelectorAll(`.${globalStatusClass}`)
+				.forEach((el) =>
+					el.set_content(
+						<blockquote>
+							⏳ Benchmarks are currently running. Results below are out of
+							date.
+						</blockquote>
+					)
+				);
+
+			return commentHtml.toString();
+		} else {
+			logger.info(
+				"Comment exists but there is no report to update with so doing nothing."
+			);
+			return commentBody;
+		}
+	}
+
+	// If the report is currently running and old results exist, update global
+	// status messages that the existing results are out of date.
+	if (report.isRunning && hasResults) {
+		commentHtml
+			.querySelectorAll(`.${globalStatusClass}`)
+			.forEach((el) =>
+				el.set_content(
+					<blockquote>
+						⏳ Benchmarks are currently running. Results below are out of date.
+					</blockquote>
+				)
+			);
+	} else {
+		commentHtml
+			.querySelectorAll(`.${globalStatusClass}`)
+			.forEach((el) => el.set_content(""));
+	}
 
 	report.summaries.forEach((summaryData) =>
 		updateSummary(inputs, report, summaryData, commentHtml, logger)
@@ -588,15 +629,10 @@ function updateSummary(inputs, report, summaryData, commentHtml, logger) {
 
 	const summaryId = getSummaryId(summaryData.measurementId, report.id);
 	const summary = commentHtml.querySelector(`#${summaryId}`);
-	// const summaryStatus = summary?.querySelector(`.${statusClass}`);
 
 	if (summary) {
 		const htmlRunNumber = parseInt(summary.getAttribute("data-run-number"), 10);
 
-		// if (report.isRunning) {
-		// 	logger.info(`Adding status info to summary with id "${summaryId}"...`);
-		// 	summaryStatus.set_content(report.status);
-		// } else if (htmlRunNumber > report.actionInfo.run.number) {
 		if (htmlRunNumber > report.actionInfo.run.number) {
 			logger.info(
 				`Existing summary is from a run (#${htmlRunNumber}) that is more recent than the` +
