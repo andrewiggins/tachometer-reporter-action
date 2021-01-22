@@ -147,15 +147,16 @@ measurement names (e.g. `measure1, measure2`) to include in the summary.
 
 ### In-progress benchmarks
 
+![Picture of a PR comment with icons indicating in progress benchmarks](./docs/in-progress-global-status.png)
 
-> TODO: Update this section
+To get a message in your comment to inform you if your benchmarks are currently
+running, add a job before your benchmarks that uses this action with the
+`initialize: true` input. This instance of `tachometer-reporter-action` will
+create a comment if none exists, or update an existing one with a message that
+the benchmarks are currently running.
 
-![Picture of a PR comment with icons indicating in progress benchmarks](./docs/in-progress-comment-with-results.png)
-
-If the `report-id` option is provided, then `tachometer-reporter-action` will
-add a stopwatch icon (⏱) next to any benchmark that is currently running. If the
-action can determine the current job id, then the icon is a link to the action
-job that is running the benchmark (see #7).
+See the [Multiple benchmark jobs](#multiple-benchmark-jobs) usage sample for an
+example of how to set this up.
 
 ### Multiple measurements in one benchmark
 
