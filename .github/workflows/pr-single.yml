@@ -23,7 +23,7 @@ jobs:
           # Could use this to simulate benchmark running for random number of seconds
           echo $((($RANDOM%(5000-1000))+1000))
       - name: Report Tachometer Result
-        uses: andrewiggins/tachometer-reporter-action@master
+        uses: andrewiggins/tachometer-reporter-action@main
         with:
           path: tests/results/test-results.json
           pr-bench-name: local-framework
