@@ -110,7 +110,7 @@ function createTestLogger() {
  * @param {Partial<AcquireCommentLockParams>} [params]
  * @returns {Promise<[ReturnType<TestLogger["getStates"]>, Comment]>}
  */
-async function invokePostorUpdateComment({
+async function invokePostOrUpdateComment({
 	github = createGitHubClient(),
 	context = createTestCommentContext(),
 	getCommentBody = getTestCommentBody,
@@ -224,7 +224,7 @@ acquireLockSuite.after.each(() => {
 });
 
 acquireLockSuite("Single benchmark, create comment", async () => {
-	const completion = invokePostorUpdateComment();
+	const completion = invokePostOrUpdateComment();
 
 	await clock.runAllAsync();
 	const [states, comment] = await completion;
@@ -250,7 +250,7 @@ acquireLockSuite("Single benchmark, update comment", async () => {
 		body: `${getTestCommentBody(null)}\n${footer}`,
 	});
 
-	const completion = invokePostorUpdateComment({ github });
+	const completion = invokePostOrUpdateComment({ github });
 
 	await clock.runAllAsync();
 	const [states, comment] = await completion;
@@ -272,7 +272,7 @@ acquireLockSuite(
 		const github = createGitHubClient();
 
 		debug("testTrace", "Start test job trying to create comment...");
-		const completion = invokePostorUpdateComment({ github, context });
+		const completion = invokePostOrUpdateComment({ github, context });
 		await clock.runAllAsync();
 
 		const [states, finalComment] = await completion;
@@ -296,14 +296,14 @@ acquireLockSuite(
 		const waiterCtx = createTestCommentContext({ initialize: false });
 
 		debug("testTrace", "Start waiter job...");
-		const waiterCompletion = invokePostorUpdateComment({
+		const waiterCompletion = invokePostOrUpdateComment({
 			github,
 			context: waiterCtx,
 		});
 		await clock.nextAsync();
 
 		debug("testTrace", "Start initializer job...");
-		const initializeCompletion = invokePostorUpdateComment({
+		const initializeCompletion = invokePostOrUpdateComment({
 			github,
 			context: initializerCtx,
 		});
@@ -354,7 +354,7 @@ acquireLockSuite(
 
 		/** @type {Error} */
 		let error;
-		const completion = invokePostorUpdateComment({ context, logger }).catch(
+		const completion = invokePostOrUpdateComment({ context, logger }).catch(
 			(e) => (error = e)
 		);
 
@@ -385,7 +385,7 @@ acquireLockSuite("Benchmark finds comment while creating", async () => {
 	const github = createGitHubClient();
 
 	debug("testTrace", "Start test job trying to create comment...");
-	const completion = invokePostorUpdateComment({ github });
+	const completion = invokePostOrUpdateComment({ github });
 	await clock.nextAsync();
 
 	debug("testTrace", "Simulate second job creating the comment...");
@@ -429,7 +429,7 @@ acquireLockSuite("Benchmark recovers previously held lock", async () => {
 		body: `${getTestCommentBody(null)}\n${context.footer}\n${lockHtml}`,
 	});
 
-	const completion = invokePostorUpdateComment({ github, context });
+	const completion = invokePostOrUpdateComment({ github, context });
 
 	await clock.runAllAsync();
 	const [states, comment] = await completion;
@@ -451,7 +451,7 @@ acquireLockSuite("Benchmark that must first wait", async () => {
 	});
 
 	debug("testTrace", "Start test job trying to update comment...");
-	const completion = invokePostorUpdateComment({ github });
+	const completion = invokePostOrUpdateComment({ github });
 	await clock.nextAsync();
 
 	debug("testTrace", "Simulate first job completing...");
@@ -486,7 +486,7 @@ acquireLockSuite("Benchmark that loses a hold", async () => {
 	});
 
 	debug("testTrace", "Start test job trying to update comment...");
-	const completion = invokePostorUpdateComment({ github });
+	const completion = invokePostOrUpdateComment({ github });
 	await clock.nextAsync();
 
 	debug("testTrace", "Simulate second job overwriting first job's lock...");
@@ -535,7 +535,7 @@ acquireLockSuite("Benchmark that times out", async () => {
 
 	/** @type {Error} */
 	let error;
-	invokePostorUpdateComment({ github }).catch((e) => (error = e));
+	invokePostOrUpdateComment({ github }).catch((e) => (error = e));
 	await clock.runAllAsync();
 
 	assert.ok(error, "Expected error to be caught");
@@ -565,7 +565,7 @@ acquireLockSuite("Comment update doesn't settle immediately", async () => {
 	} = await github.issues.getComment({ comment_id });
 
 	debug("testTrace", "Start test job that locks comment...");
-	const completion = invokePostorUpdateComment({ github, context });
+	const completion = invokePostOrUpdateComment({ github, context });
 	await clock.nextAsync();
 
 	debug("testTrace", "Simulate comment not settling yet");
