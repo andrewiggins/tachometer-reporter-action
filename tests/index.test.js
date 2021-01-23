@@ -321,7 +321,7 @@ async function runRunningUpdateDoNothingScenario(inputs) {
 
 	const actualBody = formatHtml(comments[0].body);
 	const expectedBody = formatHtml(body);
-	assert.is(actualBody, expectedBody, "Body of comment should not change");
+	assertFixture(actualBody, expectedBody, "Body of comment should not change");
 }
 
 runningUpdateSuite(
@@ -725,7 +725,7 @@ async function runUpdatedResultsUpdateScenario(
 	// Uncomment to update fixture
 	// await writeFile(testRoot(`fixtures/${expectedFixture}`), actualBody, "utf8");
 
-	assert.is(actualBody, fixture, "Body of comment should match fixture");
+	assertFixture(actualBody, fixture, "Body of comment should match fixture");
 }
 
 updatedResultsSuite(
