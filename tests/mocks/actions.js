@@ -1,5 +1,10 @@
 const { testRoot } = require("../utils");
-const { defaultActionInfo, fakeCommit } = require("./github");
+const {
+	defaultActionInfo,
+	fakeCommit,
+	fakeWorkflow,
+	fakeWorkflowRun,
+} = require("./github");
 
 const prBenchName = "local-framework";
 const baseBenchName = "base-framework";
@@ -25,7 +30,7 @@ const testLogger = {
 /**
  * @type {import('../../src/global').GitHubActionContext}
  */
-const fakeGitHubContext = {
+const fakePullRequestContext = {
 	payload: null,
 	eventName: "pull_request",
 	sha: fakeCommit.sha,
@@ -47,8 +52,27 @@ const fakeGitHubContext = {
 	},
 };
 
+/** @type {import('../../src/global').WorkflowRunActionContextPayload} */
+const fakeWorkflowRunPayload = {
+	action: "completed",
+	workflow: fakeWorkflow,
+	workflow_run: fakeWorkflowRun,
+	repository: /** @type {any} */ ({}),
+	sender: /** @type {any} */ ({}),
+};
+
+/** @type {import('../../src/global').PRContext} */
+const fakePRContext = {
+	owner: fakePullRequestContext.repo.owner,
+	repo: fakePullRequestContext.repo.repo,
+	number: fakePullRequestContext.issue.number,
+	sha: fakePullRequestContext.sha,
+};
+
 module.exports = {
 	defaultInputs,
-	fakeGitHubContext,
+	fakeWorkflowRunPayload,
+	fakePullRequestContext,
+	fakePRContext,
 	testLogger,
 };

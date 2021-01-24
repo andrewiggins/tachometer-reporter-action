@@ -7,7 +7,7 @@ const {
 	Status,
 	ResultsEntry,
 } = require("./getCommentBody");
-const { getActionInfo } = require("./utils/github");
+const { parseContext } = require("./utils/github");
 const { createCommentContext, postOrUpdateComment } = require("./comments");
 const { normalizeResults } = require("./utils/tachometer");
 const {
@@ -35,7 +35,7 @@ function pickArray(array, indexes) {
 
 /**
  * @param {string} commitSha
- * @param {import('./global').ActionInfo} actionInfo
+ * @param {import('./global').ActionInfo} benchmarkAction
  * @param {Pick<import('./global').Inputs, 'prBenchName' | 'baseBenchName' | 'defaultOpen' | 'reportId' | 'summarize'>} inputs
  * @param {import('./global').PatchedTachResults} tachResults
  * @param {boolean} [isRunning]
@@ -43,7 +43,7 @@ function pickArray(array, indexes) {
  */
 function buildReport(
 	commitSha,
-	actionInfo,
+	benchmarkAction,
 	inputs,
 	tachResults,
 	isRunning = false
@@ -143,7 +143,7 @@ function buildReport(
 							benchmarks={benches}
 							prBenchName={inputs.prBenchName}
 							baseBenchName={inputs.baseBenchName}
-							actionInfo={actionInfo}
+							actionInfo={benchmarkAction}
 							isRunning={isRunning}
 						/>
 					),
@@ -164,7 +164,7 @@ function buildReport(
 					benchmarks={benchmarks}
 					prBenchName={inputs.prBenchName}
 					baseBenchName={inputs.baseBenchName}
-					actionInfo={actionInfo}
+					actionInfo={benchmarkAction}
 					isRunning={isRunning}
 				/>
 			),
@@ -176,15 +176,17 @@ function buildReport(
 		title,
 		prBenchName: inputs.prBenchName,
 		baseBenchName: inputs.baseBenchName,
-		actionInfo: actionInfo,
+		actionInfo: benchmarkAction,
 		isRunning,
-		status: isRunning ? <Status actionInfo={actionInfo} icon={true} /> : null,
+		status: isRunning ? (
+			<Status actionInfo={benchmarkAction} icon={true} />
+		) : null,
 		body: (
 			<ResultsEntry
 				reportId={reportId}
 				benchmarks={benchmarks}
 				resultsByMeasurement={resultsByMeasurement}
-				actionInfo={actionInfo}
+				actionInfo={benchmarkAction}
 				commitSha={commitSha}
 			/>
 		),
@@ -211,13 +213,26 @@ const defaultInputs = {
  * @returns {Promise<import('./global').SerializedReport | null>}
  */
 async function reportTachRunning(github, context, inputs, logger) {
-	/** @type {import('./global').ActionInfo} */
-	const actionInfo = getActionInfo(context);
-	const commitSha = context.sha;
+	if (
+		context.eventName === "workflow_run" &&
+		context.payload.action !== "requested"
+	) {
+		logger.info(
+			`This workflow as trigged by a workflow_run ${context.payload.action} event. Nothing to do at this stage (comment will be updated in main stage).`
+		);
+		return null;
+	}
+
+	const parsedContext = parseContext(context, logger);
+	if (parseContext == null) {
+		return null;
+	}
+
+	const { pr, benchmark: benchmarkAction } = parsedContext;
 
 	let report;
 	if (inputs.reportId) {
-		report = buildReport(commitSha, actionInfo, inputs, null, true);
+		report = buildReport(pr.sha, benchmarkAction, inputs, null, true);
 	} else if (inputs.initialize !== true) {
 		logger.info(
 			'No report-id provided and initialize is not set to true. Skipping updating comment with "Running..." status.'
@@ -228,7 +243,7 @@ async function reportTachRunning(github, context, inputs, logger) {
 
 	await postOrUpdateComment(
 		github,
-		createCommentContext(context, actionInfo, report?.id, inputs.initialize),
+		createCommentContext(pr, benchmarkAction, report?.id, inputs.initialize),
 		(comment) => getCommentBody(inputs, report, comment?.body, logger),
 		logger
 	);
@@ -259,6 +274,16 @@ async function reportTachRunning(github, context, inputs, logger) {
 async function reportTachResults(github, context, inputs, logger) {
 	inputs = { ...defaultInputs, ...inputs };
 
+	if (
+		context.eventName === "workflow_run" &&
+		context.payload.action !== "completed"
+	) {
+		logger.info(
+			`This workflow as trigged by a workflow_run ${context.payload.action} event. Nothing to do at this stage (comment was initialized in "pre" stage).`
+		);
+		return null;
+	}
+
 	if (inputs.path == null) {
 		if (inputs.initialize == true) {
 			logger.info(
@@ -272,11 +297,24 @@ async function reportTachResults(github, context, inputs, logger) {
 		}
 	}
 
-	/** @type {import('./global').ActionInfo} */
-	const actionInfo = getActionInfo(context);
-	const commitSha = context.sha;
+	const parsedContext = parseContext(context, logger);
+	if (parsedContext == null) {
+		return null;
+	}
 
-	logger.debug(() => "Action Info: " + JSON.stringify(actionInfo, null, 2));
+	const {
+		pr,
+		benchmark: benchmarkAction,
+		reporting: reportingAction,
+	} = parsedContext;
+
+	logger.debug(() => "PR Context: " + JSON.stringify(pr, null, 2));
+	logger.debug(
+		() => "Benchmark Info: " + JSON.stringify(benchmarkAction, null, 2)
+	);
+	logger.debug(
+		() => "Reporting Info: " + JSON.stringify(reportingAction, null, 2)
+	);
 
 	const globber = await glob.create(inputs.path, {
 		followSymbolicLinks: inputs.followSymbolicLinks,
@@ -297,7 +335,7 @@ async function reportTachResults(github, context, inputs, logger) {
 		let report;
 		if (files.length == 1) {
 			// Only use report ID if one result file is matched
-			report = buildReport(commitSha, actionInfo, inputs, tachResults, false);
+			report = buildReport(pr.sha, benchmarkAction, inputs, tachResults, false);
 		} else {
 			// If multiple reports are globbed, then the report-id input should be
 			// ignored since all reports will share the same reportId which is used in
@@ -305,8 +343,8 @@ async function reportTachResults(github, context, inputs, logger) {
 			// each report needs a unique id. As such, the report-id input cannot be
 			// used for every globbed result file.
 			report = buildReport(
-				commitSha,
-				actionInfo,
+				pr.sha,
+				benchmarkAction,
 				{ ...inputs, reportId: null },
 				tachResults,
 				false
@@ -318,7 +356,12 @@ async function reportTachResults(github, context, inputs, logger) {
 
 	await postOrUpdateComment(
 		github,
-		createCommentContext(context, actionInfo, reports[0].id, inputs.initialize),
+		createCommentContext(
+			pr,
+			benchmarkAction,
+			inputs.reportId,
+			inputs.initialize
+		),
 		(comment) => {
 			let body = comment?.body;
 			for (let report of reports) {

@@ -11269,34 +11269,113 @@ var getCommentBody_1 = {
 
 /**
  * @param {import('../global').GitHubActionContext} context
+ * @param {import('../global').Logger} logger
+ * @returns {import('../global').ActionContexts}
+ */
+function parseContext(context, logger) {
+	if (context.eventName == "workflow_run") {
+		/** @type {import('../global').WorkflowRunActionContextPayload} */
+		// @ts-ignore
+		let payload = context.payload;
+		if (payload.workflow_run.event !== "pull_request") {
+			logger.info(
+				"This workflow_run action was not triggered by a pull request event. Doing nothing."
+			);
+			logger.info("Triggering event name: " + payload.workflow_run.event);
+			return null;
+		} else if (
+			payload.workflow_run.pull_requests == null ||
+			payload.workflow_run.pull_requests.length == 0
+		) {
+			logger.info(
+				"The workflow_run payload does not reference any pull requests. Doing nothing."
+			);
+			return null;
+		}
+
+		const prs = payload.workflow_run.pull_requests;
+		const pr = prs[0];
+		if (prs.length > 1) {
+			logger.warn(
+				`The workflow_run payload references more than one pull requests (${prs.length}). Assuming the first one is the pull_request (#${pr.number}) to post results to.`
+			);
+		}
+
+		return {
+			benchmark: getActionInfo({
+				repo: context.repo,
+				workflow: payload.workflow.name,
+				runId: payload.workflow_run.id,
+				runNumber: payload.workflow_run.run_number,
+				job: null,
+			}),
+			reporting: getActionInfo(context),
+			pr: {
+				owner: context.repo.owner,
+				repo: context.repo.repo,
+				number: pr.number,
+				sha: pr.head.sha,
+			},
+		};
+	} else if (context.eventName == "pull_request") {
+		// If this action is running in a pull_request event, we'll assume the
+		// benchmarks were also run in this workflow
+		let actionInfo = getActionInfo(context);
+		return {
+			benchmark: actionInfo,
+			reporting: actionInfo,
+			pr: {
+				owner: context.repo.owner,
+				repo: context.repo.repo,
+				number: context.issue.number,
+				sha: context.sha,
+			},
+		};
+	} else {
+		logger.info(
+			"Not a pull_request or workflow_run event. Skipping this action and doing nothing."
+		);
+		logger.info("Event name: " + context.eventName);
+		return null;
+	}
+}
+
+/**
+ * @typedef {Pick<import('../global').GitHubActionContext, "repo" | "workflow" | "runId" | "runNumber" | "job">} RelevantGitHubContext
+ * @param {RelevantGitHubContext} context
  * @returns {import('../global').ActionInfo}
  */
-function getActionInfo(context) {
-	const e = encodeURIComponent;
-	const encodedOwner = e(context.repo.owner);
-	const encodedRepo = e(context.repo.repo);
-	const encodedWorkflow = e(context.workflow);
-	const encodedRunId = e(context.runId);
+function getActionInfo({
+	repo: { owner, repo },
+	workflow,
+	runId,
+	runNumber,
+	job,
+}) {
+	const encodedOwner = encodeURIComponent(owner);
+	const encodedRepo = encodeURIComponent(repo);
+	const encodedWorkflow = encodeURIComponent(workflow);
+	const encodedRunId = encodeURIComponent(runId);
 
 	return {
 		workflow: {
-			name: context.workflow,
+			name: workflow,
 			runsHtmlUrl: `https://github.com/${encodedOwner}/${encodedRepo}/actions?query=workflow%3A%22${encodedWorkflow}%22`,
 		},
 		run: {
-			id: context.runId,
-			number: context.runNumber,
-			name: `${context.workflow} #${context.runNumber}`,
+			id: runId,
+			number: runNumber,
+			name: `${workflow} #${runNumber}`,
 			htmlUrl: `https://github.com/${encodedOwner}/${encodedRepo}/actions/runs/${encodedRunId}`,
 		},
 		job: {
-			name: context.job,
+			name: job,
 		},
 	};
 }
 
 var github$1 = {
-	getActionInfo,
+	parseContext,
 };
 
 /*! *****************************************************************************
@@ -16775,18 +16854,18 @@ async function postOrUpdateComment(github, context, getCommentBody, logger) {
 }
 
 /**
- * @param {Pick<import('./global').GitHubActionContext, "repo" | "issue">} context
- * @param {import('./global').ActionInfo} actionInfo
+ * @param {import('./global').PRContext} prContext
+ * @param {import('./global').ActionInfo} benchmarkActionInfo
  * @param {string | undefined} [customId]
  * @param {boolean} [initialize]
  * @returns {import('./global').CommentContext}
  */
-function createCommentContext(context, actionInfo, customId, initialize) {
-	const { run, job } = actionInfo;
+function createCommentContext(prContext, benchmarkActionInfo, customId, initialize) {
+	const { run, job } = benchmarkActionInfo;
 
 	const lockId = `{ customId: ${customId}, run: {id: ${run.id}, name: ${run.name}}, job: {name: ${job.name}}`;
 
-	const footer = getFooter(actionInfo);
+	const footer = getFooter(benchmarkActionInfo);
 	const footerRe = new RegExp(escapeStringRegexp(footer));
 
 	/** @type {number} */
@@ -16800,8 +16879,9 @@ function createCommentContext(context, actionInfo, customId, initialize) {
 	}
 
 	return {
-		...context.repo,
-		issueNumber: context.issue.number,
+		owner: prContext.owner,
+		repo: prContext.repo,
+		issueNumber: prContext.number,
 		commentId: null,
 		lockId,
 		footer,
@@ -16828,7 +16908,7 @@ const {
 	Status: Status$1,
 	ResultsEntry: ResultsEntry$1,
 } = getCommentBody_1;
-const { getActionInfo: getActionInfo$1 } = github$1;
+const { parseContext: parseContext$1 } = github$1;
 const { createCommentContext: createCommentContext$1, postOrUpdateComment: postOrUpdateComment$1 } = comments;
 const { normalizeResults: normalizeResults$1 } = tachometer;
 const {
@@ -16856,7 +16936,7 @@ function pickArray(array, indexes) {
 
 /**
  * @param {string} commitSha
- * @param {import('./global').ActionInfo} actionInfo
+ * @param {import('./global').ActionInfo} benchmarkAction
  * @param {Pick<import('./global').Inputs, 'prBenchName' | 'baseBenchName' | 'defaultOpen' | 'reportId' | 'summarize'>} inputs
  * @param {import('./global').PatchedTachResults} tachResults
  * @param {boolean} [isRunning]
@@ -16864,7 +16944,7 @@ function pickArray(array, indexes) {
  */
 function buildReport(
 	commitSha,
-	actionInfo,
+	benchmarkAction,
 	inputs,
 	tachResults,
 	isRunning = false
@@ -16964,7 +17044,7 @@ function buildReport(
 							benchmarks: benches,
 							prBenchName: inputs.prBenchName,
 							baseBenchName: inputs.baseBenchName,
-							actionInfo: actionInfo,
+							actionInfo: benchmarkAction,
 							isRunning: isRunning,}
 						)
 					),
@@ -16985,7 +17065,7 @@ function buildReport(
 					benchmarks: benchmarks,
 					prBenchName: inputs.prBenchName,
 					baseBenchName: inputs.baseBenchName,
-					actionInfo: actionInfo,
+					actionInfo: benchmarkAction,
 					isRunning: isRunning,}
 				)
 			),
@@ -16997,15 +17077,17 @@ function buildReport(
 		title,
 		prBenchName: inputs.prBenchName,
 		baseBenchName: inputs.baseBenchName,
-		actionInfo: actionInfo,
+		actionInfo: benchmarkAction,
 		isRunning,
-		status: isRunning ? h$1(Status$1, { actionInfo: actionInfo, icon: true,} ) : null,
+		status: isRunning ? (
+			h$1(Status$1, { actionInfo: benchmarkAction, icon: true,} )
+		) : null,
 		body: (
 			h$1(ResultsEntry$1, {
 				reportId: reportId,
 				benchmarks: benchmarks,
 				resultsByMeasurement: resultsByMeasurement,
-				actionInfo: actionInfo,
+				actionInfo: benchmarkAction,
 				commitSha: commitSha,}
 			)
 		),
@@ -17032,13 +17114,26 @@ const defaultInputs = {
  * @returns {Promise<import('./global').SerializedReport | null>}
  */
 async function reportTachRunning(github, context, inputs, logger) {
-	/** @type {import('./global').ActionInfo} */
-	const actionInfo = getActionInfo$1(context);
-	const commitSha = context.sha;
+	if (
+		context.eventName === "workflow_run" &&
+		context.payload.action !== "requested"
+	) {
+		logger.info(
+			`This workflow as trigged by a workflow_run ${context.payload.action} event. Nothing to do at this stage (comment will be updated in main stage).`
+		);
+		return null;
+	}
+
+	const parsedContext = parseContext$1(context, logger);
+	if (parseContext$1 == null) {
+		return null;
+	}
+
+	const { pr, benchmark: benchmarkAction } = parsedContext;
 
 	let report;
 	if (inputs.reportId) {
-		report = buildReport(commitSha, actionInfo, inputs, null, true);
+		report = buildReport(pr.sha, benchmarkAction, inputs, null, true);
 	} else if (inputs.initialize !== true) {
 		logger.info(
 			'No report-id provided and initialize is not set to true. Skipping updating comment with "Running..." status.'
@@ -17049,7 +17144,7 @@ async function reportTachRunning(github, context, inputs, logger) {
 
 	await postOrUpdateComment$1(
 		github,
-		createCommentContext$1(context, actionInfo, _optionalChain$1([report, 'optionalAccess', _ => _.id]), inputs.initialize),
+		createCommentContext$1(pr, benchmarkAction, _optionalChain$1([report, 'optionalAccess', _ => _.id]), inputs.initialize),
 		(comment) => getCommentBody$1(inputs, report, _optionalChain$1([comment, 'optionalAccess', _2 => _2.body]), logger),
 		logger
 	);
@@ -17080,6 +17175,16 @@ async function reportTachRunning(github, context, inputs, logger) {
 async function reportTachResults(github, context, inputs, logger) {
 	inputs = { ...defaultInputs, ...inputs };
 
+	if (
+		context.eventName === "workflow_run" &&
+		context.payload.action !== "completed"
+	) {
+		logger.info(
+			`This workflow as trigged by a workflow_run ${context.payload.action} event. Nothing to do at this stage (comment was initialized in "pre" stage).`
+		);
+		return null;
+	}
+
 	if (inputs.path == null) {
 		if (inputs.initialize == true) {
 			logger.info(
@@ -17093,11 +17198,24 @@ async function reportTachResults(github, context, inputs, logger) {
 		}
 	}
 
-	/** @type {import('./global').ActionInfo} */
-	const actionInfo = getActionInfo$1(context);
-	const commitSha = context.sha;
+	const parsedContext = parseContext$1(context, logger);
+	if (parsedContext == null) {
+		return null;
+	}
 
-	logger.debug(() => "Action Info: " + JSON.stringify(actionInfo, null, 2));
+	const {
+		pr,
+		benchmark: benchmarkAction,
+		reporting: reportingAction,
+	} = parsedContext;
+
+	logger.debug(() => "PR Context: " + JSON.stringify(pr, null, 2));
+	logger.debug(
+		() => "Benchmark Info: " + JSON.stringify(benchmarkAction, null, 2)
+	);
+	logger.debug(
+		() => "Reporting Info: " + JSON.stringify(reportingAction, null, 2)
+	);
 
 	const globber = await glob.create(inputs.path, {
 		followSymbolicLinks: inputs.followSymbolicLinks,
@@ -17118,7 +17236,7 @@ async function reportTachResults(github, context, inputs, logger) {
 		let report;
 		if (files.length == 1) {
 			// Only use report ID if one result file is matched
-			report = buildReport(commitSha, actionInfo, inputs, tachResults, false);
+			report = buildReport(pr.sha, benchmarkAction, inputs, tachResults, false);
 		} else {
 			// If multiple reports are globbed, then the report-id input should be
 			// ignored since all reports will share the same reportId which is used in
@@ -17126,8 +17244,8 @@ async function reportTachResults(github, context, inputs, logger) {
 			// each report needs a unique id. As such, the report-id input cannot be
 			// used for every globbed result file.
 			report = buildReport(
-				commitSha,
-				actionInfo,
+				pr.sha,
+				benchmarkAction,
 				{ ...inputs, reportId: null },
 				tachResults,
 				false
@@ -17139,7 +17257,12 @@ async function reportTachResults(github, context, inputs, logger) {
 
 	await postOrUpdateComment$1(
 		github,
-		createCommentContext$1(context, actionInfo, reports[0].id, inputs.initialize),
+		createCommentContext$1(
+			pr,
+			benchmarkAction,
+			inputs.reportId,
+			inputs.initialize
+		),
 		(comment) => {
 			let body = _optionalChain$1([comment, 'optionalAccess', _12 => _12.body]);
 			for (let report of reports) {

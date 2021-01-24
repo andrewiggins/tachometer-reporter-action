@@ -41,6 +41,7 @@
   "devDependencies": {
     "@actions/core": "^1.2.6",
     "@actions/github": "^4.0.0",
+    "@octokit/openapi-types": "^3.2.0",
     "@rollup/plugin-commonjs": "^13.0.0",
     "@rollup/plugin-node-resolve": "^8.1.0",
     "@rollup/plugin-replace": "^2.3.3",

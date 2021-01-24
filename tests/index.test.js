@@ -3,7 +3,11 @@ const { suite } = require("uvu");
 const assert = require("uvu/assert");
 const { parse } = require("node-html-parser");
 const { reportTachRunning, reportTachResults } = require("../lib/index");
-const { fakeGitHubContext, defaultInputs } = require("./mocks/actions");
+const {
+	fakePullRequestContext,
+	defaultInputs,
+	fakePRContext,
+} = require("./mocks/actions");
 const { createGitHubClient, defaultActionInfo } = require("./mocks/github");
 const {
 	assertFixture,
@@ -87,7 +91,7 @@ function createTestLogger() {
 
 /**
  * @typedef CommentContextParams
- * @property {Pick<import('../src/global').GitHubActionContext, "repo" | "issue">} context
+ * @property {import('../src/global').PRContext} prContext
  * @property {import('../src/global').ActionInfo} actionInfo
  * @property {string} customId
  * @property {boolean} initialize
@@ -98,14 +102,14 @@ function createTestLogger() {
 function addFooter(
 	body,
 	{
-		context = fakeGitHubContext,
+		prContext = fakePRContext,
 		actionInfo = defaultActionInfo,
 		customId = null,
 		initialize = null,
 	} = {}
 ) {
 	const { footer } = createCommentContext(
-		context,
+		prContext,
 		actionInfo,
 		customId,
 		initialize
@@ -138,7 +142,7 @@ async function readFixture(fixtureName, addDefaultFooter = true) {
  */
 function invokeReportTachRunning({
 	github = createGitHubClient(),
-	context = fakeGitHubContext,
+	context = fakePullRequestContext,
 	inputs = null,
 	logger = createTestLogger(),
 } = {}) {
@@ -162,7 +166,7 @@ function invokeReportTachRunning({
  */
 function invokeReportTachResults({
 	github = createGitHubClient(),
-	context = fakeGitHubContext,
+	context = fakePullRequestContext,
 	inputs = null,
 	logger = createTestLogger(),
 } = {}) {
@@ -642,7 +646,36 @@ updatedResultsSuite(
 	}
 );
 
+const runningWorkflowRun = suite("reportTachRunning (workflow_run)");
+setupClock(runningWorkflowRun);
+
+runningWorkflowRun(
+	"Creates new comment if workflow_run action is requested and initialize is true",
+	async () => {}
+);
+
+runningWorkflowRun(
+	"Does nothing if workflow_run action is required and initialize is null",
+	async () => {}
+);
+
+runningWorkflowRun(
+	"Does nothing if workflow_run action is completed",
+	async () => {}
+);
+
+const updatedWorkflowRun = suite("reportTachResults (workflow_run)");
+setupClock(updatedWorkflowRun);
+
+updatedWorkflowRun("Creates comment if none exists", async () => {});
+
+updatedWorkflowRun("Updates comment if one exists", async () => {});
+
+updatedWorkflowRun("Does nothing if workflow_run is requested", async () => {});
+
 runningCreateSuite.run();
 runningUpdateSuite.run();
 newResultsSuite.run();
 updatedResultsSuite.run();
+runningWorkflowRun.run();
+updatedWorkflowRun.run();

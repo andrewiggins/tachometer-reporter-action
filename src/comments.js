@@ -663,18 +663,23 @@ async function postOrUpdateComment(github, context, getCommentBody, logger) {
 }
 
 /**
- * @param {Pick<import('./global').GitHubActionContext, "repo" | "issue">} context
- * @param {import('./global').ActionInfo} actionInfo
+ * @param {import('./global').PRContext} prContext
+ * @param {import('./global').ActionInfo} benchmarkActionInfo
  * @param {string | undefined} [customId]
  * @param {boolean} [initialize]
  * @returns {import('./global').CommentContext}
  */
-function createCommentContext(context, actionInfo, customId, initialize) {
-	const { run, job } = actionInfo;
+function createCommentContext(
+	prContext,
+	benchmarkActionInfo,
+	customId,
+	initialize
+) {
+	const { run, job } = benchmarkActionInfo;
 
 	const lockId = `{ customId: ${customId}, run: {id: ${run.id}, name: ${run.name}}, job: {name: ${job.name}}`;
 
-	const footer = getFooter(actionInfo);
+	const footer = getFooter(benchmarkActionInfo);
 	const footerRe = new RegExp(escapeRe(footer));
 
 	/** @type {number} */
@@ -688,8 +693,9 @@ function createCommentContext(context, actionInfo, customId, initialize) {
 	}
 
 	return {
-		...context.repo,
-		issueNumber: context.issue.number,
+		owner: prContext.owner,
+		repo: prContext.repo,
+		issueNumber: prContext.number,
 		commentId: null,
 		lockId,
 		footer,
