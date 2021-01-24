@@ -471,4 +471,31 @@ buildReportSuite("Only includes measurements listed in summarize input", () => {
 	assert.ok(node, `Summary with id "${summaryId} exists"`);
 });
 
+buildReportSuite(
+	"Doesn't error if measurements listed in summarize input aren't available in results",
+	() => {
+		const report = invokeBuildReport({
+			inputs: { summarize: ["duration", "fake-measurement"] },
+			results: getMultiMeasureResults(),
+		});
+
+		assert.equal(
+			report.summaries.length,
+			1,
+			"report.summary contains only 1 measurement"
+		);
+
+		const summary = report.summaries[0];
+		const summaryId = getSummaryId({
+			reportId: report.id,
+			measurementId: summary.measurementId,
+		});
+
+		const html = parse(getSummaryText(report));
+		const node = html.querySelector(`#${summaryId}`);
+
+		assert.ok(node, `Summary with id "${summaryId} exists"`);
+	}
+);
+
 buildReportSuite.run();
