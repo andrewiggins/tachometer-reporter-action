@@ -211,11 +211,11 @@ const defaultInputs = {
  * @returns {Promise<import('./global').SerializedReport | null>}
  */
 async function reportTachRunning(github, context, inputs, logger) {
-	/** @type {[ import('./global').ActionInfo, import('./global').CommitInfo ]} */
-	const [actionInfo, commitInfo] = await Promise.all([
-		getActionInfo(context, github, logger),
-		getCommit(context, github),
-	]);
+	/** @type {import('./global').ActionInfo} */
+	const actionInfo = getActionInfo(context);
+
+	/** @type {import('./global').CommitInfo} */
+	const commitInfo = await getCommit(context, github);
 
 	let report;
 	if (inputs.reportId) {
@@ -274,11 +274,11 @@ async function reportTachResults(github, context, inputs, logger) {
 		}
 	}
 
-	/** @type {[import('./global').ActionInfo, import('./global').CommitInfo ]} */
-	const [actionInfo, commitInfo] = await Promise.all([
-		getActionInfo(context, github, logger),
-		getCommit(context, github),
-	]);
+	/** @type {import('./global').ActionInfo} */
+	const actionInfo = getActionInfo(context);
+
+	/** @type {import('./global').CommitInfo} */
+	const commitInfo = await getCommit(context, github);
 
 	logger.debug(() => "Action Info: " + JSON.stringify(actionInfo, null, 2));
 	logger.debug(() => "Commit Info " + JSON.stringify(commitInfo, null, 2));

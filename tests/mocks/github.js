@@ -496,11 +496,11 @@ const fakeCommit = {
 /** @type {import('../../src/global').ActionInfo} */
 const defaultActionInfo = {
 	workflow: {
-		id: workflow.id,
+		// id: workflow.id,
 		name: workflow.name,
 		runsHtmlUrl:
 			"https://github.com/andrewiggins/tachometer-reporter-action/actions?query=workflow%3A%22Pull%20Request%20Test%22",
-		srcHtmlUrl: workflow.html_url,
+		// srcHtmlUrl: workflow.html_url,
 	},
 	run: {
 		id: workflowRun.id,
@@ -509,10 +509,10 @@ const defaultActionInfo = {
 		htmlUrl: workflowRun.html_url,
 	},
 	job: {
-		id: defaultJobInfo.id,
+		// id: defaultJobInfo.id,
 		name: defaultJobInfo.name,
-		index: 2, // Manually faked to be 2 to make tests more interesting
-		htmlUrl: defaultJobInfo.html_url,
+		// index: 2, // Manually faked to be 2 to make tests more interesting
+		// htmlUrl: defaultJobInfo.html_url,
 	},
 };
 

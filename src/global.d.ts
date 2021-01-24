@@ -50,9 +50,7 @@ interface CommentContext {
 
 interface ActionInfo {
 	workflow: {
-		id: Workflow["id"];
 		name: Workflow["name"];
-		srcHtmlUrl: string;
 		runsHtmlUrl: string;
 	};
 	run: {
@@ -62,10 +60,7 @@ interface ActionInfo {
 		htmlUrl: string;
 	};
 	job: {
-		id?: WorkflowRunJob["id"];
 		name: WorkflowRunJob["name"];
-		htmlUrl?: WorkflowRunJob["html_url"];
-		index?: number;
 	};
 }
 

@@ -166,9 +166,9 @@ function ResultsEntry({
 						</li>
 					);
 				})}
-				{actionInfo.job.htmlUrl && (
+				{actionInfo.run.htmlUrl && (
 					<li>
-						Built by: <a href={actionInfo.job.htmlUrl}>{actionInfo.run.name}</a>
+						Built by: <a href={actionInfo.run.htmlUrl}>{actionInfo.run.name}</a>
 					</li>
 				)}
 				<li>{`\n\nCommit: ${sha}\n\n`}</li>
@@ -254,7 +254,7 @@ function BenchmarkSection({ report, open }) {
  * @param {{ actionInfo: import('./global').ActionInfo; icon: boolean; }} props
  */
 function Status({ actionInfo, icon }) {
-	const href = actionInfo.job.htmlUrl;
+	const href = actionInfo.run.htmlUrl;
 	const label = `Currently running in ${actionInfo.run.name}…`;
 	const tag = href ? "a" : Fragment;
 	const props = {
