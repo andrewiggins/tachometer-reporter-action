@@ -5,7 +5,7 @@ const { buildReport } = require("../lib/index");
 
 /**
  * @typedef BuildReportParams
- * @property {import('../src/global').CommitInfo} [commit]
+ * @property {string} [commitSha]
  * @property {import('../src/global').ActionInfo} [actionInfo]
  * @property {Partial<import('../src/global').Inputs>} [inputs]
  * @property {import('../src/global').TachResults} [results]
@@ -14,7 +14,7 @@ const { buildReport } = require("../lib/index");
  * @returns {import('../src/global').Report}
  */
 function invokeBuildReport({
-	commit = fakeCommit,
+	commitSha = fakeCommit.sha,
 	actionInfo = defaultActionInfo,
 	inputs = null,
 	results = copyTestResults(),
@@ -25,7 +25,7 @@ function invokeBuildReport({
 		...inputs,
 	};
 
-	return buildReport(commit, actionInfo, fullInputs, results, isRunning);
+	return buildReport(commitSha, actionInfo, fullInputs, results, isRunning);
 }
 
 module.exports = {

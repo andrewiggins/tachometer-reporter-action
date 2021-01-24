@@ -29,12 +29,6 @@ type WorkflowRunJobsAsyncIterator = AsyncIterableIterator<
 	OctokitResponse<WorkflowRunJob[]>
 >;
 
-type Commit = import("@octokit/types").GitGetCommitResponseData;
-
-interface CommitInfo extends Commit {
-	html_url: string;
-}
-
 interface CommentContext {
 	owner: string;
 	repo: string;

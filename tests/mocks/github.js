@@ -450,7 +450,6 @@ const otherJobInfo = {
 		"https://api.github.com/repos/andrewiggins/tachometer-reporter-action/check-runs/1114818713",
 };
 
-/** @type {import('../../src/global').CommitInfo} */
 const fakeCommit = {
 	sha: "626e78c2446b8d1afc917fc9b0059aa65cc9a07d",
 	node_id:
@@ -593,9 +592,6 @@ function createGitHubClient({
 		return { data: [...comments.map((c) => ({ ...c }))] };
 	}
 
-	/**
-	 * @returns {Promise<OctokitResponse<import('../../src/global').Commit>>}
-	 */
 	async function getCommit() {
 		return { data: fakeCommit };
 	}

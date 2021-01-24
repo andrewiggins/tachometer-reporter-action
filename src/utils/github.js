@@ -27,22 +27,6 @@ function getActionInfo(context) {
 }
 
 /**
- * @param {import('../global').GitHubActionContext} context
- * @param {import('../global').GitHubActionClient} github
- * @returns {Promise<import('../global').CommitInfo>}
- */
-async function getCommit(context, github) {
-	// Octokit types are wrong - html_url is returned in GitGetCommitResponseData
-	// @ts-ignore
-	return github.git
-		.getCommit({
-			...context.repo,
-			commit_sha: context.sha,
-		})
-		.then((res) => res.data);
-}
-
-/**
  * Create a status check, and return a function that updates (completes) it.
  * @param {import('../global').GitHubActionClient} github
  * @param {import('../global').GitHubActionContext} context
@@ -69,5 +53,4 @@ async function createCheck(github, context) {
 
 module.exports = {
 	getActionInfo,
-	getCommit,
 };
