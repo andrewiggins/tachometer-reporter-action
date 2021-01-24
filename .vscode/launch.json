@@ -45,6 +45,13 @@
         "!**/dist/**",
         "!**/node_modules/**"
       ]
+    },
+    {
+      "name": "comments Test",
+      "program": "${workspaceFolder}/tests/comments.test.js",
+      "request": "launch",
+      "skipFiles": ["<node_internals>/**"],
+      "type": "pwa-node"
     }
   ]
 }

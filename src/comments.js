@@ -672,7 +672,7 @@ async function postOrUpdateComment(github, context, getCommentBody, logger) {
 function createCommentContext(context, actionInfo, customId, initialize) {
 	const { run, job } = actionInfo;
 
-	const lockId = `{ customId: ${customId}, run: {id: ${run.id}, name: ${run.name}}, job: {id: ${job.id}, name: ${job.name}}`;
+	const lockId = `{ customId: ${customId}, run: {id: ${run.id}, name: ${run.name}}, job: {name: ${job.name}}`;
 
 	const footer = getFooter(actionInfo);
 	const footerRe = new RegExp(escapeRe(footer));
@@ -683,8 +683,6 @@ function createCommentContext(context, actionInfo, customId, initialize) {
 		createDelayFactor = 0;
 	} else if (initialize === false) {
 		createDelayFactor = Infinity;
-	} else if (job.index != null) {
-		createDelayFactor = job.index;
 	} else {
 		createDelayFactor = randomInt(3, 10);
 	}

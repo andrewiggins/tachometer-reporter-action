@@ -29,12 +29,6 @@ type WorkflowRunJobsAsyncIterator = AsyncIterableIterator<
 	OctokitResponse<WorkflowRunJob[]>
 >;
 
-type Commit = import("@octokit/types").GitGetCommitResponseData;
-
-interface CommitInfo extends Commit {
-	html_url: string;
-}
-
 interface CommentContext {
 	owner: string;
 	repo: string;
@@ -50,9 +44,7 @@ interface CommentContext {
 
 interface ActionInfo {
 	workflow: {
-		id: Workflow["id"];
 		name: Workflow["name"];
-		srcHtmlUrl: string;
 		runsHtmlUrl: string;
 	};
 	run: {
@@ -62,10 +54,7 @@ interface ActionInfo {
 		htmlUrl: string;
 	};
 	job: {
-		id?: WorkflowRunJob["id"];
 		name: WorkflowRunJob["name"];
-		htmlUrl?: WorkflowRunJob["html_url"];
-		index?: number;
 	};
 }
 

@@ -1,5 +1,5 @@
 const { testRoot } = require("../utils");
-const { defaultActionInfo } = require("./github");
+const { defaultActionInfo, fakeCommit } = require("./github");
 
 const prBenchName = "local-framework";
 const baseBenchName = "base-framework";
@@ -28,7 +28,7 @@ const testLogger = {
 const fakeGitHubContext = {
 	payload: null,
 	eventName: "pull_request",
-	sha: "context.sha",
+	sha: fakeCommit.sha,
 	ref: "context.ref",
 	workflow: defaultActionInfo.workflow.name,
 	action: "context.action",

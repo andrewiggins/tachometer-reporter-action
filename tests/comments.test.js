@@ -215,12 +215,16 @@ const acquireLockSuite = suite("Acquire Comment Lock");
 /** @type {import('@sinonjs/fake-timers').InstalledClock} */
 let clock;
 
-acquireLockSuite.before.each(() => {
+acquireLockSuite.before.each((context) => {
+	// Ensure we have a consistent createDelayFactor by mocking Math.random
+	context.realRandom = Math.random;
+	Math.random = () => 0;
 	clock = fakeTimers.install();
 });
 
-acquireLockSuite.after.each(() => {
+acquireLockSuite.after.each((context) => {
 	clock.uninstall();
+	Math.random = context.realRandom;
 });
 
 acquireLockSuite("Single benchmark, create comment", async () => {
@@ -232,6 +236,8 @@ acquireLockSuite("Single benchmark, create comment", async () => {
 	validateFinalComment(comment);
 	validateStates(states, [
 		{ value: "initialRead" },
+		{ value: { creating: "waiting" } },
+		{ value: { creating: "searching" } },
 		{ value: { creating: "waiting" } },
 		{ value: { creating: "searching" } },
 		{ value: { creating: "waiting" } },

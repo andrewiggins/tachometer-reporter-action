@@ -10641,7 +10641,7 @@ function flattenChildren(children, parent, flattened) {
  * @property {import('./global').BenchmarkResult[]} benchmarks
  * @property {import('./global').ResultsByMeasurement} resultsByMeasurement
  * @property {import('./global').ActionInfo} actionInfo
- * @property {import('./global').CommitInfo} commitInfo
+ * @property {string} commitSha
  *
  * @param {ResultsEntryProps} props
  */
@@ -10650,7 +10650,7 @@ function ResultsEntry({
 	benchmarks,
 	resultsByMeasurement,
 	actionInfo,
-	commitInfo,
+	commitSha,
 }) {
 	// Hard code what dimensions are rendered in the main table since GitHub comments
 	// have limited horizontal space
@@ -10665,7 +10665,7 @@ function ResultsEntry({
 
 	const listDimensions = [browserDimension$1, sampleSizeDimension$1];
 
-	const sha = commitInfo.sha.slice(0, 7);
+	const sha = commitSha.slice(0, 7);
 
 	/** @type {JSX.Element | JSX.Element[]} */
 	let table;
@@ -10706,9 +10706,9 @@ function ResultsEntry({
 )
 					);
 				})
-, actionInfo.job.htmlUrl && (
+, actionInfo.run.htmlUrl && (
 					h('li', null, "Built by: "
-  , h('a', { href: actionInfo.job.htmlUrl,}, actionInfo.run.name)
+  , h('a', { href: actionInfo.run.htmlUrl,}, actionInfo.run.name)
 )
 				)
 , h('li', null, `\n\nCommit: ${sha}\n\n`)
@@ -10794,7 +10794,7 @@ function BenchmarkSection({ report, open }) {
  * @param {{ actionInfo: import('./global').ActionInfo; icon: boolean; }} props
  */
 function Status({ actionInfo, icon }) {
-	const href = actionInfo.job.htmlUrl;
+	const href = actionInfo.run.htmlUrl;
 	const label = `Currently running in ${actionInfo.run.name}…`;
 	const tag = href ? "a" : Fragment;
 	const props = {
@@ -11267,141 +11267,36 @@ var getCommentBody_1 = {
 	Status,
 };
 
-function _nullishCoalesce$1(lhs, rhsFn) { if (lhs != null) { return lhs; } else { return rhsFn(); } } function _optionalChain$1(ops) { let lastAccessLHS = undefined; let value = ops[0]; let i = 1; while (i < ops.length) { const op = ops[i]; const fn = ops[i + 1]; i += 2; if ((op === 'optionalAccess' || op === 'optionalCall') && value == null) { return undefined; } if (op === 'access' || op === 'optionalAccess') { lastAccessLHS = value; value = fn(value); } else if (op === 'call' || op === 'optionalCall') { value = fn((...args) => value.call(lastAccessLHS, ...args)); lastAccessLHS = undefined; } } return value; }/**
- * @param {import('../global').GitHubActionContext} context
- * @param {import('../global').GitHubActionClient} github
- * @param {import('../global').Logger} logger
- * @returns {AsyncIterableIterator<import('../global').WorkflowRunJob>}
- */
-async function* getWorkflowJobs(context, github, logger) {
-	// https://docs.github.com/en/rest/reference/actions#list-jobs-for-a-workflow-run
-	/** @type {Record<string, string | number>} */
-	const params = { ...context.repo, run_id: context.runId };
-
-	const endpoint = github.actions.listJobsForWorkflowRun.endpoint(params);
-
-	/** @type {import('../global').WorkflowRunJobsAsyncIterator} */
-	const iterator = github.paginate.iterator(endpoint);
-	for await (const page of iterator) {
-		logger.debug(() => {
-			return (
-				`Workflow Jobs (run id: ${context.runId}): ` +
-				JSON.stringify(page.data, null, 2)
-			);
-		});
-
-		yield* page.data;
-	}
-}
-
 /**
  * @param {import('../global').GitHubActionContext} context
- * @param {import('../global').GitHubActionClient} github
- * @param {import('../global').Logger} logger
- * @returns {Promise<import('../global').ActionInfo>}
+ * @returns {import('../global').ActionInfo}
  */
-async function getActionInfo(context, github, logger) {
-	let run;
-	try {
-		run = (
-			await github.actions.getWorkflowRun({
-				...context.repo,
-				run_id: context.runId,
-			})
-		).data;
-	} catch (e) {
-		logger.info(`Requesting workflow run failed: ` + e.stack);
-	}
-
-	/** @type {import('@octokit/types').ActionsGetWorkflowResponseData} */
-	let workflow;
-	try {
-		if (_optionalChain$1([run, 'optionalAccess', _ => _.workflow_url])) {
-			workflow = (
-				await github.request({
-					url: _optionalChain$1([run, 'optionalAccess', _2 => _2.workflow_url]),
-				})
-			).data;
-		}
-	} catch (e) {
-		logger.info(`Requesting workflow info failed: ` + e.stack);
-	}
-
+function getActionInfo(context) {
 	const e = encodeURIComponent;
-	const workflowRunsHtmlUrl = `https://github.com/${e(context.repo.owner)}/${e(
-		context.repo.repo
-	)}/actions?query=workflow%3A%22${e(context.workflow)}%22`;
-
-	/** @type {import('../global').WorkflowRunJob} */
-	let matchingJob;
-
-	/** @type {number | undefined} */
-	let jobIndex;
-
-	try {
-		let i = 0;
-		for await (const job of getWorkflowJobs(context, github, logger)) {
-			if (job.name == context.job) {
-				matchingJob = job;
-				jobIndex = i;
-				break;
-			}
-
-			i++;
-		}
-	} catch (e) {
-		logger.info(`Requesting workflow jobs failed: ` + e.stack);
-	}
-
-	if (matchingJob == null) {
-		logger.info(
-			`Could not find job matching the name "${context.job}" for workflow run ${context.runId}. ` +
-				`This happens when the job name is overridden in the workflow YAML file. ` +
-				`Links to this job's logs will not be rendered.`
-		);
-	}
+	const encodedOwner = e(context.repo.owner);
+	const encodedRepo = e(context.repo.repo);
+	const encodedWorkflow = e(context.workflow);
+	const encodedRunId = e(context.runId);
 
 	return {
 		workflow: {
-			id: _optionalChain$1([workflow, 'optionalAccess', _3 => _3.id]),
-			name: context.workflow, // Also: workflow.name
-			srcHtmlUrl: _optionalChain$1([workflow, 'optionalAccess', _4 => _4.html_url]),
-			runsHtmlUrl: workflowRunsHtmlUrl,
+			name: context.workflow,
+			runsHtmlUrl: `https://github.com/${encodedOwner}/${encodedRepo}/actions?query=workflow%3A%22${encodedWorkflow}%22`,
 		},
 		run: {
 			id: context.runId,
 			number: context.runNumber,
 			name: `${context.workflow} #${context.runNumber}`,
-			htmlUrl: _optionalChain$1([run, 'optionalAccess', _5 => _5.html_url]),
+			htmlUrl: `https://github.com/${encodedOwner}/${encodedRepo}/actions/runs/${encodedRunId}`,
 		},
 		job: {
-			id: _optionalChain$1([matchingJob, 'optionalAccess', _6 => _6.id]),
-			name: _nullishCoalesce$1(_optionalChain$1([matchingJob, 'optionalAccess', _7 => _7.name]), () => ( context.job)),
-			htmlUrl: _nullishCoalesce$1(_optionalChain$1([matchingJob, 'optionalAccess', _8 => _8.html_url]), () => ( _optionalChain$1([run, 'optionalAccess', _9 => _9.html_url]))),
-			index: jobIndex,
+			name: context.job,
 		},
 	};
 }
 
-/**
- * @param {import('../global').GitHubActionContext} context
- * @param {import('../global').GitHubActionClient} github
- * @returns {Promise<import('../global').CommitInfo>}
- */
-async function getCommit(context, github) {
-	// Octokit types are wrong - html_url is returned in GitGetCommitResponseData
-	// @ts-ignore
-	return github.git
-		.getCommit({
-			...context.repo,
-			commit_sha: context.sha,
-		})
-		.then((res) => res.data);
-}
-
 var github$1 = {
 	getActionInfo,
-	getCommit,
 };
 
 /*! *****************************************************************************
@@ -16889,7 +16784,7 @@ async function postOrUpdateComment(github, context, getCommentBody, logger) {
 function createCommentContext(context, actionInfo, customId, initialize) {
 	const { run, job } = actionInfo;
 
-	const lockId = `{ customId: ${customId}, run: {id: ${run.id}, name: ${run.name}}, job: {id: ${job.id}, name: ${job.name}}`;
+	const lockId = `{ customId: ${customId}, run: {id: ${run.id}, name: ${run.name}}, job: {name: ${job.name}}`;
 
 	const footer = getFooter(actionInfo);
 	const footerRe = new RegExp(escapeStringRegexp(footer));
@@ -16900,8 +16795,6 @@ function createCommentContext(context, actionInfo, customId, initialize) {
 		createDelayFactor = 0;
 	} else if (initialize === false) {
 		createDelayFactor = Infinity;
-	} else if (job.index != null) {
-		createDelayFactor = job.index;
 	} else {
 		createDelayFactor = randomInt(3, 10);
 	}
@@ -16926,7 +16819,7 @@ var comments = {
 	postOrUpdateComment,
 };
 
-function _nullishCoalesce$2(lhs, rhsFn) { if (lhs != null) { return lhs; } else { return rhsFn(); } } function _optionalChain$2(ops) { let lastAccessLHS = undefined; let value = ops[0]; let i = 1; while (i < ops.length) { const op = ops[i]; const fn = ops[i + 1]; i += 2; if ((op === 'optionalAccess' || op === 'optionalCall') && value == null) { return undefined; } if (op === 'access' || op === 'optionalAccess') { lastAccessLHS = value; value = fn(value); } else if (op === 'call' || op === 'optionalCall') { value = fn((...args) => value.call(lastAccessLHS, ...args)); lastAccessLHS = undefined; } } return value; }const { readFile } = fs.promises;
+function _nullishCoalesce$1(lhs, rhsFn) { if (lhs != null) { return lhs; } else { return rhsFn(); } } function _optionalChain$1(ops) { let lastAccessLHS = undefined; let value = ops[0]; let i = 1; while (i < ops.length) { const op = ops[i]; const fn = ops[i + 1]; i += 2; if ((op === 'optionalAccess' || op === 'optionalCall') && value == null) { return undefined; } if (op === 'access' || op === 'optionalAccess') { lastAccessLHS = value; value = fn(value); } else if (op === 'call' || op === 'optionalCall') { value = fn((...args) => value.call(lastAccessLHS, ...args)); lastAccessLHS = undefined; } } return value; }const { readFile } = fs.promises;
 
 const {
 	h: h$1,
@@ -16935,7 +16828,7 @@ const {
 	Status: Status$1,
 	ResultsEntry: ResultsEntry$1,
 } = getCommentBody_1;
-const { getActionInfo: getActionInfo$1, getCommit: getCommit$1 } = github$1;
+const { getActionInfo: getActionInfo$1 } = github$1;
 const { createCommentContext: createCommentContext$1, postOrUpdateComment: postOrUpdateComment$1 } = comments;
 const { normalizeResults: normalizeResults$1 } = tachometer;
 const {
@@ -16962,7 +16855,7 @@ function pickArray(array, indexes) {
 }
 
 /**
- * @param {import("./global").CommitInfo} commitInfo
+ * @param {string} commitSha
  * @param {import('./global').ActionInfo} actionInfo
  * @param {Pick<import('./global').Inputs, 'prBenchName' | 'baseBenchName' | 'defaultOpen' | 'reportId' | 'summarize'>} inputs
  * @param {import('./global').PatchedTachResults} tachResults
@@ -16970,7 +16863,7 @@ function pickArray(array, indexes) {
  * @returns {import('./global').Report}
  */
 function buildReport(
-	commitInfo,
+	commitSha,
 	actionInfo,
 	inputs,
 	tachResults,
@@ -17055,7 +16948,7 @@ function buildReport(
 			const measurement = benches[0].measurement;
 			if (
 				inputs.summarize === true ||
-				inputs.summarize.includes(_nullishCoalesce$2(measurement.name, () => ( "")))
+				inputs.summarize.includes(_nullishCoalesce$1(measurement.name, () => ( "")))
 			) {
 				// TODO: Need to adjust benches differences array to accommodate reduced
 				// comparisons to just benches of same measurement. Handcrafted test
@@ -17113,7 +17006,7 @@ function buildReport(
 				benchmarks: benchmarks,
 				resultsByMeasurement: resultsByMeasurement,
 				actionInfo: actionInfo,
-				commitInfo: commitInfo,}
+				commitSha: commitSha,}
 			)
 		),
 		summaries,
@@ -17139,15 +17032,13 @@ const defaultInputs = {
  * @returns {Promise<import('./global').SerializedReport | null>}
  */
 async function reportTachRunning(github, context, inputs, logger) {
-	/** @type {[ import('./global').ActionInfo, import('./global').CommitInfo ]} */
-	const [actionInfo, commitInfo] = await Promise.all([
-		getActionInfo$1(context, github, logger),
-		getCommit$1(context, github),
-	]);
+	/** @type {import('./global').ActionInfo} */
+	const actionInfo = getActionInfo$1(context);
+	const commitSha = context.sha;
 
 	let report;
 	if (inputs.reportId) {
-		report = buildReport(commitInfo, actionInfo, inputs, null, true);
+		report = buildReport(commitSha, actionInfo, inputs, null, true);
 	} else if (inputs.initialize !== true) {
 		logger.info(
 			'No report-id provided and initialize is not set to true. Skipping updating comment with "Running..." status.'
@@ -17158,17 +17049,17 @@ async function reportTachRunning(github, context, inputs, logger) {
 
 	await postOrUpdateComment$1(
 		github,
-		createCommentContext$1(context, actionInfo, _optionalChain$2([report, 'optionalAccess', _ => _.id]), inputs.initialize),
-		(comment) => getCommentBody$1(inputs, report, _optionalChain$2([comment, 'optionalAccess', _2 => _2.body]), logger),
+		createCommentContext$1(context, actionInfo, _optionalChain$1([report, 'optionalAccess', _ => _.id]), inputs.initialize),
+		(comment) => getCommentBody$1(inputs, report, _optionalChain$1([comment, 'optionalAccess', _2 => _2.body]), logger),
 		logger
 	);
 
 	if (report) {
 		return {
 			...report,
-			status: _optionalChain$2([report, 'access', _3 => _3.status, 'optionalAccess', _4 => _4.toString, 'call', _5 => _5()]),
-			body: _optionalChain$2([report, 'access', _6 => _6.body, 'optionalAccess', _7 => _7.toString, 'call', _8 => _8()]),
-			summaries: _optionalChain$2([report, 'access', _9 => _9.summaries, 'optionalAccess', _10 => _10.map, 'call', _11 => _11((m) => ({
+			status: _optionalChain$1([report, 'access', _3 => _3.status, 'optionalAccess', _4 => _4.toString, 'call', _5 => _5()]),
+			body: _optionalChain$1([report, 'access', _6 => _6.body, 'optionalAccess', _7 => _7.toString, 'call', _8 => _8()]),
+			summaries: _optionalChain$1([report, 'access', _9 => _9.summaries, 'optionalAccess', _10 => _10.map, 'call', _11 => _11((m) => ({
 				measurementId: m.measurementId,
 				measurement: m.measurement,
 				summary: m.summary.toString(),
@@ -17202,14 +17093,11 @@ async function reportTachResults(github, context, inputs, logger) {
 		}
 	}
 
-	/** @type {[import('./global').ActionInfo, import('./global').CommitInfo ]} */
-	const [actionInfo, commitInfo] = await Promise.all([
-		getActionInfo$1(context, github, logger),
-		getCommit$1(context, github),
-	]);
+	/** @type {import('./global').ActionInfo} */
+	const actionInfo = getActionInfo$1(context);
+	const commitSha = context.sha;
 
 	logger.debug(() => "Action Info: " + JSON.stringify(actionInfo, null, 2));
-	logger.debug(() => "Commit Info " + JSON.stringify(commitInfo, null, 2));
 
 	const globber = await glob.create(inputs.path, {
 		followSymbolicLinks: inputs.followSymbolicLinks,
@@ -17230,7 +17118,7 @@ async function reportTachResults(github, context, inputs, logger) {
 		let report;
 		if (files.length == 1) {
 			// Only use report ID if one result file is matched
-			report = buildReport(commitInfo, actionInfo, inputs, tachResults, false);
+			report = buildReport(commitSha, actionInfo, inputs, tachResults, false);
 		} else {
 			// If multiple reports are globbed, then the report-id input should be
 			// ignored since all reports will share the same reportId which is used in
@@ -17238,7 +17126,7 @@ async function reportTachResults(github, context, inputs, logger) {
 			// each report needs a unique id. As such, the report-id input cannot be
 			// used for every globbed result file.
 			report = buildReport(
-				commitInfo,
+				commitSha,
 				actionInfo,
 				{ ...inputs, reportId: null },
 				tachResults,
@@ -17253,7 +17141,7 @@ async function reportTachResults(github, context, inputs, logger) {
 		github,
 		createCommentContext$1(context, actionInfo, reports[0].id, inputs.initialize),
 		(comment) => {
-			let body = _optionalChain$2([comment, 'optionalAccess', _12 => _12.body]);
+			let body = _optionalChain$1([comment, 'optionalAccess', _12 => _12.body]);
 			for (let report of reports) {
 				body = getCommentBody$1(inputs, report, body, logger);
 			}
@@ -17265,9 +17153,9 @@ async function reportTachResults(github, context, inputs, logger) {
 
 	return reports.map((report) => ({
 		...report,
-		status: _optionalChain$2([report, 'access', _13 => _13.status, 'optionalAccess', _14 => _14.toString, 'call', _15 => _15()]),
-		body: _optionalChain$2([report, 'access', _16 => _16.body, 'optionalAccess', _17 => _17.toString, 'call', _18 => _18()]),
-		summaries: _optionalChain$2([report, 'access', _19 => _19.summaries, 'optionalAccess', _20 => _20.map, 'call', _21 => _21((m) => ({
+		status: _optionalChain$1([report, 'access', _13 => _13.status, 'optionalAccess', _14 => _14.toString, 'call', _15 => _15()]),
+		body: _optionalChain$1([report, 'access', _16 => _16.body, 'optionalAccess', _17 => _17.toString, 'call', _18 => _18()]),
+		summaries: _optionalChain$1([report, 'access', _19 => _19.summaries, 'optionalAccess', _20 => _20.map, 'call', _21 => _21((m) => ({
 			measurementId: m.measurementId,
 			measurement: m.measurement,
 			summary: m.summary.toString(),
@@ -17281,7 +17169,7 @@ var src = {
 	reportTachResults,
 };
 
-function _optionalChain$3(ops) { let lastAccessLHS = undefined; let value = ops[0]; let i = 1; while (i < ops.length) { const op = ops[i]; const fn = ops[i + 1]; i += 2; if ((op === 'optionalAccess' || op === 'optionalCall') && value == null) { return undefined; } if (op === 'access' || op === 'optionalAccess') { lastAccessLHS = value; value = fn(value); } else if (op === 'call' || op === 'optionalCall') { value = fn((...args) => value.call(lastAccessLHS, ...args)); lastAccessLHS = undefined; } } return value; }
+function _optionalChain$2(ops) { let lastAccessLHS = undefined; let value = ops[0]; let i = 1; while (i < ops.length) { const op = ops[i]; const fn = ops[i + 1]; i += 2; if ((op === 'optionalAccess' || op === 'optionalCall') && value == null) { return undefined; } if (op === 'access' || op === 'optionalAccess') { lastAccessLHS = value; value = fn(value); } else if (op === 'call' || op === 'optionalCall') { value = fn((...args) => value.call(lastAccessLHS, ...args)); lastAccessLHS = undefined; } } return value; }
 
 /**
  * @returns {import('../global').Logger}
@@ -17313,19 +17201,19 @@ function getLogger() {
 function getInputs(logger) {
 	const path = core.getInput("path", { required: false });
 	const reportId = core.getInput("report-id", { required: false });
-	const initialize = _optionalChain$3([core
+	const initialize = _optionalChain$2([core
 , 'access', _ => _.getInput, 'call', _2 => _2("initialize", { required: false })
 , 'optionalAccess', _3 => _3.toLowerCase, 'call', _4 => _4()]);
-	const keepOldResults = _optionalChain$3([core
+	const keepOldResults = _optionalChain$2([core
 , 'access', _5 => _5.getInput, 'call', _6 => _6("keep-old-results", { required: false })
 , 'optionalAccess', _7 => _7.toLowerCase, 'call', _8 => _8()]);
-	const defaultOpen = _optionalChain$3([core
+	const defaultOpen = _optionalChain$2([core
 , 'access', _9 => _9.getInput, 'call', _10 => _10("default-open", { required: false })
 , 'optionalAccess', _11 => _11.toLowerCase, 'call', _12 => _12()]);
 	const prBenchName = core.getInput("pr-bench-name", { required: false });
 	const baseBenchName = core.getInput("base-bench-name", { required: false });
 	const summarize = core.getInput("summarize", { required: false });
-	const followSymbolicLinks = _optionalChain$3([core
+	const followSymbolicLinks = _optionalChain$2([core
 , 'access', _13 => _13.getInput, 'call', _14 => _14("follow-symbolic-links")
 , 'optionalAccess', _15 => _15.toLowerCase, 'call', _16 => _16()]);
 
@@ -17342,9 +17230,9 @@ function getInputs(logger) {
 		followSymbolicLinks: followSymbolicLinks !== "false",
 	};
 
-	if (_optionalChain$3([summarize, 'optionalAccess', _17 => _17.toLowerCase, 'call', _18 => _18()]) == "true") {
+	if (_optionalChain$2([summarize, 'optionalAccess', _17 => _17.toLowerCase, 'call', _18 => _18()]) == "true") {
 		inputs.summarize = true;
-	} else if (_optionalChain$3([summarize, 'optionalAccess', _19 => _19.toLowerCase, 'call', _20 => _20()]) == "false") {
+	} else if (_optionalChain$2([summarize, 'optionalAccess', _19 => _19.toLowerCase, 'call', _20 => _20()]) == "false") {
 		inputs.summarize = [];
 	} else if (typeof summarize == "string") {
 		inputs.summarize = summarize.split(",").map((s) => s.trim());

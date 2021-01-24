@@ -101,7 +101,7 @@ function flattenChildren(children, parent, flattened) {
  * @property {import('./global').BenchmarkResult[]} benchmarks
  * @property {import('./global').ResultsByMeasurement} resultsByMeasurement
  * @property {import('./global').ActionInfo} actionInfo
- * @property {import('./global').CommitInfo} commitInfo
+ * @property {string} commitSha
  *
  * @param {ResultsEntryProps} props
  */
@@ -110,7 +110,7 @@ function ResultsEntry({
 	benchmarks,
 	resultsByMeasurement,
 	actionInfo,
-	commitInfo,
+	commitSha,
 }) {
 	// Hard code what dimensions are rendered in the main table since GitHub comments
 	// have limited horizontal space
@@ -125,7 +125,7 @@ function ResultsEntry({
 
 	const listDimensions = [browserDimension, sampleSizeDimension];
 
-	const sha = commitInfo.sha.slice(0, 7);
+	const sha = commitSha.slice(0, 7);
 
 	/** @type {JSX.Element | JSX.Element[]} */
 	let table;
@@ -166,9 +166,9 @@ function ResultsEntry({
 						</li>
 					);
 				})}
-				{actionInfo.job.htmlUrl && (
+				{actionInfo.run.htmlUrl && (
 					<li>
-						Built by: <a href={actionInfo.job.htmlUrl}>{actionInfo.run.name}</a>
+						Built by: <a href={actionInfo.run.htmlUrl}>{actionInfo.run.name}</a>
 					</li>
 				)}
 				<li>{`\n\nCommit: ${sha}\n\n`}</li>
@@ -254,7 +254,7 @@ function BenchmarkSection({ report, open }) {
  * @param {{ actionInfo: import('./global').ActionInfo; icon: boolean; }} props
  */
 function Status({ actionInfo, icon }) {
-	const href = actionInfo.job.htmlUrl;
+	const href = actionInfo.run.htmlUrl;
 	const label = `Currently running in ${actionInfo.run.name}…`;
 	const tag = href ? "a" : Fragment;
 	const props = {

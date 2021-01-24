@@ -450,7 +450,6 @@ const otherJobInfo = {
 		"https://api.github.com/repos/andrewiggins/tachometer-reporter-action/check-runs/1114818713",
 };
 
-/** @type {import('../../src/global').CommitInfo} */
 const fakeCommit = {
 	sha: "626e78c2446b8d1afc917fc9b0059aa65cc9a07d",
 	node_id:
@@ -496,11 +495,11 @@ const fakeCommit = {
 /** @type {import('../../src/global').ActionInfo} */
 const defaultActionInfo = {
 	workflow: {
-		id: workflow.id,
+		// id: workflow.id,
 		name: workflow.name,
 		runsHtmlUrl:
 			"https://github.com/andrewiggins/tachometer-reporter-action/actions?query=workflow%3A%22Pull%20Request%20Test%22",
-		srcHtmlUrl: workflow.html_url,
+		// srcHtmlUrl: workflow.html_url,
 	},
 	run: {
 		id: workflowRun.id,
@@ -509,10 +508,10 @@ const defaultActionInfo = {
 		htmlUrl: workflowRun.html_url,
 	},
 	job: {
-		id: defaultJobInfo.id,
+		// id: defaultJobInfo.id,
 		name: defaultJobInfo.name,
-		index: 2, // Manually faked to be 2 to make tests more interesting
-		htmlUrl: defaultJobInfo.html_url,
+		// index: 2, // Manually faked to be 2 to make tests more interesting
+		// htmlUrl: defaultJobInfo.html_url,
 	},
 };
 
@@ -593,9 +592,6 @@ function createGitHubClient({
 		return { data: [...comments.map((c) => ({ ...c }))] };
 	}
 
-	/**
-	 * @returns {Promise<OctokitResponse<import('../../src/global').Commit>>}
-	 */
 	async function getCommit() {
 		return { data: fakeCommit };
 	}

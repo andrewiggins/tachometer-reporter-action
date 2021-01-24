@@ -312,7 +312,7 @@ newCommentSuite("Supports benchmarks with different names", () => {
 });
 
 newCommentSuite(
-	"Still renders status even if job.html_url and run.html_url is falsey",
+	"Still renders status even if run.htmlUrl is falsey",
 	async () => {
 		const report = invokeBuildReport({
 			inputs: { reportId: testReportId },
@@ -323,9 +323,6 @@ newCommentSuite(
 					htmlUrl: null,
 				},
 				job: {
-					id: undefined,
-					index: undefined,
-					htmlUrl: undefined,
 					name: defaultActionInfo.job.name,
 				},
 			},
@@ -689,7 +686,7 @@ updateCommentSuite(
 );
 
 updateCommentSuite(
-	"Update status for existing comment when no job.html_url or run.html_url is present",
+	"Update status for existing comment when no run.htmlUrl is present",
 	async () => {
 		const commentBody = await readFixture("test-results-existing-comment.html");
 		const report = invokeBuildReport({
@@ -701,9 +698,6 @@ updateCommentSuite(
 					htmlUrl: null,
 				},
 				job: {
-					id: undefined,
-					index: undefined,
-					htmlUrl: undefined,
 					name: defaultActionInfo.job.name,
 				},
 			},

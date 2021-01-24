@@ -7,7 +7,7 @@ const {
 	Status,
 	ResultsEntry,
 } = require("./getCommentBody");
-const { getActionInfo, getCommit } = require("./utils/github");
+const { getActionInfo } = require("./utils/github");
 const { createCommentContext, postOrUpdateComment } = require("./comments");
 const { normalizeResults } = require("./utils/tachometer");
 const {
@@ -34,7 +34,7 @@ function pickArray(array, indexes) {
 }
 
 /**
- * @param {import("./global").CommitInfo} commitInfo
+ * @param {string} commitSha
  * @param {import('./global').ActionInfo} actionInfo
  * @param {Pick<import('./global').Inputs, 'prBenchName' | 'baseBenchName' | 'defaultOpen' | 'reportId' | 'summarize'>} inputs
  * @param {import('./global').PatchedTachResults} tachResults
@@ -42,7 +42,7 @@ function pickArray(array, indexes) {
  * @returns {import('./global').Report}
  */
 function buildReport(
-	commitInfo,
+	commitSha,
 	actionInfo,
 	inputs,
 	tachResults,
@@ -185,7 +185,7 @@ function buildReport(
 				benchmarks={benchmarks}
 				resultsByMeasurement={resultsByMeasurement}
 				actionInfo={actionInfo}
-				commitInfo={commitInfo}
+				commitSha={commitSha}
 			/>
 		),
 		summaries,
@@ -211,15 +211,13 @@ const defaultInputs = {
  * @returns {Promise<import('./global').SerializedReport | null>}
  */
 async function reportTachRunning(github, context, inputs, logger) {
-	/** @type {[ import('./global').ActionInfo, import('./global').CommitInfo ]} */
-	const [actionInfo, commitInfo] = await Promise.all([
-		getActionInfo(context, github, logger),
-		getCommit(context, github),
-	]);
+	/** @type {import('./global').ActionInfo} */
+	const actionInfo = getActionInfo(context);
+	const commitSha = context.sha;
 
 	let report;
 	if (inputs.reportId) {
-		report = buildReport(commitInfo, actionInfo, inputs, null, true);
+		report = buildReport(commitSha, actionInfo, inputs, null, true);
 	} else if (inputs.initialize !== true) {
 		logger.info(
 			'No report-id provided and initialize is not set to true. Skipping updating comment with "Running..." status.'
@@ -274,14 +272,11 @@ async function reportTachResults(github, context, inputs, logger) {
 		}
 	}
 
-	/** @type {[import('./global').ActionInfo, import('./global').CommitInfo ]} */
-	const [actionInfo, commitInfo] = await Promise.all([
-		getActionInfo(context, github, logger),
-		getCommit(context, github),
-	]);
+	/** @type {import('./global').ActionInfo} */
+	const actionInfo = getActionInfo(context);
+	const commitSha = context.sha;
 
 	logger.debug(() => "Action Info: " + JSON.stringify(actionInfo, null, 2));
-	logger.debug(() => "Commit Info " + JSON.stringify(commitInfo, null, 2));
 
 	const globber = await glob.create(inputs.path, {
 		followSymbolicLinks: inputs.followSymbolicLinks,
@@ -302,7 +297,7 @@ async function reportTachResults(github, context, inputs, logger) {
 		let report;
 		if (files.length == 1) {
 			// Only use report ID if one result file is matched
-			report = buildReport(commitInfo, actionInfo, inputs, tachResults, false);
+			report = buildReport(commitSha, actionInfo, inputs, tachResults, false);
 		} else {
 			// If multiple reports are globbed, then the report-id input should be
 			// ignored since all reports will share the same reportId which is used in
@@ -310,7 +305,7 @@ async function reportTachResults(github, context, inputs, logger) {
 			// each report needs a unique id. As such, the report-id input cannot be
 			// used for every globbed result file.
 			report = buildReport(
-				commitInfo,
+				commitSha,
 				actionInfo,
 				{ ...inputs, reportId: null },
 				tachResults,
