@@ -218,7 +218,7 @@ async function reportTachRunning(github, context, inputs, logger) {
 		context.payload.action !== "requested"
 	) {
 		logger.info(
-			`This workflow as trigged by a workflow_run ${context.payload.action} event. Nothing to do at this stage (comment will be updated in main stage).`
+			`This workflow was trigged by a workflow_run ${context.payload.action} event. Nothing to do at this stage (comment will be updated in main stage).`
 		);
 		return null;
 	}
@@ -279,7 +279,7 @@ async function reportTachResults(github, context, inputs, logger) {
 		context.payload.action !== "completed"
 	) {
 		logger.info(
-			`This workflow as trigged by a workflow_run ${context.payload.action} event. Nothing to do at this stage (comment was initialized in "pre" stage).`
+			`This workflow was trigged by a workflow_run ${context.payload.action} event. Nothing to do at this stage (comment was initialized in "pre" stage).`
 		);
 		return null;
 	}
