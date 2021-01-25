@@ -11267,13 +11267,15 @@ var getCommentBody_1 = {
 	Status,
 };
 
-/**
+function _nullishCoalesce$1(lhs, rhsFn) { if (lhs != null) { return lhs; } else { return rhsFn(); } }/**
  * @param {import('../global').GitHubActionContext} context
+ * @param {import('../global').GitHubActionClient} github
  * @param {import('../global').Logger} logger
- * @returns {import('../global').ActionContexts}
+ * @returns {Promise<import('../global').ActionContexts>}
  */
-function parseContext(context, logger) {
+async function parseContext(context, github, logger) {
 	if (context.eventName == "workflow_run") {
+		// 1. Validate workflow_run.event
 		/** @type {import('../global').WorkflowRunActionContextPayload} */
 		// @ts-ignore
 		let payload = context.payload;
@@ -11283,24 +11285,47 @@ function parseContext(context, logger) {
 			);
 			logger.info("Triggering event name: " + payload.workflow_run.event);
 			return null;
-		} else if (
-			payload.workflow_run.pull_requests == null ||
-			payload.workflow_run.pull_requests.length == 0
-		) {
-			logger.warn(
-				"The workflow_run payload does not reference any pull requests. Doing nothing."
-			);
-			return null;
 		}
 
-		const prs = payload.workflow_run.pull_requests;
+		// 2. Determine relevant PR number
+		let prs = _nullishCoalesce$1(payload.workflow_run.pull_requests, () => ( []));
+		let headLabel = `${payload.workflow_run.head_repository.owner.login}:${payload.workflow_run.head_branch}`;
+
+		// 2.1. Filter for PRs with matching head_sha
+		prs = prs.filter((pr) => pr.head.sha == payload.workflow_run.head_sha);
+
+		if (prs.length !== 1) {
+			logger.info(
+				"Cannot determine relevant PR based on workflow payload. Querying the GitHub API to try and determine what PR to comment on."
+			);
+
+			// 2.2. Search the PR API for matching open PRs if 0 or more than 1
+			// matched from the payload (payload doesn't contain open or close state)
+			prs = (
+				await github.pulls.list({
+					owner: context.repo.owner,
+					repo: context.repo.repo,
+					state: "open",
+					head: headLabel,
+				})
+			).data;
+		}
+
+		if (prs.length === 0) {
+			throw new Error(
+				`This workflow run does not match any PRs. We looked for PRs matching ${headLabel}. Cannot determine which PR to comment on.`
+			);
+		} else if (prs.length > 1) {
+			const prLabels = prs.map((pr) => `#${pr.number}`).join(", ");
+			throw new Error(
+				`This workflow run matches more than one pull requests: ${prLabels}. We looked for PRs matching ${headLabel}. Cannot determine which PR to comment on.`
+			);
+		}
+
 		const pr = prs[0];
-		if (prs.length > 1) {
-			logger.warn(
-				`The workflow_run payload references more than one pull requests (${prs.length}). Assuming the first one is the pull_request (#${pr.number}) to post results to.`
-			);
-		}
+		logger.info(`Found matching PR: #${pr.number}`);
 
+		// 3. Return the parsed context
 		return {
 			benchmark: getActionInfo({
 				repo: context.repo,
@@ -16904,7 +16929,7 @@ var comments = {
 	postOrUpdateComment,
 };
 
-function _nullishCoalesce$1(lhs, rhsFn) { if (lhs != null) { return lhs; } else { return rhsFn(); } } function _optionalChain$1(ops) { let lastAccessLHS = undefined; let value = ops[0]; let i = 1; while (i < ops.length) { const op = ops[i]; const fn = ops[i + 1]; i += 2; if ((op === 'optionalAccess' || op === 'optionalCall') && value == null) { return undefined; } if (op === 'access' || op === 'optionalAccess') { lastAccessLHS = value; value = fn(value); } else if (op === 'call' || op === 'optionalCall') { value = fn((...args) => value.call(lastAccessLHS, ...args)); lastAccessLHS = undefined; } } return value; }const { readFile } = fs.promises;
+function _nullishCoalesce$2(lhs, rhsFn) { if (lhs != null) { return lhs; } else { return rhsFn(); } } function _optionalChain$1(ops) { let lastAccessLHS = undefined; let value = ops[0]; let i = 1; while (i < ops.length) { const op = ops[i]; const fn = ops[i + 1]; i += 2; if ((op === 'optionalAccess' || op === 'optionalCall') && value == null) { return undefined; } if (op === 'access' || op === 'optionalAccess') { lastAccessLHS = value; value = fn(value); } else if (op === 'call' || op === 'optionalCall') { value = fn((...args) => value.call(lastAccessLHS, ...args)); lastAccessLHS = undefined; } } return value; }const { readFile } = fs.promises;
 
 const {
 	h: h$1,
@@ -17033,7 +17058,7 @@ function buildReport(
 			const measurement = benches[0].measurement;
 			if (
 				inputs.summarize === true ||
-				inputs.summarize.includes(_nullishCoalesce$1(measurement.name, () => ( "")))
+				inputs.summarize.includes(_nullishCoalesce$2(measurement.name, () => ( "")))
 			) {
 				// TODO: Need to adjust benches differences array to accommodate reduced
 				// comparisons to just benches of same measurement. Handcrafted test
@@ -17129,7 +17154,7 @@ async function reportTachRunning(github, context, inputs, logger) {
 		return null;
 	}
 
-	const parsedContext = parseContext$1(context, logger);
+	const parsedContext = await parseContext$1(context, github, logger);
 	if (parsedContext == null) {
 		return null;
 	}
@@ -17203,7 +17228,7 @@ async function reportTachResults(github, context, inputs, logger) {
 		}
 	}
 
-	const parsedContext = parseContext$1(context, logger);
+	const parsedContext = await parseContext$1(context, github, logger);
 	if (parsedContext == null) {
 		return null;
 	}

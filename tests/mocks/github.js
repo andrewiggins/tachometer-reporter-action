@@ -1,5 +1,8 @@
 //#region Fake Response
 
+const defaultOwner = "andrewiggins";
+const defaultRepo = "tachometer-reporter-action";
+
 // curl -H "Accept: application/vnd.github.v3+json" https://api.github.com/repos/andrewiggins/tachometer-reporter-action/actions/workflows/5202306
 /** @type {import('../../src/global').Workflow} */
 const fakeWorkflow = {
@@ -517,6 +520,14 @@ const fakeCommit = {
 	},
 };
 
+/** @type {PullRequestData} */
+const fakePullRequest = {
+	number: 5,
+	head: {
+		sha: fakeCommit.sha,
+	},
+};
+
 //#endregion
 
 /** @type {import('../../src/global').ActionInfo} */
@@ -555,6 +566,7 @@ const defaultActionInfo = {
 
 /**
  * @typedef {DeepPartial<import('../../src/global').CommentData>} Comment
+ * @typedef {DeepPartial<import('@octokit/types').PullsListResponseData[0]>} PullRequestData
  */
 
 /**
@@ -563,6 +575,7 @@ const defaultActionInfo = {
  * @property {typeof fakeWorkflow | Error} [workflowData]
  * @property {typeof fakeWorkflowRun | Error} [runData]
  * @property {Array<typeof defaultJobInfo> | Error} [runJobs]
+ * @property {Array<PullRequestData> | Error} [pullRequests]
  *
  * @param {GithubClientInitialData} [options]
  */
@@ -571,9 +584,10 @@ function createGitHubClient({
 	workflowData = fakeWorkflow,
 	runData = fakeWorkflowRun,
 	runJobs = [otherJobInfo, defaultJobInfo],
+	pullRequests = [fakePullRequest],
 } = {}) {
 	// From the log found in defaultActionInfo.job.htmlUrl
-	let id = 656984357;
+	let COMMENT_ID = 656984357;
 
 	/**
 	 * @param {{ comment_id: number }} params
@@ -607,7 +621,7 @@ function createGitHubClient({
 	 * @returns {Promise<OctokitResponse<Comment>>}
 	 */
 	async function createComment({ body }) {
-		const comment = { id: id++, body, user: { type: "Bot" } };
+		const comment = { id: COMMENT_ID++, body, user: { type: "Bot" } };
 		comments.push(comment);
 		return { data: { ...comment } };
 	}
@@ -664,6 +678,17 @@ function createGitHubClient({
 		}
 	}
 
+	/**
+	 * @returns {Promise<OctokitResponse<PullRequestData[]>>}
+	 */
+	async function listPRs() {
+		if (pullRequests instanceof Error) {
+			throw pullRequests;
+		}
+
+		return { data: pullRequests };
+	}
+
 	return {
 		request,
 		paginate: {
@@ -682,11 +707,17 @@ function createGitHubClient({
 		git: {
 			getCommit,
 		},
+		pulls: {
+			list: listPRs,
+		},
 	};
 }
 
 module.exports = {
+	defaultOwner,
+	defaultRepo,
 	defaultActionInfo,
+	fakePullRequest,
 	fakeWorkflow,
 	fakeWorkflowRun,
 	fakeCommit,
