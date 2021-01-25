@@ -29,14 +29,6 @@ const { fullVersion } = util.version;
 
 	logger.info(`Running tachometer-reporter-action ${fullVersion}`);
 
-	if (util.github.context.eventName !== "pull_request") {
-		logger.info(
-			"Not a pull request event. Skipping this action and doing nothing."
-		);
-		logger.info("Event name: " + util.github.context.eventName);
-		return;
-	}
-
 	try {
 		util.core.debug("Inputs: " + JSON.stringify(inputs, null, 2));
 

@@ -19,14 +19,6 @@ const { fullVersion } = require("../utils/version");
 	logger.debug(() => "Repo: " + JSON.stringify(context.repo, null, 2));
 	logger.debug(() => "Context: " + JSON.stringify(context, null, 2));
 
-	if (context.eventName !== "pull_request") {
-		logger.info(
-			"Not a pull request event. Skipping this action and doing nothing."
-		);
-		logger.info("Event name: " + github.context.eventName);
-		return;
-	}
-
 	const octokit = github.getOctokit(token);
 	const report = await reportTachRunning(octokit, context, inputs, logger);
 

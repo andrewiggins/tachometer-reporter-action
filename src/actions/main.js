@@ -13,14 +13,6 @@ const { fullVersion } = require("../utils/version");
 
 	logger.info(`Running tachometer-reporter-action ${fullVersion}`);
 
-	if (github.context.eventName !== "pull_request") {
-		logger.info(
-			"Not a pull request event. Skipping this action and doing nothing."
-		);
-		logger.info("Event name: " + github.context.eventName);
-		return;
-	}
-
 	try {
 		core.debug("Inputs: " + JSON.stringify(inputs, null, 2));
 

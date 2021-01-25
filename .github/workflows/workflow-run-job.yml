@@ -13,6 +13,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
+      - run: npm ci
       - run: git show HEAD
       - name: Log GitHub Context
         run: node -e 'var github = require("@actions/github"); var context = github.context; console.log("context.issue =", JSON.stringify(context.issue, null, 2)); console.log("context.repo =", JSON.stringify(context.repo, null, 2)); console.log("context = ", JSON.stringify(context, null, 2));'
