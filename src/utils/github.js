@@ -18,7 +18,7 @@ function parseContext(context, logger) {
 			payload.workflow_run.pull_requests == null ||
 			payload.workflow_run.pull_requests.length == 0
 		) {
-			logger.info(
+			logger.warn(
 				"The workflow_run payload does not reference any pull requests. Doing nothing."
 			);
 			return null;

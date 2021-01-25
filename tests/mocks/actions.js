@@ -52,13 +52,89 @@ const fakePullRequestContext = {
 	},
 };
 
-/** @type {import('../../src/global').WorkflowRunActionContextPayload} */
-const fakeWorkflowRunPayload = {
-	action: "completed",
-	workflow: fakeWorkflow,
-	workflow_run: fakeWorkflowRun,
-	repository: /** @type {any} */ ({}),
-	sender: /** @type {any} */ ({}),
+/** @type {import('../../src/global').WorkflowRunGitHubActionContext} */
+const fakeCompletedWorkflowRunContext = {
+	eventName: "workflow_run",
+	payload: {
+		action: "completed",
+		workflow: fakeWorkflow,
+		workflow_run: fakeWorkflowRun,
+		repository: /** @type {any} */ ({}),
+		sender: /** @type {any} */ ({}),
+	},
+	sha: fakeWorkflowRun.pull_requests[0].base.sha,
+	ref: "context.ref",
+	workflow: "Workflow Run Example",
+	action: "context.action",
+	actor: "context.actor",
+	job: "Report Tachometer Results in a workflow_run",
+	runNumber: 3,
+	runId: 12345,
+	repo: {
+		owner: "andrewiggins",
+		repo: "tachometer-reporter-action",
+	},
+	issue: {
+		owner: "andrewiggins",
+		repo: "tachometer-reporter-action",
+		number: null,
+	},
+};
+
+/** @type {import('../../src/global').WorkflowRunGitHubActionContext} */
+const fakeRequestedWorkflowRunContext = {
+	eventName: "workflow_run",
+	payload: {
+		action: "requested",
+		workflow: fakeWorkflow,
+		workflow_run: {
+			...fakeWorkflowRun,
+			status: "queued",
+			conclusion: null,
+		},
+		repository: /** @type {any} */ ({}),
+		sender: /** @type {any} */ ({}),
+	},
+	sha: fakeWorkflowRun.pull_requests[0].base.sha,
+	ref: "context.ref",
+	workflow: "Workflow Run Example",
+	action: "context.action",
+	actor: "context.actor",
+	job: "Report Tachometer Results in a workflow_run",
+	runNumber: 3,
+	runId: 12345,
+	repo: {
+		owner: "andrewiggins",
+		repo: "tachometer-reporter-action",
+	},
+	issue: {
+		owner: "andrewiggins",
+		repo: "tachometer-reporter-action",
+		number: null,
+	},
+};
+
+/** @type {import('../../src/global').WorkflowRunGitHubActionContext} */
+const fakePushContext = {
+	eventName: "push",
+	payload: /** @type {any} */ ({}),
+	sha: fakeCommit.sha,
+	ref: "context.ref",
+	workflow: defaultActionInfo.workflow.name,
+	action: "context.action",
+	actor: "context.actor",
+	job: defaultActionInfo.job.name,
+	runNumber: defaultActionInfo.run.number,
+	runId: defaultActionInfo.run.id,
+	repo: {
+		owner: "andrewiggins",
+		repo: "tachometer-reporter-action",
+	},
+	issue: {
+		owner: "andrewiggins",
+		repo: "tachometer-reporter-action",
+		number: null,
+	},
 };
 
 /** @type {import('../../src/global').PRContext} */
@@ -71,8 +147,10 @@ const fakePRContext = {
 
 module.exports = {
 	defaultInputs,
-	fakeWorkflowRunPayload,
 	fakePullRequestContext,
+	fakePushContext,
+	fakeCompletedWorkflowRunContext,
+	fakeRequestedWorkflowRunContext,
 	fakePRContext,
 	testLogger,
 };

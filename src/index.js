@@ -224,7 +224,7 @@ async function reportTachRunning(github, context, inputs, logger) {
 	}
 
 	const parsedContext = parseContext(context, logger);
-	if (parseContext == null) {
+	if (parsedContext == null) {
 		return null;
 	}
 

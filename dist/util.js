@@ -11287,7 +11287,7 @@ function parseContext(context, logger) {
 			payload.workflow_run.pull_requests == null ||
 			payload.workflow_run.pull_requests.length == 0
 		) {
-			logger.info(
+			logger.warn(
 				"The workflow_run payload does not reference any pull requests. Doing nothing."
 			);
 			return null;
@@ -16860,7 +16860,12 @@ async function postOrUpdateComment(github, context, getCommentBody, logger) {
  * @param {boolean} [initialize]
  * @returns {import('./global').CommentContext}
  */
-function createCommentContext(prContext, benchmarkActionInfo, customId, initialize) {
+function createCommentContext(
+	prContext,
+	benchmarkActionInfo,
+	customId,
+	initialize
+) {
 	const { run, job } = benchmarkActionInfo;
 
 	const lockId = `{ customId: ${customId}, run: {id: ${run.id}, name: ${run.name}}, job: {name: ${job.name}}`;
@@ -17125,7 +17130,7 @@ async function reportTachRunning(github, context, inputs, logger) {
 	}
 
 	const parsedContext = parseContext$1(context, logger);
-	if (parseContext$1 == null) {
+	if (parsedContext == null) {
 		return null;
 	}
 

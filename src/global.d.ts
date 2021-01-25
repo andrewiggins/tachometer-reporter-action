@@ -18,6 +18,9 @@ export type GitHubActionClient = ReturnType<
 
 // Sample context: https://github.com/andrewiggins/tachometer-reporter-action/runs/860022655?check_suite_focus=true
 type GitHubActionContext = typeof import("@actions/github").context;
+type WorkflowRunGitHubActionContext = GitHubActionContext & {
+	payload: WorkflowRunActionContextPayload;
+};
 
 type CommentData = import("@octokit/types").IssuesGetCommentResponseData;
 
