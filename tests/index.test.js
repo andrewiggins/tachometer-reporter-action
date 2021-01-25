@@ -725,6 +725,176 @@ updatedResultsSuite(
 const runningWorkflowRun = suite("reportTachRunning (workflow_run)");
 setupClock(runningWorkflowRun);
 
+/**
+ * @param {ReturnType<typeof import('uvu').suite>} suite
+ * @param {typeof invokeReportTachResults} invoker
+ * @param {ReportTachRunningParams & { context: import('../src/global').WorkflowRunGitHubActionContext; }} baseParams
+ */
+function runPullRequestAPISuite(suite, invoker, baseParams) {
+	suite("Uses payload PRs if only 1 is matches", async () => {
+		// 1. Set payload.workflow_run.pull_requests to a list with 1 PR
+		// 2. Set GitHub client to return an empty list
+		// 3. Should still work
+
+		/** @type {import('../src/global').WorkflowRunGitHubActionContext} */
+		const context = cleanSet(
+			baseParams.context,
+			"payload.workflow_run.pull_requests",
+			[fakeWorkflowRun.pull_requests[0]]
+		);
+
+		const github = createGitHubClient({ pullRequests: [] });
+		await invoker({ ...baseParams, github, context });
+
+		const comments = (await github.issues.listComments()).data;
+
+		assert.is(comments.length, 1, "Should create a new comment");
+	});
+
+	suite("Filters payload PRs by head_sha", async () => {
+		// 1. Set payload.workflow_run.pull_requests to a list with two PRs with
+		//    different head.sha. One of them should match
+		// 2. Set GitHub client to return an empty list
+		// 3. Should still work
+
+		const pr1 = fakeWorkflowRun.pull_requests[0];
+		let pr2 = cleanSet(fakeWorkflowRun.pull_requests[0], "head.sha", "abcdef");
+		pr2 = cleanSet(pr2, "number", 1);
+
+		/** @type {import('../src/global').WorkflowRunGitHubActionContext} */
+		const context = cleanSet(
+			baseParams.context,
+			"payload.workflow_run.pull_requests",
+			[pr1, pr2]
+		);
+
+		const github = createGitHubClient({ pullRequests: [] });
+		await invoker({ ...baseParams, github, context });
+
+		const comments = (await github.issues.listComments()).data;
+
+		assert.is(comments.length, 1, "Should create a new comment");
+	});
+
+	suite("Searches PR API if payload pull_requests are empty", async () => {
+		// 1. Set payload.workflow_run.pull_requests to an empty list
+		// 2. Set GitHub client to return a list with one PR
+		// 3. Should still work
+
+		/** @type {import('../src/global').WorkflowRunGitHubActionContext} */
+		const context = cleanSet(
+			baseParams.context,
+			"payload.workflow_run.pull_requests",
+			[]
+		);
+
+		const github = createGitHubClient({
+			pullRequests: [fakeWorkflowRun.pull_requests[0]],
+		});
+
+		await invoker({ ...baseParams, github, context });
+
+		const comments = (await github.issues.listComments()).data;
+
+		assert.is(comments.length, 1, "Should create a new comment");
+	});
+
+	suite(
+		"Throws an error no PRs are associated with a workflow run",
+		async () => {
+			// 1. Set payload.workflow_run.pull_requests to an empty list
+			// 2. Set GitHub client to return an empty list
+			// 3. Should throw an error
+
+			/** @type {import('../src/global').WorkflowRunGitHubActionContext} */
+			const context = cleanSet(
+				baseParams.context,
+				"payload.workflow_run.pull_requests",
+				[]
+			);
+
+			const github = createGitHubClient({ pullRequests: [] });
+
+			/** @type {Error} */
+			let error;
+			await invoker({ ...baseParams, github, context }).catch(
+				(e) => (error = e)
+			);
+
+			assert.ok(error, "Should throw an error");
+			assert.ok(
+				error.message.includes(`does not match any PRs`),
+				"Throws expected error"
+			);
+		}
+	);
+
+	suite(
+		"Throws an error multiple PRs are associated with a workflow run",
+		async () => {
+			// 1. Set payload.workflow_run.pull_requests to a list with two PRs
+			// 2. Set GitHub client to return a list with two PRs
+			// 3. Should throw an error
+
+			const pr1 = fakeWorkflowRun.pull_requests[0];
+			let pr2 = cleanSet(
+				fakeWorkflowRun.pull_requests[0],
+				"head.sha",
+				"abcdef"
+			);
+			pr2 = cleanSet(pr2, "number", 1);
+
+			/** @type {import('../src/global').WorkflowRunGitHubActionContext} */
+			const context = cleanSet(
+				baseParams.context,
+				"payload.workflow_run.pull_requests",
+				[]
+			);
+
+			const github = createGitHubClient({ pullRequests: [pr1, pr2] });
+
+			/** @type {Error} */
+			let error;
+			await invoker({ ...baseParams, github, context }).catch(
+				(e) => (error = e)
+			);
+
+			assert.ok(error, "Should throw an error");
+			assert.ok(
+				error.message.includes(`matches more than one pull requests`),
+				"Throws expected error"
+			);
+		}
+	);
+
+	suite("Throws an error if PR API fails", async () => {
+		// 1. Set payload.workflow_run.pull_requests to an empty list
+		// 2. Set GitHub client to an Error
+		// 3. Should throw an error
+
+		/** @type {import('../src/global').WorkflowRunGitHubActionContext} */
+		const context = cleanSet(
+			baseParams.context,
+			"payload.workflow_run.pull_requests",
+			[]
+		);
+
+		const github = createGitHubClient({
+			pullRequests: new Error(`Fake error pull request API error`),
+		});
+
+		/** @type {Error} */
+		let error;
+		await invoker({ ...baseParams, github, context }).catch((e) => (error = e));
+
+		assert.ok(error, "Should throw an error");
+		assert.ok(
+			error.message.includes(`pull request API error`),
+			"Throws expected error"
+		);
+	});
+}
+
 runningWorkflowRun(
 	"Does nothing if workflow_run event is not 'pull_request' ",
 	async () => {
@@ -815,70 +985,10 @@ runningWorkflowRun(
 	}
 );
 
-runningWorkflowRun(
-	"Prints a warning and does nothing if no PRs are associated with a workflow run",
-	async () => {
-		let warnCalled = false;
-
-		/** @type {ReturnType<typeof createTestLogger>} */
-		const logger = {
-			...createTestLogger(),
-			warn(msg) {
-				warnCalled = true;
-			},
-		};
-
-		/** @type {import('../src/global').WorkflowRunGitHubActionContext} */
-		const context = cleanSet(
-			fakeRequestedWorkflowRunContext,
-			"payload.workflow_run.pull_requests",
-			[]
-		);
-
-		const github = createGitHubClient();
-		await invokeReportTachRunning({ github, logger, context });
-
-		const comments = (await github.issues.listComments()).data;
-
-		assert.is(comments.length, 0, "Should not create a new comment");
-		assert.ok(warnCalled, "logger.warn should be called");
-	}
-);
-
-runningWorkflowRun(
-	"Prints a warning if multiple PRs are associated with a workflow run",
-	async () => {
-		let warnCalled = false;
-
-		/** @type {ReturnType<typeof createTestLogger>} */
-		const logger = {
-			...createTestLogger(),
-			warn(msg) {
-				warnCalled = true;
-			},
-		};
-
-		/** @type {import('../src/global').WorkflowRunGitHubActionContext} */
-		const context = cleanSet(
-			fakeRequestedWorkflowRunContext,
-			"payload.workflow_run.pull_requests",
-			[fakeWorkflowRun.pull_requests[0], fakeWorkflowRun.pull_requests[0]]
-		);
-
-		const github = createGitHubClient();
-		await invokeReportTachRunning({
-			inputs: { initialize: true },
-			github,
-			logger,
-			context,
-		});
-
-		const comments = (await github.issues.listComments()).data;
-
-		assert.is(comments.length, 1, "Should create a new comment");
-		assert.ok(warnCalled, "logger.warn should be called");
-	}
-);
+runPullRequestAPISuite(runningWorkflowRun, invokeReportTachRunning, {
+	inputs: { initialize: true },
+	context: fakeRequestedWorkflowRunContext,
+});
 
 const updatedWorkflowRun = suite("reportTachResults (workflow_run)");
 setupClock(updatedWorkflowRun);
@@ -982,65 +1092,9 @@ updatedWorkflowRun(
 	}
 );
 
-updatedWorkflowRun(
-	"Prints a warning and does nothing if no PRs are associated with a workflow run",
-	async () => {
-		let warnCalled = false;
-
-		/** @type {ReturnType<typeof createTestLogger>} */
-		const logger = {
-			...createTestLogger(),
-			warn(msg) {
-				warnCalled = true;
-			},
-		};
-
-		/** @type {import('../src/global').WorkflowRunGitHubActionContext} */
-		const context = cleanSet(
-			fakeCompletedWorkflowRunContext,
-			"payload.workflow_run.pull_requests",
-			[]
-		);
-
-		const github = createGitHubClient();
-		await invokeReportTachResults({ github, logger, context });
-
-		const comments = (await github.issues.listComments()).data;
-
-		assert.is(comments.length, 0, "Should not create a new comment");
-		assert.ok(warnCalled, "logger.warn should be called");
-	}
-);
-
-updatedWorkflowRun(
-	"Prints a warning if multiple PRs are associated with a workflow run",
-	async () => {
-		let warnCalled = false;
-
-		/** @type {ReturnType<typeof createTestLogger>} */
-		const logger = {
-			...createTestLogger(),
-			warn(msg) {
-				warnCalled = true;
-			},
-		};
-
-		/** @type {import('../src/global').WorkflowRunGitHubActionContext} */
-		const context = cleanSet(
-			fakeCompletedWorkflowRunContext,
-			"payload.workflow_run.pull_requests",
-			[fakeWorkflowRun.pull_requests[0], fakeWorkflowRun.pull_requests[0]]
-		);
-
-		const github = createGitHubClient();
-		await invokeReportTachResults({ github, logger, context });
-
-		const comments = (await github.issues.listComments()).data;
-
-		assert.is(comments.length, 1, "Should create a new comment");
-		assert.ok(warnCalled, "logger.warn should be called");
-	}
-);
+runPullRequestAPISuite(updatedWorkflowRun, invokeReportTachResults, {
+	context: fakeCompletedWorkflowRunContext,
+});
 
 runningCreateSuite.run();
 runningUpdateSuite.run();

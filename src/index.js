@@ -223,7 +223,7 @@ async function reportTachRunning(github, context, inputs, logger) {
 		return null;
 	}
 
-	const parsedContext = parseContext(context, logger);
+	const parsedContext = await parseContext(context, github, logger);
 	if (parsedContext == null) {
 		return null;
 	}
@@ -297,7 +297,7 @@ async function reportTachResults(github, context, inputs, logger) {
 		}
 	}
 
-	const parsedContext = parseContext(context, logger);
+	const parsedContext = await parseContext(context, github, logger);
 	if (parsedContext == null) {
 		return null;
 	}

@@ -1,9 +1,12 @@
 const { testRoot } = require("../utils");
 const {
+	defaultOwner,
+	defaultRepo,
 	defaultActionInfo,
 	fakeCommit,
 	fakeWorkflow,
 	fakeWorkflowRun,
+	fakePullRequest,
 } = require("./github");
 
 const prBenchName = "local-framework";
@@ -42,13 +45,13 @@ const fakePullRequestContext = {
 	runNumber: defaultActionInfo.run.number,
 	runId: defaultActionInfo.run.id,
 	repo: {
-		owner: "andrewiggins",
-		repo: "tachometer-reporter-action",
+		owner: defaultOwner,
+		repo: defaultRepo,
 	},
 	issue: {
-		owner: "andrewiggins",
-		repo: "tachometer-reporter-action",
-		number: 5,
+		owner: defaultOwner,
+		repo: defaultRepo,
+		number: fakePullRequest.number,
 	},
 };
 
@@ -71,12 +74,12 @@ const fakeCompletedWorkflowRunContext = {
 	runNumber: 3,
 	runId: 12345,
 	repo: {
-		owner: "andrewiggins",
-		repo: "tachometer-reporter-action",
+		owner: defaultOwner,
+		repo: defaultRepo,
 	},
 	issue: {
-		owner: "andrewiggins",
-		repo: "tachometer-reporter-action",
+		owner: defaultOwner,
+		repo: defaultRepo,
 		number: null,
 	},
 };
@@ -104,12 +107,12 @@ const fakeRequestedWorkflowRunContext = {
 	runNumber: 3,
 	runId: 12345,
 	repo: {
-		owner: "andrewiggins",
-		repo: "tachometer-reporter-action",
+		owner: defaultOwner,
+		repo: defaultRepo,
 	},
 	issue: {
-		owner: "andrewiggins",
-		repo: "tachometer-reporter-action",
+		owner: defaultOwner,
+		repo: defaultRepo,
 		number: null,
 	},
 };
@@ -127,12 +130,12 @@ const fakePushContext = {
 	runNumber: defaultActionInfo.run.number,
 	runId: defaultActionInfo.run.id,
 	repo: {
-		owner: "andrewiggins",
-		repo: "tachometer-reporter-action",
+		owner: defaultOwner,
+		repo: defaultRepo,
 	},
 	issue: {
-		owner: "andrewiggins",
-		repo: "tachometer-reporter-action",
+		owner: defaultOwner,
+		repo: defaultRepo,
 		number: null,
 	},
 };
