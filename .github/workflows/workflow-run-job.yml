@@ -1,6 +1,8 @@
 name: Report Tachometer Results
 
 on:
+  # The pull_request event can't write comments for PRs from forks so using this
+  # workflow_run workflow as a workaround
   workflow_run:
     workflows: ["PR Artifacts For Forks Flow"]
     branches: ["**"]
@@ -18,18 +20,32 @@ jobs:
       - name: Log GitHub Context
         run: node -e 'var github = require("@actions/github"); var context = github.context; console.log("context.issue =", JSON.stringify(context.issue, null, 2)); console.log("context.repo =", JSON.stringify(context.repo, null, 2)); console.log("context = ", JSON.stringify(context, null, 2));'
 
-  report_running:
-    name: Report benchmarks are in-progress
-    runs-on: ubuntu-latest
-    # Only add the "benchmarks are running" text when the workflow_run starts
-    if: ${{ github.event.action == 'requested' }}
-    steps:
-      - name: Report Tachometer Running
-        uses: andrewiggins/tachometer-reporter-action@main
-        with:
-          # Set initialize true so this action just creates the comment or adds
-          # the "benchmarks are running" text
-          initialize: true
+  # TODO: is this even possible since 'requested' will fire before artifacts have been loaded?
+  # report_running:
+  #   name: Report benchmarks are in-progress
+  #   runs-on: ubuntu-latest
+  #   # Only add the "benchmarks are running" text when a workflow_run is
+  #   # requested (a.k.a starting)
+  #   if: ${{ github.event.action == 'requested' }}
+  #   steps:
+  #     # Download the artifact from the triggering workflow that contains the
+  #     # PR number to add a comment to
+  #     - name: Download PR number artifact
+  #       uses: dawidd6/action-download-artifact@v2
+  #       with:
+  #         workflow: ${{ github.event.workflow.id }}
+  #         run_id: ${{ github.event.workflow_run.id }}
+  #         name: pr_num
+  #     - name: Set PR number to environment variable
+  #       run: echo "PR_NUM=$(cat pr_num.txt)" >> $GITHUB_ENV
+
+  #     - name: Report Tachometer Running
+  #       uses: andrewiggins/tachometer-reporter-action@main
+  #       with:
+  #         # Set initialize to true so this action just creates the comment or
+  #         # adds the "benchmarks are running" text
+  #         initialize: true
+  #         pr-num: ${{ env.PR_NUM }}
 
   report_results:
     name: Report benchmark results
@@ -38,6 +54,18 @@ jobs:
     # workflow_run was successful
     if: ${{ github.event.action == 'completed' && github.event.workflow_run.conclusion == 'success' }}
     steps:
+      # Download the artifact from the triggering workflow that contains the
+      # PR number to add a comment to
+      - name: Download PR number artifact
+        uses: dawidd6/action-download-artifact@v2
+        with:
+          workflow: ${{ github.event.workflow.id }}
+          run_id: ${{ github.event.workflow_run.id }}
+          name: pr_num
+      - name: Set PR number to environment variable
+        run: echo "PR_NUM=$(cat pr_num.txt)" >> $GITHUB_ENV
+
+      # TODO: Can we combine the two artifacts into one??
       # Download the artifact from the triggering workflow that contains the
       # Tachometer results to report
       - uses: dawidd6/action-download-artifact@v2
@@ -52,3 +80,4 @@ jobs:
         uses: andrewiggins/tachometer-reporter-action@main
         with:
           path: results/*.json
+          pr-num: ${{ env.PR_NUM }}

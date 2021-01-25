@@ -6,6 +6,18 @@ on:
       - "**"
 
 jobs:
+  pr_num:
+    name: Record PR Number
+    runs-on: ubuntu-latest
+    steps:
+      - name: Save PR number
+        run: echo ${{ github.event.number }} > ./pr_num.txt
+      # TODO: Should this combine with the results artifact?
+      - uses: actions/upload-artifact@v2
+        with:
+          name: pr_num
+          path: pr_num.txt
+
   bench_1:
     name: First Bench Job
     runs-on: ubuntu-latest

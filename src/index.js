@@ -197,6 +197,7 @@ function buildReport(
 /** @type {Partial<import('./global').Inputs>} */
 const defaultInputs = {
 	reportId: null,
+	prNum: null,
 	initialize: null,
 	prBenchName: null,
 	baseBenchName: null,
@@ -223,7 +224,7 @@ async function reportTachRunning(github, context, inputs, logger) {
 		return null;
 	}
 
-	const parsedContext = parseContext(context, logger);
+	const parsedContext = parseContext(inputs, context, logger);
 	if (parsedContext == null) {
 		return null;
 	}
@@ -297,7 +298,7 @@ async function reportTachResults(github, context, inputs, logger) {
 		}
 	}
 
-	const parsedContext = parseContext(context, logger);
+	const parsedContext = parseContext(inputs, context, logger);
 	if (parsedContext == null) {
 		return null;
 	}

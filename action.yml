@@ -8,6 +8,9 @@ inputs:
   path:
     description: "The path to the results JSON file of running tachometer. Accepts a glob to report multiple result files. Follows rules of @actions/glob"
     required: false
+  pr-num:
+    description: "The number of the pull request to add a comment to containing the benchmark results"
+    required: false
   report-id:
     description: "A string to uniquely identify this report between other instances of tachometer-reporter-action running in this job or other jobs in the same PR"
     require: false

@@ -41,32 +41,33 @@ const fakeWorkflowRun = {
 	html_url:
 		"https://github.com/andrewiggins/tachometer-reporter-action/actions/runs/506256195",
 	pull_requests: [
-		{
-			url:
-				"https://api.github.com/repos/andrewiggins/tachometer-reporter-action/pulls/43",
-			id: 560481270,
-			number: 43,
-			head: {
-				ref: "test-pr",
-				sha: "a70706dc304819dcaca4e1859117817973bf0a7c",
-				repo: {
-					id: 278722227,
-					url:
-						"https://api.github.com/repos/andrewiggins/tachometer-reporter-action",
-					name: "tachometer-reporter-action",
-				},
-			},
-			base: {
-				ref: "main",
-				sha: "169ac424fcfdf0b0a88d7218ec23f1d3ba3ecc8d",
-				repo: {
-					id: 278722227,
-					url:
-						"https://api.github.com/repos/andrewiggins/tachometer-reporter-action",
-					name: "tachometer-reporter-action",
-				},
-			},
-		},
+		// It appears PRs from forked repos don't have this info
+		// {
+		// 	url:
+		// 		"https://api.github.com/repos/andrewiggins/tachometer-reporter-action/pulls/43",
+		// 	id: 560481270,
+		// 	number: 43,
+		// 	head: {
+		// 		ref: "test-pr",
+		// 		sha: "a70706dc304819dcaca4e1859117817973bf0a7c",
+		// 		repo: {
+		// 			id: 278722227,
+		// 			url:
+		// 				"https://api.github.com/repos/andrewiggins/tachometer-reporter-action",
+		// 			name: "tachometer-reporter-action",
+		// 		},
+		// 	},
+		// 	base: {
+		// 		ref: "main",
+		// 		sha: "169ac424fcfdf0b0a88d7218ec23f1d3ba3ecc8d",
+		// 		repo: {
+		// 			id: 278722227,
+		// 			url:
+		// 				"https://api.github.com/repos/andrewiggins/tachometer-reporter-action",
+		// 			name: "tachometer-reporter-action",
+		// 		},
+		// 	},
+		// },
 	],
 	created_at: "2021-01-23T20:04:18Z",
 	updated_at: "2021-01-23T20:59:59Z",
@@ -91,11 +92,11 @@ const fakeWorkflowRun = {
 		timestamp: "2021-01-23T20:04:08Z",
 		author: {
 			name: "Andre Wiggins",
-			email: "andrewiggins@live.com",
+			email: "author@email.com",
 		},
 		committer: {
 			name: "Andre Wiggins",
-			email: "andrewiggins@live.com",
+			email: "committer@email.com",
 		},
 	},
 	repository: {
@@ -318,6 +319,7 @@ const fakeWorkflowRun = {
 
 // Job Data: curl -H "Accept: application/vnd.github.v3+json" https://api.github.com/repos/andrewiggins/tachometer-reporter-action/actions/jobs/1755125478
 // Job Index: curl -H "Accept: application/vnd.github.v3+json" https://api.github.com/repos/andrewiggins/tachometer-reporter-action/actions/runs/506256195/jobs
+/** @type {import('@octokit/openapi-types').components["schemas"]["job"]} */
 const defaultJobInfo = {
 	id: 1755125478,
 	run_id: 506256195,
@@ -398,6 +400,7 @@ const defaultJobInfo = {
 
 // Job Data: curl -H "Accept: application/vnd.github.v3+json" https://api.github.com/repos/andrewiggins/tachometer-reporter-action/actions/jobs/1114818713
 // Job Index: curl -H "Accept: application/vnd.github.v3+json" https://api.github.com/repos/andrewiggins/tachometer-reporter-action/actions/runs/254664657/jobs
+/** @type {import('@octokit/openapi-types').components["schemas"]["job"]} */
 const otherJobInfo = {
 	id: 1114818713,
 	run_id: 254664657,
@@ -477,6 +480,8 @@ const otherJobInfo = {
 		"https://api.github.com/repos/andrewiggins/tachometer-reporter-action/check-runs/1114818713",
 };
 
+// https://api.github.com/repos/andrewiggins/tachometer-reporter-action/git/commits/626e78c2446b8d1afc917fc9b0059aa65cc9a07d
+/** @type {import('@octokit/openapi-types').components["schemas"]["git-commit"]} */
 const fakeCommit = {
 	sha: "626e78c2446b8d1afc917fc9b0059aa65cc9a07d",
 	node_id:
@@ -506,7 +511,8 @@ const fakeCommit = {
 			sha: "e14f6dfcaca042ac8fa174d96afa9fabe0e0516b",
 			url:
 				"https://api.github.com/repos/andrewiggins/tachometer-reporter-action/git/commits/e14f6dfcaca042ac8fa174d96afa9fabe0e0516b",
-			// html_url: "https://github.com/andrewiggins/tachometer-reporter-action/commit/e14f6dfcaca042ac8fa174d96afa9fabe0e0516b",
+			html_url:
+				"https://github.com/andrewiggins/tachometer-reporter-action/commit/e14f6dfcaca042ac8fa174d96afa9fabe0e0516b",
 		},
 	],
 	verification: {

@@ -736,7 +736,11 @@ runningWorkflowRun(
 		);
 
 		const github = createGitHubClient();
-		await invokeReportTachRunning({ github, context });
+		await invokeReportTachRunning({
+			github,
+			context,
+			inputs: { prNum: fakePRContext.number },
+		});
 
 		const comments = (await github.issues.listComments()).data;
 		assert.is(comments.length, 0, "Should not create any comments");
@@ -749,7 +753,7 @@ runningWorkflowRun(
 		const github = createGitHubClient();
 		await invokeReportTachRunning({
 			github,
-			inputs: { initialize: true },
+			inputs: { initialize: true, prNum: fakePRContext.number },
 			context: fakeRequestedWorkflowRunContext,
 		});
 
@@ -772,7 +776,7 @@ runningWorkflowRun(
 
 		await invokeReportTachRunning({
 			github,
-			inputs: { initialize: true },
+			inputs: { initialize: true, prNum: fakePRContext.number },
 			context: fakeRequestedWorkflowRunContext,
 		});
 
@@ -791,7 +795,7 @@ runningWorkflowRun(
 		const github = createGitHubClient();
 		await invokeReportTachRunning({
 			github,
-			inputs: { initialize: null },
+			inputs: { initialize: null, prNum: fakePRContext.number },
 			context: fakeRequestedWorkflowRunContext,
 		});
 
@@ -806,7 +810,7 @@ runningWorkflowRun(
 		const github = createGitHubClient();
 		await invokeReportTachRunning({
 			github,
-			inputs: { initialize: true },
+			inputs: { initialize: true, prNum: fakePRContext.number },
 			context: fakeCompletedWorkflowRunContext,
 		});
 
@@ -816,67 +820,17 @@ runningWorkflowRun(
 );
 
 runningWorkflowRun(
-	"Prints a warning and does nothing if no PRs are associated with a workflow run",
+	"Throws an error if prNum input is not provided",
 	async () => {
-		let warnCalled = false;
-
-		/** @type {ReturnType<typeof createTestLogger>} */
-		const logger = {
-			...createTestLogger(),
-			warn(msg) {
-				warnCalled = true;
-			},
-		};
-
-		/** @type {import('../src/global').WorkflowRunGitHubActionContext} */
-		const context = cleanSet(
-			fakeRequestedWorkflowRunContext,
-			"payload.workflow_run.pull_requests",
-			[]
-		);
-
-		const github = createGitHubClient();
-		await invokeReportTachRunning({ github, logger, context });
-
-		const comments = (await github.issues.listComments()).data;
-
-		assert.is(comments.length, 0, "Should not create a new comment");
-		assert.ok(warnCalled, "logger.warn should be called");
-	}
-);
-
-runningWorkflowRun(
-	"Prints a warning if multiple PRs are associated with a workflow run",
-	async () => {
-		let warnCalled = false;
-
-		/** @type {ReturnType<typeof createTestLogger>} */
-		const logger = {
-			...createTestLogger(),
-			warn(msg) {
-				warnCalled = true;
-			},
-		};
-
-		/** @type {import('../src/global').WorkflowRunGitHubActionContext} */
-		const context = cleanSet(
-			fakeRequestedWorkflowRunContext,
-			"payload.workflow_run.pull_requests",
-			[fakeWorkflowRun.pull_requests[0], fakeWorkflowRun.pull_requests[0]]
-		);
-
-		const github = createGitHubClient();
+		/** @type {Error} */
+		let error;
 		await invokeReportTachRunning({
 			inputs: { initialize: true },
-			github,
-			logger,
-			context,
-		});
+			context: fakeRequestedWorkflowRunContext,
+		}).catch((e) => (error = e));
 
-		const comments = (await github.issues.listComments()).data;
-
-		assert.is(comments.length, 1, "Should create a new comment");
-		assert.ok(warnCalled, "logger.warn should be called");
+		assert.ok(error, "Should throw an error");
+		assert.ok(error.message.includes(`pr-num`), "Throws expected error");
 	}
 );
 
@@ -894,7 +848,11 @@ updatedWorkflowRun(
 		);
 
 		const github = createGitHubClient();
-		await invokeReportTachResults({ github, context });
+		await invokeReportTachResults({
+			github,
+			context,
+			inputs: { prNum: fakePRContext.number },
+		});
 
 		const comments = (await github.issues.listComments()).data;
 		assert.is(comments.length, 0, "Should not create any comments");
@@ -907,7 +865,7 @@ updatedWorkflowRun(
 		const github = createGitHubClient();
 		await invokeReportTachResults({
 			github,
-			inputs: { initialize: true },
+			inputs: { initialize: true, prNum: fakePRContext.number },
 			context: fakeRequestedWorkflowRunContext,
 		});
 
@@ -922,7 +880,7 @@ updatedWorkflowRun(
 		const github = createGitHubClient();
 		await invokeReportTachResults({
 			github,
-			inputs: { initialize: null },
+			inputs: { initialize: null, prNum: fakePRContext.number },
 			context: fakeRequestedWorkflowRunContext,
 		});
 
@@ -939,6 +897,7 @@ updatedWorkflowRun(
 			github,
 			inputs: {
 				initialize: null,
+				prNum: fakePRContext.number,
 				path: testRoot("results/glob-results-*.json"),
 			},
 			context: fakeCompletedWorkflowRunContext,
@@ -973,6 +932,7 @@ updatedWorkflowRun(
 			{
 				inputs: {
 					path: testRoot("results/glob-results2-*.json"),
+					prNum: fakePRContext.number,
 				},
 				context: fakeCompletedWorkflowRunContext,
 			},
@@ -983,62 +943,16 @@ updatedWorkflowRun(
 );
 
 updatedWorkflowRun(
-	"Prints a warning and does nothing if no PRs are associated with a workflow run",
+	"Throws an error if prNum input is not provided",
 	async () => {
-		let warnCalled = false;
+		/** @type {Error} */
+		let error;
+		await invokeReportTachResults({
+			context: fakeCompletedWorkflowRunContext,
+		}).catch((e) => (error = e));
 
-		/** @type {ReturnType<typeof createTestLogger>} */
-		const logger = {
-			...createTestLogger(),
-			warn(msg) {
-				warnCalled = true;
-			},
-		};
-
-		/** @type {import('../src/global').WorkflowRunGitHubActionContext} */
-		const context = cleanSet(
-			fakeCompletedWorkflowRunContext,
-			"payload.workflow_run.pull_requests",
-			[]
-		);
-
-		const github = createGitHubClient();
-		await invokeReportTachResults({ github, logger, context });
-
-		const comments = (await github.issues.listComments()).data;
-
-		assert.is(comments.length, 0, "Should not create a new comment");
-		assert.ok(warnCalled, "logger.warn should be called");
-	}
-);
-
-updatedWorkflowRun(
-	"Prints a warning if multiple PRs are associated with a workflow run",
-	async () => {
-		let warnCalled = false;
-
-		/** @type {ReturnType<typeof createTestLogger>} */
-		const logger = {
-			...createTestLogger(),
-			warn(msg) {
-				warnCalled = true;
-			},
-		};
-
-		/** @type {import('../src/global').WorkflowRunGitHubActionContext} */
-		const context = cleanSet(
-			fakeCompletedWorkflowRunContext,
-			"payload.workflow_run.pull_requests",
-			[fakeWorkflowRun.pull_requests[0], fakeWorkflowRun.pull_requests[0]]
-		);
-
-		const github = createGitHubClient();
-		await invokeReportTachResults({ github, logger, context });
-
-		const comments = (await github.issues.listComments()).data;
-
-		assert.is(comments.length, 1, "Should create a new comment");
-		assert.ok(warnCalled, "logger.warn should be called");
+		assert.ok(error, "Should throw an error");
+		assert.ok(error.message.includes(`pr-num`), "Throws expected error");
 	}
 );
 

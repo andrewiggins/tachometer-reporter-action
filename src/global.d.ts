@@ -87,6 +87,7 @@ interface ActionContexts {
 
 interface Inputs {
 	path: string;
+	prNum?: number;
 	reportId?: string;
 	initialize?: boolean;
 	prBenchName?: string;

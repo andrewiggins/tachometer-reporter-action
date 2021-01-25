@@ -11268,11 +11268,12 @@ var getCommentBody_1 = {
 };
 
 /**
+ * @param {import('../global').Inputs} inputs
  * @param {import('../global').GitHubActionContext} context
  * @param {import('../global').Logger} logger
  * @returns {import('../global').ActionContexts}
  */
-function parseContext(context, logger) {
+function parseContext(inputs, context, logger) {
 	if (context.eventName == "workflow_run") {
 		/** @type {import('../global').WorkflowRunActionContextPayload} */
 		// @ts-ignore
@@ -11283,21 +11284,9 @@ function parseContext(context, logger) {
 			);
 			logger.info("Triggering event name: " + payload.workflow_run.event);
 			return null;
-		} else if (
-			payload.workflow_run.pull_requests == null ||
-			payload.workflow_run.pull_requests.length == 0
-		) {
-			logger.warn(
-				"The workflow_run payload does not reference any pull requests. Doing nothing."
-			);
-			return null;
-		}
-
-		const prs = payload.workflow_run.pull_requests;
-		const pr = prs[0];
-		if (prs.length > 1) {
-			logger.warn(
-				`The workflow_run payload references more than one pull requests (${prs.length}). Assuming the first one is the pull_request (#${pr.number}) to post results to.`
+		} else if (inputs.prNum == null) {
+			throw new Error(
+				`"pr-num" input was not provided and is required when running this action in a workflow_run event`
 			);
 		}
 
@@ -11313,8 +11302,8 @@ function parseContext(context, logger) {
 			pr: {
 				owner: context.repo.owner,
 				repo: context.repo.repo,
-				number: pr.number,
-				sha: pr.head.sha,
+				number: inputs.prNum,
+				sha: payload.workflow_run.head_sha,
 			},
 		};
 	} else if (context.eventName == "pull_request") {
@@ -17103,6 +17092,7 @@ function buildReport(
 /** @type {Partial<import('./global').Inputs>} */
 const defaultInputs = {
 	reportId: null,
+	prNum: null,
 	initialize: null,
 	prBenchName: null,
 	baseBenchName: null,
@@ -17129,7 +17119,7 @@ async function reportTachRunning(github, context, inputs, logger) {
 		return null;
 	}
 
-	const parsedContext = parseContext$1(context, logger);
+	const parsedContext = parseContext$1(inputs, context, logger);
 	if (parsedContext == null) {
 		return null;
 	}
@@ -17203,7 +17193,7 @@ async function reportTachResults(github, context, inputs, logger) {
 		}
 	}
 
-	const parsedContext = parseContext$1(context, logger);
+	const parsedContext = parseContext$1(inputs, context, logger);
 	if (parsedContext == null) {
 		return null;
 	}
@@ -17328,6 +17318,7 @@ function getLogger() {
  */
 function getInputs(logger) {
 	const path = core.getInput("path", { required: false });
+	const prNum = parseInt(core.getInput("pr_num", { required: false }), 10);
 	const reportId = core.getInput("report-id", { required: false });
 	const initialize = _optionalChain$2([core
 , 'access', _ => _.getInput, 'call', _2 => _2("initialize", { required: false })
@@ -17348,6 +17339,7 @@ function getInputs(logger) {
 	/** @type {import('../global').Inputs} */
 	const inputs = {
 		path: path ? path : null,
+		prNum: Number.isNaN(prNum) ? null : prNum,
 		initialize: initialize ? initialize == "true" : null,
 		reportId: reportId ? reportId : null,
 		keepOldResults: keepOldResults != "false",

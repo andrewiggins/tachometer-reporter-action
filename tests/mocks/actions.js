@@ -10,6 +10,7 @@ const prBenchName = "local-framework";
 const baseBenchName = "base-framework";
 const defaultInputs = Object.freeze({
 	path: testRoot("results/test-results.json"),
+	prNum: null,
 	reportId: null,
 	prBenchName,
 	baseBenchName,
@@ -62,7 +63,7 @@ const fakeCompletedWorkflowRunContext = {
 		repository: /** @type {any} */ ({}),
 		sender: /** @type {any} */ ({}),
 	},
-	sha: fakeWorkflowRun.pull_requests[0].base.sha,
+	sha: "A_SHA_THAT_SHOULDN'T_BE_USED",
 	ref: "context.ref",
 	workflow: "Workflow Run Example",
 	action: "context.action",
@@ -95,7 +96,7 @@ const fakeRequestedWorkflowRunContext = {
 		repository: /** @type {any} */ ({}),
 		sender: /** @type {any} */ ({}),
 	},
-	sha: fakeWorkflowRun.pull_requests[0].base.sha,
+	sha: "A_SHA_THAT_SHOULDN'T_BE_USED",
 	ref: "context.ref",
 	workflow: "Workflow Run Example",
 	action: "context.action",

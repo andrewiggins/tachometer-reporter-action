@@ -1,9 +1,10 @@
 /**
+ * @param {import('../global').Inputs} inputs
  * @param {import('../global').GitHubActionContext} context
  * @param {import('../global').Logger} logger
  * @returns {import('../global').ActionContexts}
  */
-function parseContext(context, logger) {
+function parseContext(inputs, context, logger) {
 	if (context.eventName == "workflow_run") {
 		/** @type {import('../global').WorkflowRunActionContextPayload} */
 		// @ts-ignore
@@ -14,21 +15,9 @@ function parseContext(context, logger) {
 			);
 			logger.info("Triggering event name: " + payload.workflow_run.event);
 			return null;
-		} else if (
-			payload.workflow_run.pull_requests == null ||
-			payload.workflow_run.pull_requests.length == 0
-		) {
-			logger.warn(
-				"The workflow_run payload does not reference any pull requests. Doing nothing."
-			);
-			return null;
-		}
-
-		const prs = payload.workflow_run.pull_requests;
-		const pr = prs[0];
-		if (prs.length > 1) {
-			logger.warn(
-				`The workflow_run payload references more than one pull requests (${prs.length}). Assuming the first one is the pull_request (#${pr.number}) to post results to.`
+		} else if (inputs.prNum == null) {
+			throw new Error(
+				`"pr-num" input was not provided and is required when running this action in a workflow_run event`
 			);
 		}
 
@@ -44,8 +33,8 @@ function parseContext(context, logger) {
 			pr: {
 				owner: context.repo.owner,
 				repo: context.repo.repo,
-				number: pr.number,
-				sha: pr.head.sha,
+				number: inputs.prNum,
+				sha: payload.workflow_run.head_sha,
 			},
 		};
 	} else if (context.eventName == "pull_request") {

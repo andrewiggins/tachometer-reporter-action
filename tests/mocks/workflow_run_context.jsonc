@@ -153,11 +153,11 @@ context = {
       "head_branch": "test-pr",
       "head_commit": {
         "author": {
-          "email": "andrewiggins@live.com",
+          "email": "author@email.com",
           "name": "Andre Wiggins"
         },
         "committer": {
-          "email": "andrewiggins@live.com",
+          "email": "committer@email.com",
           "name": "Andre Wiggins"
         },
         "id": "a70706dc304819dcaca4e1859117817973bf0a7c",

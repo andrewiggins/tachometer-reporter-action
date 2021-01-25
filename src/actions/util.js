@@ -29,6 +29,7 @@ function getLogger() {
  */
 function getInputs(logger) {
 	const path = core.getInput("path", { required: false });
+	const prNum = parseInt(core.getInput("pr_num", { required: false }), 10);
 	const reportId = core.getInput("report-id", { required: false });
 	const initialize = core
 		.getInput("initialize", { required: false })
@@ -49,6 +50,7 @@ function getInputs(logger) {
 	/** @type {import('../global').Inputs} */
 	const inputs = {
 		path: path ? path : null,
+		prNum: Number.isNaN(prNum) ? null : prNum,
 		initialize: initialize ? initialize == "true" : null,
 		reportId: reportId ? reportId : null,
 		keepOldResults: keepOldResults != "false",
