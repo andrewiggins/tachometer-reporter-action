@@ -1,59 +1,94 @@
 //#region Fake Response
 
-// curl -H "Accept: application/vnd.github.v3+json" https://api.github.com/repos/andrewiggins/tachometer-reporter-action/actions/workflows/1850458
-const workflow = {
-	id: 1850458,
-	node_id: "MDg6V29ya2Zsb3cxODUwNDU4",
-	name: "Pull Request Test",
-	path: ".github/workflows/pr.yml",
+// curl -H "Accept: application/vnd.github.v3+json" https://api.github.com/repos/andrewiggins/tachometer-reporter-action/actions/workflows/5202306
+/** @type {import('../../src/global').Workflow} */
+const fakeWorkflow = {
+	id: 5202306,
+	node_id: "MDg6V29ya2Zsb3c1MjAyMzA2",
+	// name: "PR Artifacts Multi-Measurement Setup Job Flow",
+	name: "Pull Request Test", // Override actual value so tests are easier to maintain
+	path: ".github/workflows/pr-artifacts-flow.yml",
 	state: "active",
-	created_at: "2020-07-10T21:02:12.000Z",
-	updated_at: "2020-07-10T21:02:12.000Z",
+	created_at: "2021-01-22T00:44:50.000Z",
+	updated_at: "2021-01-22T00:44:50.000Z",
 	url:
-		"https://api.github.com/repos/andrewiggins/tachometer-reporter-action/actions/workflows/1850458",
+		"https://api.github.com/repos/andrewiggins/tachometer-reporter-action/actions/workflows/5202306",
 	html_url:
-		"https://github.com/andrewiggins/tachometer-reporter-action/blob/main/.github/workflows/pr.yml",
+		"https://github.com/andrewiggins/tachometer-reporter-action/blob/main/.github/workflows/pr-artifacts-flow.yml",
 	badge_url:
-		"https://github.com/andrewiggins/tachometer-reporter-action/workflows/Pull%20Request%20Test/badge.svg",
+		"https://github.com/andrewiggins/tachometer-reporter-action/workflows/PR%20Artifacts%20Multi-Measurement%20Setup%20Job%20Flow/badge.svg",
 };
 
-// curl -H "Accept: application/vnd.github.v3+json" https://api.github.com/repos/andrewiggins/tachometer-reporter-action/actions/runs/166203010
-const workflowRun = {
-	id: 166203010,
-	node_id: "MDExOldvcmtmbG93UnVuMTY2MjAzMDEw",
-	head_branch: "initial-implementation",
-	head_sha: "b1981b930e913a4b628cde273949a7982d3403c8",
-	run_number: 50,
+// curl -H "Accept: application/vnd.github.v3+json" https://api.github.com/repos/andrewiggins/tachometer-reporter-action/actions/runs/506256195
+/** @type {import('../../src/global').WorkflowRun} */
+const fakeWorkflowRun = {
+	id: 506256195,
+	// name: "PR Artifacts Multi-Measurement Setup Job Flow",
+	name: "Pull Request Test", // Override actual value so tests are easier to maintain
+	node_id: "MDExOldvcmtmbG93UnVuNTA2MjU2MTk1",
+	head_branch: "test-pr",
+	head_sha: "a70706dc304819dcaca4e1859117817973bf0a7c",
+	// run_number: 10,
+	run_number: 50, // Override actual value so tests are easier to maintain
 	event: "pull_request",
 	status: "completed",
 	conclusion: "success",
-	workflow_id: 1850458,
+	workflow_id: 5202306,
+	// check_suite_id: 1886652898,
+	// check_suite_node_id: "MDEwOkNoZWNrU3VpdGUxODg2NjUyODk4",
 	url:
-		"https://api.github.com/repos/andrewiggins/tachometer-reporter-action/actions/runs/166203010",
+		"https://api.github.com/repos/andrewiggins/tachometer-reporter-action/actions/runs/506256195",
 	html_url:
-		"https://github.com/andrewiggins/tachometer-reporter-action/actions/runs/166203010",
-	pull_requests: [],
-	created_at: "2020-07-12T06:08:16Z",
-	updated_at: "2020-07-12T06:08:58Z",
+		"https://github.com/andrewiggins/tachometer-reporter-action/actions/runs/506256195",
+	pull_requests: [
+		{
+			url:
+				"https://api.github.com/repos/andrewiggins/tachometer-reporter-action/pulls/43",
+			id: 560481270,
+			number: 43,
+			head: {
+				ref: "test-pr",
+				sha: "a70706dc304819dcaca4e1859117817973bf0a7c",
+				repo: {
+					id: 278722227,
+					url:
+						"https://api.github.com/repos/andrewiggins/tachometer-reporter-action",
+					name: "tachometer-reporter-action",
+				},
+			},
+			base: {
+				ref: "main",
+				sha: "169ac424fcfdf0b0a88d7218ec23f1d3ba3ecc8d",
+				repo: {
+					id: 278722227,
+					url:
+						"https://api.github.com/repos/andrewiggins/tachometer-reporter-action",
+					name: "tachometer-reporter-action",
+				},
+			},
+		},
+	],
+	created_at: "2021-01-23T20:04:18Z",
+	updated_at: "2021-01-23T20:59:59Z",
 	jobs_url:
-		"https://api.github.com/repos/andrewiggins/tachometer-reporter-action/actions/runs/166203010/jobs",
+		"https://api.github.com/repos/andrewiggins/tachometer-reporter-action/actions/runs/506256195/jobs",
 	logs_url:
-		"https://api.github.com/repos/andrewiggins/tachometer-reporter-action/actions/runs/166203010/logs",
+		"https://api.github.com/repos/andrewiggins/tachometer-reporter-action/actions/runs/506256195/logs",
 	check_suite_url:
-		"https://api.github.com/repos/andrewiggins/tachometer-reporter-action/check-suites/905197750",
+		"https://api.github.com/repos/andrewiggins/tachometer-reporter-action/check-suites/1886652898",
 	artifacts_url:
-		"https://api.github.com/repos/andrewiggins/tachometer-reporter-action/actions/runs/166203010/artifacts",
+		"https://api.github.com/repos/andrewiggins/tachometer-reporter-action/actions/runs/506256195/artifacts",
 	cancel_url:
-		"https://api.github.com/repos/andrewiggins/tachometer-reporter-action/actions/runs/166203010/cancel",
+		"https://api.github.com/repos/andrewiggins/tachometer-reporter-action/actions/runs/506256195/cancel",
 	rerun_url:
-		"https://api.github.com/repos/andrewiggins/tachometer-reporter-action/actions/runs/166203010/rerun",
+		"https://api.github.com/repos/andrewiggins/tachometer-reporter-action/actions/runs/506256195/rerun",
 	workflow_url:
-		"https://api.github.com/repos/andrewiggins/tachometer-reporter-action/actions/workflows/1850458",
+		"https://api.github.com/repos/andrewiggins/tachometer-reporter-action/actions/workflows/5202306",
 	head_commit: {
-		id: "b1981b930e913a4b628cde273949a7982d3403c8",
-		tree_id: "5aa6c42369d92896cecbf5fb3d4ba135adec2ba8",
-		message: "Try using markdown to render summary link",
-		timestamp: "2020-07-12T06:07:47Z",
+		id: "a70706dc304819dcaca4e1859117817973bf0a7c",
+		tree_id: "9a8742b0aee03f4e1903491978f30d2b5a65c9af",
+		message: "Trigger PR action run: main",
+		timestamp: "2021-01-23T20:04:08Z",
 		author: {
 			name: "Andre Wiggins",
 			email: "andrewiggins@live.com",
@@ -73,7 +108,7 @@ const workflowRun = {
 			login: "andrewiggins",
 			id: 459878,
 			node_id: "MDQ6VXNlcjQ1OTg3OA==",
-			avatar_url: "https://avatars3.githubusercontent.com/u/459878?v=4",
+			avatar_url: "https://avatars.githubusercontent.com/u/459878?v=4",
 			gravatar_id: "",
 			url: "https://api.github.com/users/andrewiggins",
 			html_url: "https://github.com/andrewiggins",
@@ -181,7 +216,7 @@ const workflowRun = {
 			login: "andrewiggins",
 			id: 459878,
 			node_id: "MDQ6VXNlcjQ1OTg3OA==",
-			avatar_url: "https://avatars3.githubusercontent.com/u/459878?v=4",
+			avatar_url: "https://avatars.githubusercontent.com/u/459878?v=4",
 			gravatar_id: "",
 			url: "https://api.github.com/users/andrewiggins",
 			html_url: "https://github.com/andrewiggins",
@@ -281,92 +316,84 @@ const workflowRun = {
 	},
 };
 
-// Job Data: curl -H "Accept: application/vnd.github.v3+json" https://api.github.com/repos/andrewiggins/tachometer-reporter-action/actions/jobs/862215228
-// Job Index: curl -H "Accept: application/vnd.github.v3+json" https://api.github.com/repos/andrewiggins/tachometer-reporter-action/actions/runs/166203010/jobs
+// Job Data: curl -H "Accept: application/vnd.github.v3+json" https://api.github.com/repos/andrewiggins/tachometer-reporter-action/actions/jobs/1755125478
+// Job Index: curl -H "Accept: application/vnd.github.v3+json" https://api.github.com/repos/andrewiggins/tachometer-reporter-action/actions/runs/506256195/jobs
 const defaultJobInfo = {
-	id: 862215228,
-	run_id: 166203010,
+	id: 1755125478,
+	run_id: 506256195,
 	run_url:
-		"https://api.github.com/repos/andrewiggins/tachometer-reporter-action/actions/runs/166203010",
-	node_id: "MDg6Q2hlY2tSdW44NjIyMTUyMjg=",
-	head_sha: "b1981b930e913a4b628cde273949a7982d3403c8",
+		"https://api.github.com/repos/andrewiggins/tachometer-reporter-action/actions/runs/506256195",
+	node_id: "MDg6Q2hlY2tSdW4xNzU1MTI1NDc4",
+	head_sha: "a70706dc304819dcaca4e1859117817973bf0a7c",
 	url:
-		"https://api.github.com/repos/andrewiggins/tachometer-reporter-action/actions/jobs/862215228",
+		"https://api.github.com/repos/andrewiggins/tachometer-reporter-action/actions/jobs/1755125478",
 	html_url:
-		"https://github.com/andrewiggins/tachometer-reporter-action/runs/862215228",
+		"https://github.com/andrewiggins/tachometer-reporter-action/runs/1755125478",
 	status: "completed",
 	conclusion: "success",
-	started_at: "2020-07-12T06:08:31Z",
-	completed_at: "2020-07-12T06:08:54Z",
-	name: "pr_test",
+	started_at: "2021-01-23T20:59:45Z",
+	completed_at: "2021-01-23T20:59:55Z",
+	name: "Report Results",
 	steps: [
 		{
 			name: "Set up job",
 			status: "completed",
 			conclusion: "success",
 			number: 1,
-			started_at: "2020-07-12T06:08:31.000Z",
-			completed_at: "2020-07-12T06:08:33.000Z",
+			started_at: "2021-01-23T20:59:45.000Z",
+			completed_at: "2021-01-23T20:59:48.000Z",
 		},
 		{
-			name: "Run actions/checkout@v2",
+			name: "Pre Report Tachometer Results",
 			status: "completed",
 			conclusion: "success",
 			number: 2,
-			started_at: "2020-07-12T06:08:33.000Z",
-			completed_at: "2020-07-12T06:08:34.000Z",
+			started_at: "2021-01-23T20:59:48.000Z",
+			completed_at: "2021-01-23T20:59:49.000Z",
 		},
 		{
-			name: "Run actions/setup-node@v1",
+			name: "Run actions/download-artifact@v2",
 			status: "completed",
 			conclusion: "success",
 			number: 3,
-			started_at: "2020-07-12T06:08:34.000Z",
-			completed_at: "2020-07-12T06:08:39.000Z",
+			started_at: "2021-01-23T20:59:49.000Z",
+			completed_at: "2021-01-23T20:59:49.000Z",
 		},
 		{
-			name: "Run npm ci",
+			name: "Run ls -al",
 			status: "completed",
 			conclusion: "success",
 			number: 4,
-			started_at: "2020-07-12T06:08:39.000Z",
-			completed_at: "2020-07-12T06:08:53.000Z",
+			started_at: "2021-01-23T20:59:49.000Z",
+			completed_at: "2021-01-23T20:59:49.000Z",
 		},
 		{
-			name: "Run npm test",
+			name: "Run ls -al results",
 			status: "completed",
 			conclusion: "success",
 			number: 5,
-			started_at: "2020-07-12T06:08:53.000Z",
-			completed_at: "2020-07-12T06:08:53.000Z",
+			started_at: "2021-01-23T20:59:49.000Z",
+			completed_at: "2021-01-23T20:59:49.000Z",
 		},
 		{
-			name: "Report Tachometer Result",
+			name: "Report Tachometer Results",
 			status: "completed",
 			conclusion: "success",
 			number: 6,
-			started_at: "2020-07-12T06:08:53.000Z",
-			completed_at: "2020-07-12T06:08:54.000Z",
-		},
-		{
-			name: "Post Run actions/checkout@v2",
-			status: "completed",
-			conclusion: "success",
-			number: 12,
-			started_at: "2020-07-12T06:08:54.000Z",
-			completed_at: "2020-07-12T06:08:54.000Z",
+			started_at: "2021-01-23T20:59:49.000Z",
+			completed_at: "2021-01-23T20:59:55.000Z",
 		},
 		{
 			name: "Complete job",
 			status: "completed",
 			conclusion: "success",
-			number: 13,
-			started_at: "2020-07-12T06:08:54.000Z",
-			completed_at: "2020-07-12T06:08:54.000Z",
+			number: 7,
+			started_at: "2021-01-23T20:59:55.000Z",
+			completed_at: "2021-01-23T20:59:55.000Z",
 		},
 	],
 	check_run_url:
-		"https://api.github.com/repos/andrewiggins/tachometer-reporter-action/check-runs/862215228",
+		"https://api.github.com/repos/andrewiggins/tachometer-reporter-action/check-runs/1755125478",
 };
 
 // Job Data: curl -H "Accept: application/vnd.github.v3+json" https://api.github.com/repos/andrewiggins/tachometer-reporter-action/actions/jobs/1114818713
@@ -496,16 +523,16 @@ const fakeCommit = {
 const defaultActionInfo = {
 	workflow: {
 		// id: workflow.id,
-		name: workflow.name,
+		name: fakeWorkflow.name,
 		runsHtmlUrl:
 			"https://github.com/andrewiggins/tachometer-reporter-action/actions?query=workflow%3A%22Pull%20Request%20Test%22",
 		// srcHtmlUrl: workflow.html_url,
 	},
 	run: {
-		id: workflowRun.id,
-		number: workflowRun.run_number,
+		id: fakeWorkflowRun.id,
+		number: fakeWorkflowRun.run_number,
 		name: "Pull Request Test #50",
-		htmlUrl: workflowRun.html_url,
+		htmlUrl: fakeWorkflowRun.html_url,
 	},
 	job: {
 		// id: defaultJobInfo.id,
@@ -517,7 +544,7 @@ const defaultActionInfo = {
 
 /**
  * @template T
- * @typedef {Partial<import('../../src/global').OctokitResponse<T>>} OctokitResponse
+ * @typedef {Partial<import("@octokit/types").OctokitResponse<T>>} OctokitResponse
  */
 
 /**
@@ -533,16 +560,16 @@ const defaultActionInfo = {
 /**
  * @typedef GithubClientInitialData
  * @property {Comment[]} [comments]
- * @property {typeof workflow | Error} [workflowData]
- * @property {typeof workflowRun | Error} [runData]
+ * @property {typeof fakeWorkflow | Error} [workflowData]
+ * @property {typeof fakeWorkflowRun | Error} [runData]
  * @property {Array<typeof defaultJobInfo> | Error} [runJobs]
  *
  * @param {GithubClientInitialData} [options]
  */
 function createGitHubClient({
 	comments = [],
-	workflowData = workflow,
-	runData = workflowRun,
+	workflowData = fakeWorkflow,
+	runData = fakeWorkflowRun,
 	runJobs = [otherJobInfo, defaultJobInfo],
 } = {}) {
 	// From the log found in defaultActionInfo.job.htmlUrl
@@ -626,7 +653,7 @@ function createGitHubClient({
 	}
 
 	async function request({ url }) {
-		if (url == workflowRun.workflow_url) {
+		if (url == fakeWorkflowRun.workflow_url) {
 			if (workflowData instanceof Error) {
 				throw workflowData;
 			}
@@ -660,6 +687,8 @@ function createGitHubClient({
 
 module.exports = {
 	defaultActionInfo,
+	fakeWorkflow,
+	fakeWorkflowRun,
 	fakeCommit,
 	createGitHubClient,
 };

@@ -18,16 +18,34 @@ export type GitHubActionClient = ReturnType<
 
 // Sample context: https://github.com/andrewiggins/tachometer-reporter-action/runs/860022655?check_suite_focus=true
 type GitHubActionContext = typeof import("@actions/github").context;
+type WorkflowRunGitHubActionContext = GitHubActionContext & {
+	payload: WorkflowRunActionContextPayload;
+};
+
 type CommentData = import("@octokit/types").IssuesGetCommentResponseData;
 
-type OctokitResponse<T> = import("@octokit/types").OctokitResponse<T>;
-type Workflow = import("@octokit/types").ActionsGetWorkflowResponseData;
-type WorkflowRun = import("@octokit/types").ActionsGetWorkflowRunResponseData;
-type WorkflowRunJob = import("@octokit/types").ActionsGetJobForWorkflowRunResponseData;
+// type OctokitResponse<T> = import("@octokit/types").OctokitResponse<T>;
 
-type WorkflowRunJobsAsyncIterator = AsyncIterableIterator<
-	OctokitResponse<WorkflowRunJob[]>
->;
+// type Workflow = import("@octokit/types").ActionsGetWorkflowResponseData;
+// type WorkflowRun = import("@octokit/types").ActionsGetWorkflowRunResponseData;
+// type WorkflowRunJob = import("@octokit/types").ActionsGetJobForWorkflowRunResponseData;
+
+// type WorkflowRunJobsAsyncIterator = AsyncIterableIterator<
+// 	OctokitResponse<WorkflowRunJob[]>
+// >;
+
+type Workflow = import("@octokit/openapi-types").components["schemas"]["workflow"];
+type WorkflowRun = import("@octokit/openapi-types").components["schemas"]["workflow-run"];
+type WorkflowRunJob = import("@octokit/openapi-types").components["schemas"]["job"];
+type MinimalRepository = import("@octokit/openapi-types").components["schemas"]["minimal-repository"];
+type SimpleUser = import("@octokit/openapi-types").components["schemas"]["simple-user"];
+
+interface PRContext {
+	owner: string;
+	repo: string;
+	number: number;
+	sha: string;
+}
 
 interface CommentContext {
 	owner: string;
@@ -54,8 +72,17 @@ interface ActionInfo {
 		htmlUrl: string;
 	};
 	job: {
-		name: WorkflowRunJob["name"];
+		name?: WorkflowRunJob["name"];
 	};
+}
+
+type BenchmarkActionInfo = ActionInfo;
+type ReportingActionInfo = ActionInfo;
+
+interface ActionContexts {
+	benchmark: BenchmarkActionInfo;
+	reporting: ReportingActionInfo;
+	pr: PRContext;
 }
 
 interface Inputs {
@@ -170,4 +197,12 @@ interface Dimension {
 	label: string;
 	format: (r: BenchmarkResult) => string;
 	tableConfig?: { alignment?: "left" | "center" | "right" };
+}
+
+interface WorkflowRunActionContextPayload {
+	action: "requested" | "completed";
+	repository: MinimalRepository;
+	sender: SimpleUser;
+	workflow: Workflow;
+	workflow_run: WorkflowRun;
 }

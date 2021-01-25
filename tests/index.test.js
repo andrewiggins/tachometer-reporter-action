@@ -2,9 +2,23 @@ const { writeFile } = require("fs/promises");
 const { suite } = require("uvu");
 const assert = require("uvu/assert");
 const { parse } = require("node-html-parser");
+/** @type {import('clean-set').default} */
+// @ts-ignore
+const cleanSet = require("clean-set");
 const { reportTachRunning, reportTachResults } = require("../lib/index");
-const { fakeGitHubContext, defaultInputs } = require("./mocks/actions");
-const { createGitHubClient, defaultActionInfo } = require("./mocks/github");
+const {
+	fakePullRequestContext,
+	defaultInputs,
+	fakePRContext,
+	fakeRequestedWorkflowRunContext,
+	fakeCompletedWorkflowRunContext,
+	fakePushContext,
+} = require("./mocks/actions");
+const {
+	createGitHubClient,
+	defaultActionInfo,
+	fakeWorkflowRun,
+} = require("./mocks/github");
 const {
 	assertFixture,
 	testRoot,
@@ -87,7 +101,7 @@ function createTestLogger() {
 
 /**
  * @typedef CommentContextParams
- * @property {Pick<import('../src/global').GitHubActionContext, "repo" | "issue">} context
+ * @property {import('../src/global').PRContext} prContext
  * @property {import('../src/global').ActionInfo} actionInfo
  * @property {string} customId
  * @property {boolean} initialize
@@ -98,14 +112,14 @@ function createTestLogger() {
 function addFooter(
 	body,
 	{
-		context = fakeGitHubContext,
+		prContext = fakePRContext,
 		actionInfo = defaultActionInfo,
 		customId = null,
 		initialize = null,
 	} = {}
 ) {
 	const { footer } = createCommentContext(
-		context,
+		prContext,
 		actionInfo,
 		customId,
 		initialize
@@ -138,7 +152,7 @@ async function readFixture(fixtureName, addDefaultFooter = true) {
  */
 function invokeReportTachRunning({
 	github = createGitHubClient(),
-	context = fakeGitHubContext,
+	context = fakePullRequestContext,
 	inputs = null,
 	logger = createTestLogger(),
 } = {}) {
@@ -157,12 +171,12 @@ function invokeReportTachRunning({
  * @property {import('../src/global').GitHubActionContext} [context]
  * @property {Partial<import('../src/global').Inputs>} [inputs]
  * @property {import('../src/global').Logger} [logger]
- * @param {ReportTachRunningParams} params
+ * @param {ReportTachResultsParams} params
  * @returns {Promise<import('../src/global').SerializedReport | null>}
  */
 function invokeReportTachResults({
 	github = createGitHubClient(),
-	context = fakeGitHubContext,
+	context = fakePullRequestContext,
 	inputs = null,
 	logger = createTestLogger(),
 } = {}) {
@@ -257,6 +271,29 @@ runningCreateSuite(
 		const actualBody = formatHtml(comments[0].body);
 		const fixture = await readFixture("new-comment-running.html");
 		assertFixture(actualBody, fixture, "Comment body matches fixture");
+	}
+);
+
+runningCreateSuite(
+	"Does not create a new comment and instead prints a message if context.eventName isn't supported",
+	async () => {
+		let infoCalled = false;
+
+		/** @type {ReturnType<typeof createTestLogger>} */
+		const logger = {
+			...createTestLogger(),
+			info(msg) {
+				infoCalled = true;
+			},
+		};
+
+		const github = createGitHubClient();
+		await invokeReportTachRunning({ github, logger, context: fakePushContext });
+
+		const comments = (await github.issues.listComments()).data;
+
+		assert.is(comments.length, 0, "Should not create a new comment");
+		assert.ok(infoCalled, "logger.info should be called");
 	}
 );
 
@@ -541,43 +578,78 @@ newResultsSuite(
 	}
 );
 
+newResultsSuite(
+	"Does not create a new comment and instead prints a message if context.eventName isn't supported",
+	async () => {
+		let infoCalled = false;
+
+		/** @type {ReturnType<typeof createTestLogger>} */
+		const logger = {
+			...createTestLogger(),
+			info(msg) {
+				infoCalled = true;
+			},
+		};
+
+		const github = createGitHubClient();
+		await invokeReportTachResults({ github, logger, context: fakePushContext });
+
+		const comments = (await github.issues.listComments()).data;
+
+		assert.is(comments.length, 0, "Should not create a new comment");
+		assert.ok(infoCalled, "logger.info should be called");
+	}
+);
+
 const updatedResultsSuite = suite("reportTachResults (update comment)");
 setupClock(updatedResultsSuite);
 
 /**
- * @param {Partial<import('../src/global').Inputs>} inputs
+ * @param {ReportTachResultsParams} params
  */
 async function runUpdatedResultsUpdateScenario(
-	inputs,
-	initialFixture = "test-results-new-comment.html",
-	expectedFixture = "test-results-2-updated-comment.html",
-	logger = undefined
+	params,
+	initialFixture = null,
+	expectedFixture = null
 ) {
-	const body = addFooter(await readFixture(initialFixture, false));
+	if (initialFixture == null) {
+		initialFixture = await readFixture("test-results-new-comment.html", false);
+	}
+
+	if (expectedFixture == null) {
+		expectedFixture = await readFixture("test-results-2-updated-comment.html");
+	}
+
+	const body = addFooter(initialFixture);
 
 	const github = createGitHubClient();
 	await github.issues.createComment({ body });
 
-	await invokeReportTachResults({ github, inputs, logger });
+	await invokeReportTachResults({ github, ...params });
 
 	const comments = (await github.issues.listComments()).data;
 	assert.is(comments.length, 1, "Should not create any new comments");
 
 	const actualBody = formatHtml(comments[0].body);
-	const fixture = await readFixture(expectedFixture);
 
 	// Uncomment to update fixture
 	// await writeFile(testRoot(`fixtures/${expectedFixture}`), actualBody, "utf8");
 
-	assertFixture(actualBody, fixture, "Body of comment should match fixture");
+	assertFixture(
+		actualBody,
+		expectedFixture,
+		"Body of comment should match fixture"
+	);
 }
 
 updatedResultsSuite(
 	"Updates a comment when path is non null and initialize is null",
 	async () => {
 		await runUpdatedResultsUpdateScenario({
-			path: testRoot("results/test-results-2.json"),
-			initialize: null,
+			inputs: {
+				path: testRoot("results/test-results-2.json"),
+				initialize: null,
+			},
 		});
 	}
 );
@@ -586,8 +658,10 @@ updatedResultsSuite(
 	"Updates a comment when path is non null and initialize is true",
 	async () => {
 		await runUpdatedResultsUpdateScenario({
-			path: testRoot("results/test-results-2.json"),
-			initialize: true,
+			inputs: {
+				path: testRoot("results/test-results-2.json"),
+				initialize: true,
+			},
 		});
 	}
 );
@@ -596,8 +670,10 @@ updatedResultsSuite(
 	"Updates a comment when path is non null and initialize is false",
 	async () => {
 		await runUpdatedResultsUpdateScenario({
-			path: testRoot("results/test-results-2.json"),
-			initialize: false,
+			inputs: {
+				path: testRoot("results/test-results-2.json"),
+				initialize: false,
+			},
 		});
 	}
 );
@@ -607,11 +683,13 @@ updatedResultsSuite(
 	async () => {
 		await runUpdatedResultsUpdateScenario(
 			{
-				path: testRoot("results/glob-results2-*"),
-				reportId: multiMeasureReportId,
+				inputs: {
+					path: testRoot("results/glob-results2-*"),
+					reportId: multiMeasureReportId,
+				},
 			},
-			"glob-results.html",
-			"glob-results2.html"
+			await readFixture("glob-results.html", false),
+			await readFixture("glob-results2.html")
 		);
 	}
 );
@@ -631,14 +709,336 @@ updatedResultsSuite(
 
 		await runUpdatedResultsUpdateScenario(
 			{
-				path: "results/does-not-exist-*.json",
+				inputs: {
+					path: "results/does-not-exist-*.json",
+				},
+				logger,
 			},
-			"test-results-new-comment.html",
-			"test-results-new-comment.html",
-			logger
+			await readFixture("test-results-new-comment.html", false),
+			await readFixture("test-results-new-comment.html")
 		);
 
 		assert.ok(warnCalled, "Warning should be printed to console");
+	}
+);
+
+const runningWorkflowRun = suite("reportTachRunning (workflow_run)");
+setupClock(runningWorkflowRun);
+
+runningWorkflowRun(
+	"Does nothing if workflow_run event is not 'pull_request' ",
+	async () => {
+		/** @type {import('../src/global').WorkflowRunGitHubActionContext} */
+		const context = cleanSet(
+			fakeCompletedWorkflowRunContext,
+			"payload.workflow_run.event",
+			"push"
+		);
+
+		const github = createGitHubClient();
+		await invokeReportTachRunning({ github, context });
+
+		const comments = (await github.issues.listComments()).data;
+		assert.is(comments.length, 0, "Should not create any comments");
+	}
+);
+
+runningWorkflowRun(
+	"Creates new comment if workflow_run action is 'requested' and initialize is true",
+	async () => {
+		const github = createGitHubClient();
+		await invokeReportTachRunning({
+			github,
+			inputs: { initialize: true },
+			context: fakeRequestedWorkflowRunContext,
+		});
+
+		const comments = (await github.issues.listComments()).data;
+		assert.is(comments.length, 1, "Should create a comment");
+
+		const actualBody = formatHtml(comments[0].body);
+		const fixture = await readFixture("new-comment-initialized.html");
+		assertFixture(actualBody, fixture, "Comment body matches fixture");
+	}
+);
+
+runningWorkflowRun(
+	"Updates existing comment if workflow_run action is 'requested' and initialize is true",
+	async () => {
+		const body = addFooter(await readFixture("glob-results.html", false));
+
+		const github = createGitHubClient();
+		await github.issues.createComment({ body });
+
+		await invokeReportTachRunning({
+			github,
+			inputs: { initialize: true },
+			context: fakeRequestedWorkflowRunContext,
+		});
+
+		const comments = (await github.issues.listComments()).data;
+		assert.is(comments.length, 1, "Should not create a new comment");
+
+		const actualBody = formatHtml(comments[0].body);
+		const fixture = await readFixture("glob-results-running.html");
+		assertFixture(actualBody, fixture, "Comment body matches fixture");
+	}
+);
+
+runningWorkflowRun(
+	"Does nothing if workflow_run action is 'requested' and initialize is null",
+	async () => {
+		const github = createGitHubClient();
+		await invokeReportTachRunning({
+			github,
+			inputs: { initialize: null },
+			context: fakeRequestedWorkflowRunContext,
+		});
+
+		const comments = (await github.issues.listComments()).data;
+		assert.is(comments.length, 0, "Should not create any comments");
+	}
+);
+
+runningWorkflowRun(
+	"Does nothing if workflow_run action is 'completed' and initialize is true",
+	async () => {
+		const github = createGitHubClient();
+		await invokeReportTachRunning({
+			github,
+			inputs: { initialize: true },
+			context: fakeCompletedWorkflowRunContext,
+		});
+
+		const comments = (await github.issues.listComments()).data;
+		assert.is(comments.length, 0, "Should not create any comments");
+	}
+);
+
+runningWorkflowRun(
+	"Prints a warning and does nothing if no PRs are associated with a workflow run",
+	async () => {
+		let warnCalled = false;
+
+		/** @type {ReturnType<typeof createTestLogger>} */
+		const logger = {
+			...createTestLogger(),
+			warn(msg) {
+				warnCalled = true;
+			},
+		};
+
+		/** @type {import('../src/global').WorkflowRunGitHubActionContext} */
+		const context = cleanSet(
+			fakeRequestedWorkflowRunContext,
+			"payload.workflow_run.pull_requests",
+			[]
+		);
+
+		const github = createGitHubClient();
+		await invokeReportTachRunning({ github, logger, context });
+
+		const comments = (await github.issues.listComments()).data;
+
+		assert.is(comments.length, 0, "Should not create a new comment");
+		assert.ok(warnCalled, "logger.warn should be called");
+	}
+);
+
+runningWorkflowRun(
+	"Prints a warning if multiple PRs are associated with a workflow run",
+	async () => {
+		let warnCalled = false;
+
+		/** @type {ReturnType<typeof createTestLogger>} */
+		const logger = {
+			...createTestLogger(),
+			warn(msg) {
+				warnCalled = true;
+			},
+		};
+
+		/** @type {import('../src/global').WorkflowRunGitHubActionContext} */
+		const context = cleanSet(
+			fakeRequestedWorkflowRunContext,
+			"payload.workflow_run.pull_requests",
+			[fakeWorkflowRun.pull_requests[0], fakeWorkflowRun.pull_requests[0]]
+		);
+
+		const github = createGitHubClient();
+		await invokeReportTachRunning({
+			inputs: { initialize: true },
+			github,
+			logger,
+			context,
+		});
+
+		const comments = (await github.issues.listComments()).data;
+
+		assert.is(comments.length, 1, "Should create a new comment");
+		assert.ok(warnCalled, "logger.warn should be called");
+	}
+);
+
+const updatedWorkflowRun = suite("reportTachResults (workflow_run)");
+setupClock(updatedWorkflowRun);
+
+updatedWorkflowRun(
+	"Does nothing if workflow_run event is not 'pull_request' ",
+	async () => {
+		/** @type {import('../src/global').WorkflowRunGitHubActionContext} */
+		const context = cleanSet(
+			fakeCompletedWorkflowRunContext,
+			"payload.workflow_run.event",
+			"push"
+		);
+
+		const github = createGitHubClient();
+		await invokeReportTachResults({ github, context });
+
+		const comments = (await github.issues.listComments()).data;
+		assert.is(comments.length, 0, "Should not create any comments");
+	}
+);
+
+updatedWorkflowRun(
+	"Does nothing if workflow_run action is 'requested' and initialize is true",
+	async () => {
+		const github = createGitHubClient();
+		await invokeReportTachResults({
+			github,
+			inputs: { initialize: true },
+			context: fakeRequestedWorkflowRunContext,
+		});
+
+		const comments = (await github.issues.listComments()).data;
+		assert.is(comments.length, 0, "Should not create any comments");
+	}
+);
+
+updatedWorkflowRun(
+	"Does nothing if workflow_run action is 'requested' and initialize is null",
+	async () => {
+		const github = createGitHubClient();
+		await invokeReportTachResults({
+			github,
+			inputs: { initialize: null },
+			context: fakeRequestedWorkflowRunContext,
+		});
+
+		const comments = (await github.issues.listComments()).data;
+		assert.is(comments.length, 0, "Should not create any comments");
+	}
+);
+
+updatedWorkflowRun(
+	"Creates comment if none exists and workflow_run action is 'completed'",
+	async () => {
+		const github = createGitHubClient();
+		await invokeReportTachResults({
+			github,
+			inputs: {
+				initialize: null,
+				path: testRoot("results/glob-results-*.json"),
+			},
+			context: fakeCompletedWorkflowRunContext,
+		});
+
+		const comments = (await github.issues.listComments()).data;
+
+		assert.is(comments.length, 1, "Should create a new comment");
+
+		const actualBody = formatHtml(comments[0].body);
+		let fixture = await readFixture("glob-results.html");
+		// Workflow runs don't have access to the merge commit and so display the
+		// PRs head SHA
+		fixture = fixture.replace(/Commit: 626e78c/g, "Commit: a70706d");
+
+		assertFixture(actualBody, fixture, "Comment body matches fixture");
+	}
+);
+
+updatedWorkflowRun(
+	"Updates comment with results if one exists and workflow_run action is 'completed'",
+	async () => {
+		let expectedFixture = await readFixture("glob-results2.html");
+		// Workflow runs don't have access to the merge commit and so display the
+		// PRs head SHA
+		expectedFixture = expectedFixture.replace(
+			/Commit: 626e78c/g,
+			"Commit: a70706d"
+		);
+
+		await runUpdatedResultsUpdateScenario(
+			{
+				inputs: {
+					path: testRoot("results/glob-results2-*.json"),
+				},
+				context: fakeCompletedWorkflowRunContext,
+			},
+			await readFixture("glob-results.html", false),
+			expectedFixture
+		);
+	}
+);
+
+updatedWorkflowRun(
+	"Prints a warning and does nothing if no PRs are associated with a workflow run",
+	async () => {
+		let warnCalled = false;
+
+		/** @type {ReturnType<typeof createTestLogger>} */
+		const logger = {
+			...createTestLogger(),
+			warn(msg) {
+				warnCalled = true;
+			},
+		};
+
+		/** @type {import('../src/global').WorkflowRunGitHubActionContext} */
+		const context = cleanSet(
+			fakeCompletedWorkflowRunContext,
+			"payload.workflow_run.pull_requests",
+			[]
+		);
+
+		const github = createGitHubClient();
+		await invokeReportTachResults({ github, logger, context });
+
+		const comments = (await github.issues.listComments()).data;
+
+		assert.is(comments.length, 0, "Should not create a new comment");
+		assert.ok(warnCalled, "logger.warn should be called");
+	}
+);
+
+updatedWorkflowRun(
+	"Prints a warning if multiple PRs are associated with a workflow run",
+	async () => {
+		let warnCalled = false;
+
+		/** @type {ReturnType<typeof createTestLogger>} */
+		const logger = {
+			...createTestLogger(),
+			warn(msg) {
+				warnCalled = true;
+			},
+		};
+
+		/** @type {import('../src/global').WorkflowRunGitHubActionContext} */
+		const context = cleanSet(
+			fakeCompletedWorkflowRunContext,
+			"payload.workflow_run.pull_requests",
+			[fakeWorkflowRun.pull_requests[0], fakeWorkflowRun.pull_requests[0]]
+		);
+
+		const github = createGitHubClient();
+		await invokeReportTachResults({ github, logger, context });
+
+		const comments = (await github.issues.listComments()).data;
+
+		assert.is(comments.length, 1, "Should create a new comment");
+		assert.ok(warnCalled, "logger.warn should be called");
 	}
 );
 
@@ -646,3 +1046,5 @@ runningCreateSuite.run();
 runningUpdateSuite.run();
 newResultsSuite.run();
 updatedResultsSuite.run();
+runningWorkflowRun.run();
+updatedWorkflowRun.run();

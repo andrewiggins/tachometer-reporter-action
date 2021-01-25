@@ -5,7 +5,7 @@ const {
 	postOrUpdateComment,
 	createCommentContext,
 } = require("../lib/comments");
-const { fakeGitHubContext } = require("./mocks/actions");
+const { fakePRContext } = require("./mocks/actions");
 const { defaultActionInfo, createGitHubClient } = require("./mocks/github");
 const { pick } = require("./utils");
 
@@ -35,19 +35,19 @@ function debug(namespace, msg) {
 
 /**
  * @typedef CommentContextParams
- * @property {Pick<import('../src/global').GitHubActionContext, "repo" | "issue">} context
+ * @property {import('../src/global').PRContext} prContext
  * @property {import('../src/global').ActionInfo} actionInfo
  * @property {string} customId
  * @property {boolean} initialize
  * @param {Partial<CommentContextParams>} params
  */
 function createTestCommentContext({
-	context = fakeGitHubContext,
+	prContext = fakePRContext,
 	actionInfo = defaultActionInfo,
 	customId = null,
 	initialize = null,
 } = {}) {
-	return createCommentContext(context, actionInfo, customId, initialize);
+	return createCommentContext(prContext, actionInfo, customId, initialize);
 }
 
 let updateNum = 0;

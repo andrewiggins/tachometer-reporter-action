@@ -1,0 +1,30 @@
+name: PR Artifacts For Forks Flow
+
+on:
+  pull_request:
+    branches:
+      - "**"
+
+jobs:
+  bench_1:
+    name: First Bench Job
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - run: |
+          # Could use this to simulate benchmark running for random number of seconds
+          echo $((($RANDOM%(5000-1000))+1000))
+      - uses: actions/upload-artifact@v2
+        with:
+          name: results
+          path: tests/results/glob-results-A.json
+
+  bench_2:
+    name: Second Bench Job
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/upload-artifact@v2
+        with:
+          name: results
+          path: tests/results/glob-results-B.json
