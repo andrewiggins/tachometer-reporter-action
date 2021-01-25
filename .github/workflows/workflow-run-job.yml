@@ -24,7 +24,7 @@ jobs:
     if: ${{ github.event.action == 'requested' }}
     steps:
       - name: Report Tachometer Running
-        uses: andrewiggins/tachometer-reporter-action@workflow-run-support
+        uses: andrewiggins/tachometer-reporter-action@main
         with:
           # Set initialize true so this action just creates the comment or adds
           # the "benchmarks are running" text
@@ -48,6 +48,6 @@ jobs:
 
       # Create/update the comment with the latest results
       - name: Report Tachometer Results
-        uses: andrewiggins/tachometer-reporter-action@workflow-run-support
+        uses: andrewiggins/tachometer-reporter-action@main
         with:
           path: results/*.json
