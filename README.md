@@ -10,6 +10,8 @@ Pull Requests.
 
 ### Single benchmark job
 
+Simply pass in the path to the resulting JSON file from running tachometer.
+
 ```yaml
 name: Pull Request Test
 
@@ -37,6 +39,9 @@ jobs:
 ```
 
 ### Multiple benchmark jobs
+
+For multiple benchmark jobs, upload the result JSON files to an artifact. Then
+download the results in a final job that reports the results of all the files.
 
 ```yaml
 name: Multiple benchmark jobs example
@@ -118,6 +123,108 @@ jobs:
       # Read all the results and post comment
       - name: Report Tachometer Result
         uses: andrewiggins/tachometer-reporter-action@v2
+        with:
+          path: results/*.json
+```
+
+### Working with forks
+
+Since the `pull_request` event doesn't have permissions to write comments to PRs
+when triggered by a PR from a fork, we'll instead use the `workflow_run` event
+to do the reporting. We'll build on the previous example of uploading the
+results to an artifact. This time however, we'll download the artifact and post
+the results to the PR from a `workflow_run` event.
+
+In general, while this flow is the most complicated, this is the recommended
+flow as it should work for any PR that is opened against your repository.
+
+Be sure to always run the benchmark in a `pull_request` event for [security
+reasons](https://securitylab.github.com/research/github-actions-preventing-pwn-requests).
+Just post the comment using this action in the `workflow_run`.
+
+#### Pull Request workflow file
+
+```yaml
+name: PR CI
+
+on:
+  pull_request:
+    branches:
+      - "**"
+
+jobs:
+  bench_1:
+    name: First Bench Job
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      # Run your benchmarks
+      - run: ./benchmark.sh
+      # Upload the results to an artifact
+      - uses: actions/upload-artifact@v2
+        with:
+          name: results
+          path: results-1.json
+
+  bench_2:
+    name: Second Bench Job
+    runs-on: ubuntu-latest
+    steps:
+			- uses: actions/checkout@v2
+      - run: ./benchmark.sh
+      - uses: actions/upload-artifact@v2
+        with:
+          name: results
+          path: results-2.json
+```
+
+#### Workflow Run workflow file
+
+```yaml
+name: Report Tachometer Results
+
+on:
+  workflow_run:
+    workflows: ["PR CI"]
+    branches: ["**"]
+    types:
+      - completed
+      - requested
+
+jobs:
+  # Optional job to update existing comments with a "benchmarks are running" text
+  report_running:
+    name: Report benchmarks are in-progress
+    runs-on: ubuntu-latest
+    # Only add the "benchmarks are running" text when the workflow_run starts
+    if: ${{ github.event.action == 'requested' }}
+    steps:
+      - name: Report Tachometer Running
+        uses: andrewiggins/tachometer-reporter-action@main
+        with:
+          # Set initialize true so this action just creates the comment and adds
+          # the "benchmarks are running" text
+          initialize: true
+
+  report_results:
+    name: Report benchmark results
+    runs-on: ubuntu-latest
+    # Only run this job if the event action was "completed" and the triggering
+    # workflow_run was successful
+    if: ${{ github.event.action == 'completed' && github.event.workflow_run.conclusion == 'success' }}
+    steps:
+      # Download the artifact from the triggering workflow that contains the
+      # Tachometer results to report
+      - uses: dawidd6/action-download-artifact@v2
+        with:
+          workflow: ${{ github.event.workflow.id }}
+          run_id: ${{ github.event.workflow_run.id }}
+          name: results
+          path: results
+
+      # Create/update the comment with the latest results
+      - name: Report Tachometer Results
+        uses: andrewiggins/tachometer-reporter-action@main
         with:
           path: results/*.json
 ```
