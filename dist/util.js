@@ -11301,14 +11301,13 @@ async function parseContext(context, github, logger) {
 
 			// 2.2. Search the PR API for matching open PRs if 0 or more than 1
 			// matched from the payload (payload doesn't contain open or close state)
-			prs = (
-				await github.pulls.list({
-					owner: context.repo.owner,
-					repo: context.repo.repo,
-					state: "open",
-					head: headLabel,
-				})
-			).data;
+			let res = await github.pulls.list({
+				owner: context.repo.owner,
+				repo: context.repo.repo,
+				head: headLabel,
+			});
+
+			prs = res.data;
 		}
 
 		if (prs.length === 0) {
