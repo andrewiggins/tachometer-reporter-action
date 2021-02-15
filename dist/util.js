@@ -16202,7 +16202,7 @@ var escapeStringRegexp = string => {
 };
 
 const fullVersion = `v${
-	 "2.4.0"
+	 "2.4.1"
 }`;
 const majorVersion = ` v${
 	 2
