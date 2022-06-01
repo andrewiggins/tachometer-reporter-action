@@ -99,6 +99,7 @@ const runtimeConfidenceIntervalDimension = {
  * @returns {string}
  */
 function formatConfidenceInterval(ci, format) {
+	if (ci.low == null) return `∞ - ∞`;
 	return `${format(ci.low)} - ${format(ci.high)}`;
 }
 
